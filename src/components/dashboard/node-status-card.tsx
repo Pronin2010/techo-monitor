@@ -125,7 +125,7 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
   return (
     <div className="border-b last:border-b-0">
       {/* ── Single row ── */}
-      <div className="flex items-center gap-3 px-4 py-2.5 cursor-pointer select-none hover:bg-muted/30 transition-colors">
+      <div className="flex items-center gap-3 px-4 py-2.5 cursor-pointer select-none hover:bg-muted/30 transition-colors" onClick={() => setExpanded(!expanded)}>
         {/* Expand icon */}
         <span className="text-muted-foreground shrink-0">
           {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
