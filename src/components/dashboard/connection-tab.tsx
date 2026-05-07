@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from '@/hooks/use-toast'
 import {
   Usb,
@@ -19,23 +18,20 @@ import {
   AlertTriangle,
   Copy,
   RefreshCw,
-  Save,
-  Cable,
   Radio,
   ChevronDown,
-  ChevronUp,
-  MonitorSmartphone,
+  ChevronRight,
   TreePine,
   MapPin,
   BatteryCharging,
   Antenna,
   Zap,
-  Globe,
   Smartphone,
-  Cpu,
-  Settings,
   Check,
+  ArrowLeft,
   ArrowRight,
+  HelpCircle,
+  Cable,
 } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -55,48 +51,152 @@ interface ConnectionConfig {
   status: string
 }
 
+interface ConnectionTabProps {
+  onSyncComplete?: () => void
+}
+
 // ---------------------------------------------------------------------------
-// Step indicator component
+// Wizard step progress bar
 // ---------------------------------------------------------------------------
 
-function StepIndicator({ step, title, completed, active }: { step: number; title: string; completed: boolean; active: boolean }) {
+const WIZARD_STEPS = [
+  { id: 1, title: 'Подготовка', icon: Smartphone },
+  { id: 2, title: 'Подключение', icon: Cable },
+  { id: 3, title: 'Проверка', icon: CheckCircle2 },
+]
+
+function WizardProgressBar({ currentStep, completedSteps }: { currentStep: number; completedSteps: Set<number> }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className={`rounded-full h-7 w-7 flex items-center justify-center text-xs font-bold shrink-0 ${
-        completed ? 'bg-green-500 text-white' : active ? 'bg-teal-500 text-white' : 'bg-muted text-muted-foreground'
-      }`}>
-        {completed ? <Check className="h-4 w-4" /> : step}
-      </div>
-      <span className={`font-semibold text-sm ${active ? 'text-foreground' : 'text-muted-foreground'}`}>
-        {title}
-      </span>
+    <div className="flex items-center justify-center gap-0 mb-8">
+      {WIZARD_STEPS.map((step, idx) => {
+        const Icon = step.icon
+        const isActive = step.id === currentStep
+        const isCompleted = completedSteps.has(step.id)
+        const isPast = step.id < currentStep || isCompleted
+
+        return (
+          <div key={step.id} className="flex items-center">
+            <div className="flex flex-col items-center gap-1.5">
+              <div
+                className={`rounded-full h-10 w-10 flex items-center justify-center transition-all ${
+                  isCompleted
+                    ? 'bg-green-500 text-white shadow-md shadow-green-500/25'
+                    : isActive
+                    ? 'bg-teal-500 text-white shadow-md shadow-teal-500/25'
+                    : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+              </div>
+              <span className={`text-xs font-medium ${isActive || isCompleted ? 'text-foreground' : 'text-muted-foreground'}`}>
+                {step.title}
+              </span>
+            </div>
+            {idx < WIZARD_STEPS.length - 1 && (
+              <div className={`w-16 sm:w-24 h-0.5 mx-2 mb-5 transition-all ${
+                isPast ? 'bg-green-400' : 'bg-muted'
+              }`} />
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Component
+// Copy button
 // ---------------------------------------------------------------------------
 
-interface ConnectionTabProps {
-  onSyncComplete?: () => void
+function CopyButton({ text, label }: { text: string; label?: string }) {
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text)
+    toast({ title: 'Скопировано', description: label || text })
+  }
+  return (
+    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleCopy}>
+      <Copy className="h-3.5 w-3.5" />
+    </Button>
+  )
 }
+
+// ---------------------------------------------------------------------------
+// Collapsible sub-step
+// ---------------------------------------------------------------------------
+
+function SubStep({
+  title,
+  completed,
+  onToggle,
+  children,
+}: {
+  title: string
+  completed: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="rounded-lg border bg-card overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors text-left"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`rounded-full h-6 w-6 flex items-center justify-center shrink-0 transition-colors ${
+            completed ? 'bg-green-500 text-white' : 'bg-muted text-muted-foreground'
+          }`}>
+            {completed ? <Check className="h-3.5 w-3.5" /> : <span className="text-xs font-bold">1</span>}
+          </div>
+          <span className="font-medium text-sm">{title}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`text-xs h-7 ${completed ? 'text-green-600' : ''}`}
+            onClick={(e) => { e.stopPropagation(); onToggle() }}
+          >
+            {completed ? 'Готово' : 'Отметить'}
+          </Button>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </button>
+      {completed && children && (
+        <div className="px-4 pb-3 pt-0 border-t bg-muted/20">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Main Component
+// ---------------------------------------------------------------------------
 
 export default function ConnectionTab({ onSyncComplete }: ConnectionTabProps) {
   const [config, setConfig] = useState<ConnectionConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [showSerialGuide, setShowSerialGuide] = useState(false)
-  const [showMqttGuide, setShowMqttGuide] = useState(false)
-  const [showForestGuide, setShowForestGuide] = useState(true)
+  const [wizardStep, setWizardStep] = useState(1)
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testSuccess, setTestSuccess] = useState(false)
 
+  // Load config from server
   const loadConfig = useCallback(async () => {
     try {
       const res = await fetch('/api/meshtastic/sync')
       if (res.ok) {
         const data = await res.json()
         setConfig(data)
+        // If already connected, skip to step 3
+        if (data.status === 'connected' && data.lastSync) {
+          setCompletedSteps(new Set([1, 2, 3]))
+          setWizardStep(3)
+        }
       }
     } catch (err) {
       console.error('Failed to load config:', err)
@@ -107,7 +207,46 @@ export default function ConnectionTab({ onSyncComplete }: ConnectionTabProps) {
 
   useEffect(() => {
     loadConfig()
+    // Restore wizard progress from localStorage
+    const saved = localStorage.getItem('connection-wizard-progress')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as { steps: number[]; currentStep: number }
+        if (parsed.steps?.length) {
+          setCompletedSteps(new Set(parsed.steps))
+        }
+        if (parsed.currentStep) {
+          setWizardStep(parsed.currentStep)
+        }
+      } catch { /* ignore */ }
+    }
   }, [loadConfig])
+
+  // Save wizard progress to localStorage
+  const saveProgress = (steps: Set<number>, step: number) => {
+    localStorage.setItem('connection-wizard-progress', JSON.stringify({
+      steps: Array.from(steps),
+      currentStep: step,
+    }))
+  }
+
+  const toggleStep = (step: number) => {
+    setCompletedSteps(prev => {
+      const next = new Set(prev)
+      if (next.has(step)) {
+        next.delete(step)
+      } else {
+        next.add(step)
+      }
+      saveProgress(next, wizardStep)
+      return next
+    })
+  }
+
+  const goToStep = (step: number) => {
+    setWizardStep(step)
+    saveProgress(completedSteps, step)
+  }
 
   const handleSave = async () => {
     if (!config) return
@@ -130,15 +269,11 @@ export default function ConnectionTab({ onSyncComplete }: ConnectionTabProps) {
 
   const handleDownloadScript = () => {
     window.open('/api/meshtastic/script', '_blank')
-    toast({ title: 'Скачивание', description: 'Скрипт techo-bridge.py загружается' })
-  }
-
-  const handleCopyCommand = (cmd: string) => {
-    navigator.clipboard.writeText(cmd)
-    toast({ title: 'Скопировано', description: 'Команда скопирована в буфер обмена' })
+    toast({ title: 'Скачивание', description: 'techo-bridge.py загружается...' })
   }
 
   const handleTestSync = async () => {
+    setTesting(true)
     try {
       const res = await fetch('/api/meshtastic/sync', {
         method: 'POST',
@@ -164,11 +299,14 @@ export default function ConnectionTab({ onSyncComplete }: ConnectionTabProps) {
         }),
       })
       if (res.ok) {
-        toast({ title: 'Тест успешен', description: 'Тестовый узел добавлен через API синхронизации' })
+        setTestSuccess(true)
+        toast({ title: 'Тест успешен', description: 'API синхронизации работает корректно' })
         onSyncComplete?.()
       }
     } catch {
       toast({ title: 'Ошибка', description: 'Не удалось выполнить тест', variant: 'destructive' })
+    } finally {
+      setTesting(false)
     }
   }
 
@@ -176,18 +314,19 @@ export default function ConnectionTab({ onSyncComplete }: ConnectionTabProps) {
     setConfig(prev => prev ? { ...prev, ...updates } : prev)
   }
 
-  const toggleStep = (step: number) => {
-    setCompletedSteps(prev => {
-      const next = new Set(prev)
-      if (next.has(step)) {
-        next.delete(step)
-      } else {
-        next.add(step)
-      }
-      return next
-    })
+  // Generate the ready-to-use run command
+  const generateRunCommand = () => {
+    if (!config) return ''
+    if (config.type === 'mqtt') {
+      let cmd = `python techo-bridge.py --mode mqtt --broker ${config.mqttBroker || 'mqtt.meshtastic.org:1883'} --topic ${config.mqttTopic || 'msh/EU_433/#'}`
+      if (config.mqttUsername) cmd += ` --mqtt-user ${config.mqttUsername}`
+      if (config.mqttPassword) cmd += ` --mqtt-pass ${config.mqttPassword}`
+      return cmd
+    }
+    return `python techo-bridge.py --mode serial --port ${config.serialPort || '/dev/ttyUSB0'} --dashboard http://localhost:3000`
   }
 
+  // Status config for banner
   const statusConfig: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
     connected: { label: 'Подключено', color: 'text-green-500', icon: CheckCircle2 },
     disconnected: { label: 'Отключено', color: 'text-muted-foreground', icon: XCircle },
@@ -205,957 +344,520 @@ export default function ConnectionTab({ onSyncComplete }: ConnectionTabProps) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* ── Connection Status Banner ── */}
+    <div className="space-y-6 max-w-3xl mx-auto">
+      {/* ── Connection Status Banner (compact) ── */}
       <Card className={config?.status === 'connected' ? 'border-green-300 dark:border-green-800' : ''}>
         <CardContent className="p-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <currentStatus.icon className={`h-5 w-5 ${currentStatus.color}`} />
               <div>
-                <p className="font-medium">Статус подключения</p>
-                <p className="text-sm text-muted-foreground">
-                  {currentStatus.label}
-                  {config?.lastSync && (
-                    <> · Последняя синхронизация: {new Date(config.lastSync).toLocaleString('ru')}</>
-                  )}
-                </p>
+                <p className="font-medium text-sm">{currentStatus.label}</p>
+                {config?.lastSync && (
+                  <p className="text-xs text-muted-foreground">
+                    Последняя синхронизация: {new Date(config.lastSync).toLocaleString('ru')}
+                  </p>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleTestSync} className="gap-1.5">
-                <Radio className="h-3.5 w-3.5" />
-                Тест API
-              </Button>
-              <Button variant="outline" size="sm" onClick={loadConfig} className="gap-1.5">
-                <RefreshCw className="h-3.5 w-3.5" />
-                Обновить
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={loadConfig} className="gap-1.5">
+              <RefreshCw className="h-3.5 w-3.5" />
+              Обновить
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      {/* ── FOREST TRACKER SETUP GUIDE (433 MHz) ── */}
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      <Card className="border-green-300 dark:border-green-800">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TreePine className="h-5 w-5 text-green-600" />
-              Настройка трекеров 433 МГц в лесу
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowForestGuide(!showForestGuide)}
-              className="gap-1"
-            >
-              {showForestGuide ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              {showForestGuide ? 'Свернуть' : 'Развернуть'}
-            </Button>
-          </div>
-          <CardDescription>
-            Пошаговая инструкция: настройка новых T-Echo на 433 МГц для лесного трекинга
-          </CardDescription>
-        </CardHeader>
+      {/* ── Wizard ── */}
+      <Card>
+        <CardContent className="p-6">
+          <WizardProgressBar currentStep={wizardStep} completedSteps={completedSteps} />
 
-        {showForestGuide && (
-          <CardContent className="space-y-6 border-t pt-4">
-            {/* 433 MHz advantage banner */}
+          {/* ════════════════════════════════════════════════════════ */}
+          {/* STEP 1: Подготовка устройства                            */}
+          {/* ════════════════════════════════════════════════════════ */}
+          {wizardStep === 1 && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold mb-1">Подготовка устройства</h3>
+                <p className="text-sm text-muted-foreground">
+                  Перед первым подключением настройте T-Echo через приложение Meshtastic или USB
+                </p>
+              </div>
+
+              {/* Sub-step 1: Flash */}
+              <SubStep
+                title="Прошивка Meshtastic"
+                completed={completedSteps.has(11)}
+                onToggle={() => toggleStep(11)}
+              >
+                <div className="mt-2 space-y-2">
+                  <p className="text-xs text-muted-foreground">Установите приложение Meshtastic на телефон и прошейте T-Echo по Bluetooth, или через USB:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs font-mono bg-background px-2 py-1.5 rounded flex-1">
+                      pip install meshtastic &amp;&amp; python -m meshtastic --flash
+                    </code>
+                    <CopyButton text="pip install meshtastic && python -m meshtastic --flash" />
+                  </div>
+                </div>
+              </SubStep>
+
+              {/* Sub-step 2: Region */}
+              <SubStep
+                title="Установите регион EU_433"
+                completed={completedSteps.has(12)}
+                onToggle={() => toggleStep(12)}
+              >
+                <div className="mt-2 space-y-2">
+                  <Alert className="border-red-500/50 bg-red-50 dark:bg-red-950/20 py-2">
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+                    <AlertDescription className="text-xs text-red-800 dark:text-red-200">
+                      <strong>Все устройства</strong> должны иметь одинаковый регион! EU_433 для России.
+                    </AlertDescription>
+                  </Alert>
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs font-mono bg-background px-2 py-1.5 rounded flex-1">
+                      python -m meshtastic --set lora.region EU_433
+                    </code>
+                    <CopyButton text="python -m meshtastic --set lora.region EU_433" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Или в приложении: Device Settings → LoRa → Region → EU_433</p>
+                </div>
+              </SubStep>
+
+              {/* Sub-step 3: Channel */}
+              <SubStep
+                title="Создайте приватный канал"
+                completed={completedSteps.has(13)}
+                onToggle={() => toggleStep(13)}
+              >
+                <div className="mt-2 space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    В приложении: Channel Settings → + New channel → Private → Share → QR Code
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    На остальных устройствах нажмите <strong>Scan QR</strong> и отсканируйте код.
+                  </p>
+                  <p className="text-xs text-muted-foreground">Модем: <Badge variant="outline" className="text-[10px]">LongModerate</Badge> — оптимально для леса</p>
+                </div>
+              </SubStep>
+
+              {/* Sub-step 4: Roles */}
+              <SubStep
+                title="Настройте роли устройств"
+                completed={completedSteps.has(14)}
+                onToggle={() => toggleStep(14)}
+              >
+                <div className="mt-2 space-y-2">
+                  <p className="text-xs text-muted-foreground mb-2">Установите роль на каждом устройстве:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2 text-xs">
+                      <Badge className="text-[10px] bg-teal-500">ROUTER</Badge>
+                      <span className="text-muted-foreground">Base Station (ПК)</span>
+                      <CopyButton text="python -m meshtastic --set device.role ROUTER" />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <Badge className="text-[10px] bg-amber-500">REPEATER</Badge>
+                      <span className="text-muted-foreground">Ретранслятор</span>
+                      <CopyButton text="python -m meshtastic --set device.role REPEATER" />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <Badge className="text-[10px] bg-green-600">TRACKER</Badge>
+                      <span className="text-muted-foreground">Сон 5 мин</span>
+                      <CopyButton text="python -m meshtastic --set device.role TRACKER --set power.ls_secs 300" />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <Badge className="text-[10px] bg-green-600">TRACKER</Badge>
+                      <span className="text-muted-foreground">Сон 45 мин</span>
+                      <CopyButton text="python -m meshtastic --set device.role TRACKER --set power.ls_secs 2700" />
+                    </div>
+                  </div>
+                </div>
+              </SubStep>
+
+              <div className="flex justify-end pt-2">
+                <Button onClick={() => goToStep(2)} className="gap-2">
+                  Далее
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════ */}
+          {/* STEP 2: Подключение к дашборду                          */}
+          {/* ════════════════════════════════════════════════════════ */}
+          {wizardStep === 2 && (
+            <div className="space-y-5">
+              <div>
+                <h3 className="text-lg font-semibold mb-1">Подключение к дашборду</h3>
+                <p className="text-sm text-muted-foreground">
+                  Скачайте скрипт-мост, настройте параметры подключения и запустите
+                </p>
+              </div>
+
+              {/* Download script card */}
+              <div className="flex items-center gap-4 p-4 rounded-lg bg-teal-50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-800">
+                <div className="p-2 rounded-lg bg-teal-100 dark:bg-teal-900/40">
+                  <Download className="h-6 w-6 text-teal-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-sm">techo-bridge.py</p>
+                  <p className="text-xs text-muted-foreground">Python-скрипт для подключения T-Echo к дашборду</p>
+                </div>
+                <Button onClick={handleDownloadScript} variant="outline" size="sm" className="gap-1.5">
+                  <Download className="h-3.5 w-3.5" />
+                  Скачать
+                </Button>
+              </div>
+
+              {/* Connection method selector */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Способ подключения</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => updateConfig({ type: 'serial' })}
+                    className={`p-4 rounded-lg border-2 text-left transition-all ${
+                      config?.type !== 'mqtt'
+                        ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/20'
+                        : 'border-muted hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <Usb className={`h-5 w-5 mb-2 ${config?.type !== 'mqtt' ? 'text-teal-500' : 'text-muted-foreground'}`} />
+                    <p className="font-medium text-sm">USB / Serial</p>
+                    <p className="text-xs text-muted-foreground">T-Echo подключён к этому ПК по USB</p>
+                  </button>
+                  <button
+                    onClick={() => updateConfig({ type: 'mqtt' })}
+                    className={`p-4 rounded-lg border-2 text-left transition-all ${
+                      config?.type === 'mqtt'
+                        ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/20'
+                        : 'border-muted hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <Wifi className={`h-5 w-5 mb-2 ${config?.type === 'mqtt' ? 'text-teal-500' : 'text-muted-foreground'}`} />
+                    <p className="font-medium text-sm">MQTT</p>
+                    <p className="text-xs text-muted-foreground">Подключение через MQTT-брокер</p>
+                  </button>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Serial settings */}
+              {config?.type !== 'mqtt' && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Настройки Serial</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Порт устройства</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={config?.serialPort || '/dev/ttyUSB0'}
+                          onChange={(e) => updateConfig({ serialPort: e.target.value })}
+                          className="font-mono text-sm"
+                          placeholder="/dev/ttyUSB0"
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Linux: /dev/ttyUSB0 &middot; macOS: /dev/cu.usbmodem* &middot; Windows: COM3
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* MQTT settings */}
+              {config?.type === 'mqtt' && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Настройки MQTT</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Брокер</Label>
+                      <Input
+                        value={config?.mqttBroker || 'mqtt.meshtastic.org:1883'}
+                        onChange={(e) => updateConfig({ mqttBroker: e.target.value })}
+                        className="font-mono text-sm"
+                        placeholder="mqtt://..."
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Топик</Label>
+                      <Input
+                        value={config?.mqttTopic || 'msh/EU_433/#'}
+                        onChange={(e) => updateConfig({ mqttTopic: e.target.value })}
+                        className="font-mono text-sm"
+                        placeholder="msh/EU_433/#"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Имя пользователя</Label>
+                      <Input
+                        value={config?.mqttUsername || ''}
+                        onChange={(e) => updateConfig({ mqttUsername: e.target.value })}
+                        className="text-sm"
+                        placeholder="Необязательно"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Пароль</Label>
+                      <Input
+                        value={config?.mqttPassword || ''}
+                        onChange={(e) => updateConfig({ mqttPassword: e.target.value })}
+                        className="text-sm"
+                        type="password"
+                        placeholder="Необязательно"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Install dependencies + Run command */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Запуск</Label>
+
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">1. Установите зависимости (один раз):</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs font-mono bg-muted px-3 py-2 rounded flex-1">
+                      pip install meshtastic requests
+                    </code>
+                    <CopyButton text="pip install meshtastic requests" />
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">2. Запустите скрипт:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs font-mono bg-muted px-3 py-2 rounded flex-1 break-all">
+                      {generateRunCommand()}
+                    </code>
+                    <CopyButton text={generateRunCommand()} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <Button variant="outline" onClick={() => goToStep(1)} className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Назад
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="gap-1.5"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${saving ? 'animate-spin' : ''}`} />
+                    Сохранить
+                  </Button>
+                  <Button onClick={() => goToStep(3)} className="gap-2">
+                    Далее
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════ */}
+          {/* STEP 3: Проверка                                       */}
+          {/* ════════════════════════════════════════════════════════ */}
+          {wizardStep === 3 && (
+            <div className="space-y-5">
+              <div>
+                <h3 className="text-lg font-semibold mb-1">Проверка подключения</h3>
+                <p className="text-sm text-muted-foreground">
+                  Проверьте, что API синхронизации работает корректно
+                </p>
+              </div>
+
+              {!testSuccess ? (
+                <div className="flex flex-col items-center py-8 space-y-4">
+                  <div className="p-4 rounded-full bg-muted">
+                    <Radio className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <div className="text-center space-y-1">
+                    <p className="font-medium">Тест подключения к API</p>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      Нажмите кнопку ниже, чтобы проверить, что дашборд корректно принимает данные от устройств
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleTestSync}
+                    disabled={testing}
+                    size="lg"
+                    className="gap-2"
+                  >
+                    {testing ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Radio className="h-4 w-4" />
+                    )}
+                    {testing ? 'Проверка...' : 'Запустить тест'}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center py-8 space-y-4">
+                  <div className="p-4 rounded-full bg-green-100 dark:bg-green-900/30">
+                    <CheckCircle2 className="h-8 w-8 text-green-500" />
+                  </div>
+                  <div className="text-center space-y-1">
+                    <p className="font-medium text-green-600">Подключение работает!</p>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      API синхронизации принимает данные. Убедитесь, что устройства появились на вкладке «Статус».
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => { setTestSuccess(false); onSyncComplete?.() }}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Обновить данные
+                    </Button>
+                    <Button
+                      onClick={() => { toggleStep(3); }}
+                      variant="outline"
+                      className="gap-1.5"
+                    >
+                      <Check className="h-4 w-4" />
+                      Всё настроено
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-start pt-2">
+                <Button variant="outline" onClick={() => goToStep(2)} className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Назад
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Collapsible Reference Guide ── */}
+      <Card>
+        <button
+          onClick={() => setShowGuide(!showGuide)}
+          className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left"
+        >
+          <div className="flex items-center gap-2">
+            <HelpCircle className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium text-sm text-muted-foreground">Справочник: советы для лесного трекинга</span>
+          </div>
+          {showGuide ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+
+        {showGuide && (
+          <CardContent className="pt-0 pb-4 space-y-4">
+            {/* 433 MHz banner */}
             <Alert className="border-green-500/50 bg-green-50 dark:bg-green-950/20">
               <Radio className="h-4 w-4 text-green-600" />
-              <AlertTitle>433 МГц — отличный выбор для леса!</AlertTitle>
-              <AlertDescription className="text-green-800 dark:text-green-200">
-                Частота 433 МГц (диапазон LPD433) <strong>лучше проникает сквозь деревья и листву</strong>, чем 868 МГц.
-                На этой частоте дальность в лесу на 40–60% больше. Для России это легальный диапазон
-                (LPD-радиостанции, до 10 мВт).
+              <AlertTitle>433 МГц для леса</AlertTitle>
+              <AlertDescription className="text-green-800 dark:text-green-200 text-sm">
+                Частота 433 МГц лучше проникает сквозь деревья. Дальность в лесу на 40-60% больше, чем на 868 МГц.
               </AlertDescription>
             </Alert>
 
-            {/* Architecture overview */}
-            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-              <h4 className="font-semibold text-sm flex items-center gap-2">
-                <Settings className="h-4 w-4 text-teal-500" />
-                Архитектура сети
+            {/* Quick commands reference */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <Zap className="h-4 w-4 text-amber-500" />
+                Быстрая настройка одним блоком
               </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="flex items-start gap-2 p-2 rounded bg-background">
-                  <Cable className="h-5 w-5 text-teal-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm">Base Station</p>
-                    <Badge variant="default" className="text-[10px] mb-1">ROUTER</Badge>
-                    <p className="text-xs text-muted-foreground">Подключён к ПК по USB. Шлюз в дашборд. Не спит.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2 p-2 rounded bg-background">
-                  <Radio className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm">Repeater</p>
-                    <Badge variant="secondary" className="text-[10px] mb-1">REPEATER</Badge>
-                    <p className="text-xs text-muted-foreground">На холме/дереве. Ретранслирует между спящими. Не спит.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2 p-2 rounded bg-background">
-                  <MapPin className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm">Tracker Alpha</p>
-                    <Badge variant="destructive" className="text-[10px] mb-1">TRACKER</Badge>
-                    <p className="text-xs text-muted-foreground">В лесу. GPS + телеметрия. Спит.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2 p-2 rounded bg-background">
-                  <MapPin className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm">Tracker Bravo</p>
-                    <Badge variant="destructive" className="text-[10px] mb-1">TRACKER</Badge>
-                    <p className="text-xs text-muted-foreground">В лесу. GPS + телеметрия. Спит.</p>
-                  </div>
-                </div>
-              </div>
-              {/* Mesh & Sleep explanation */}
-              <Alert className="border-purple-300/50 bg-purple-50/50 dark:bg-purple-950/20 mt-2">
-                <AlertTriangle className="h-4 w-4 text-purple-600" />
-                <AlertTitle className="text-sm">Mesh и спящие узлы</AlertTitle>
-                <AlertDescription className="text-xs text-purple-800 dark:text-purple-200">
-                  Спящий трекер <strong>не ретранслирует</strong> чужие пакеты. Mesh-сеть работает, потому что ROUTER
-                  и REPEATER <strong>всегда бодрствуют</strong>. Для надёжной связи устанавливайте <strong>разные интервалы
-                  сна</strong> на трекерах — это увеличивает шанс, что хотя бы один бодрствует для ретрансляции.
-                </AlertDescription>
-              </Alert>
-            </div>
-
-            <Separator />
-
-            {/* ── Step 1: Flash firmware ── */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <StepIndicator step={1} title="Прошивка Meshtastic" completed={completedSteps.has(1)} active={!completedSteps.has(1)} />
-                <Button variant="ghost" size="sm" onClick={() => toggleStep(1)} className="text-xs">
-                  {completedSteps.has(1) ? 'Отменить' : 'Готово'}
-                </Button>
-              </div>
-              <div className="ml-9 space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Если на T-Echo ещё нет Meshtastic — прошейте его. Для новых устройств это обязательный шаг.
-                </p>
-                <p className="text-sm font-medium">Способ А — Через телефон (рекомендуется):</p>
-                <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1 ml-4">
-                  <li>Скачайте приложение <strong>Meshtastic</strong> (Android / iOS)</li>
-                  <li>Включите T-Echo (удерживайте кнопку питания 3 секунды)</li>
-                  <li>В приложении нажмите <strong>«+»</strong> → найдите T-Echo по Bluetooth</li>
-                  <li>Приложение предложит прошить устройство — <strong>согласитесь</strong></li>
-                  <li>Дождитесь завершения прошивки (~2 минуты)</li>
-                </ol>
-                <p className="text-sm font-medium mt-2">Способ Б — Через компьютер (USB):</p>
-                <div className="relative">
-                  <code className="block bg-muted p-2 rounded text-sm font-mono">
-                    pip install meshtastic && python -m meshtastic --flash
-                  </code>
-                  <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7"
-                    onClick={() => handleCopyCommand('pip install meshtastic && python -m meshtastic --flash')}>
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20 mt-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs">
-                    Для T-Echo нужна версия прошивки не ниже 2.3.x. Проверьте: <code className="bg-background px-1 rounded">python -m meshtastic --info</code>
-                  </AlertDescription>
-                </Alert>
+              <div className="flex items-start gap-2">
+                <code className="text-[11px] font-mono bg-muted p-3 rounded leading-relaxed flex-1 whitespace-pre-wrap">
+{`python -m meshtastic --set lora.region EU_433 \\
+  --set device.role TRACKER \\
+  --set power.ls_secs 300 \\
+  --set power.is_power_saving true \\
+  --set gps.enabled true \\
+  --set gps.update_interval 30 \\
+  --set telemetry.environment_update_interval 120 \\
+  --set telemetry.device_update_interval 120`}
+                </code>
+                <CopyButton text={`python -m meshtastic --set lora.region EU_433 --set device.role TRACKER --set power.ls_secs 300 --set power.is_power_saving true --set gps.enabled true --set gps.update_interval 30 --set telemetry.environment_update_interval 120 --set telemetry.device_update_interval 120`} />
               </div>
             </div>
 
-            <Separator />
-
-            {/* ── Step 2: Set Region to EU_433 ── */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <StepIndicator step={2} title="Установите регион EU_433" completed={completedSteps.has(2)} active={completedSteps.has(1) && !completedSteps.has(2)} />
-                <Button variant="ghost" size="sm" onClick={() => toggleStep(2)} className="text-xs">
-                  {completedSteps.has(2) ? 'Отменить' : 'Готово'}
-                </Button>
-              </div>
-              <div className="ml-9 space-y-2">
-                <Alert className="border-red-500/50 bg-red-50 dark:bg-red-950/20">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <AlertTitle>Критически важно!</AlertTitle>
-                  <AlertDescription className="text-red-800 dark:text-red-200">
-                    Все устройства должны иметь <strong>одинаковый регион</strong>. Если регион разный — устройства
-                    <strong> не увидят друг друга</strong>, даже если стоят рядом!
-                  </AlertDescription>
-                </Alert>
-                <p className="text-sm text-muted-foreground">
-                  Для 433 МГц выбирайте <strong>EU_433</strong> (LPD433). Не путайте с EU_868 или RU_868!
-                </p>
-                <p className="text-sm font-medium">Через приложение:</p>
-                <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1 ml-4">
-                  <li>Подключитесь к T-Echo по Bluetooth</li>
-                  <li>Device Settings → LoRa → Region</li>
-                  <li>Выберите <strong>EU_433</strong></li>
-                </ol>
-                <p className="text-sm font-medium mt-2">Через компьютер (USB):</p>
-                <div className="relative">
-                  <code className="block bg-muted p-2 rounded text-sm font-mono">
-                    python -m meshtastic --set lora.region EU_433
-                  </code>
-                  <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7"
-                    onClick={() => handleCopyCommand('python -m meshtastic --set lora.region EU_433')}>
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
+            {/* Tips grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
+                <Antenna className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground mb-0.5">Модем LongModerate</p>
+                  <p>~10 км на открытой, ~3-5 км в лесу. Для густого леса — VeryLongFast.</p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  ⚠️ Повторите на КАЖДОМ устройстве! Сначала на Base Station, потом на трекерах.
-                </p>
               </div>
-            </div>
-
-            <Separator />
-
-            {/* ── Step 3: Create Private Channel ── */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <StepIndicator step={3} title="Создайте приватный канал" completed={completedSteps.has(3)} active={completedSteps.has(2) && !completedSteps.has(3)} />
-                <Button variant="ghost" size="sm" onClick={() => toggleStep(3)} className="text-xs">
-                  {completedSteps.has(3) ? 'Отменить' : 'Готово'}
-                </Button>
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
+                <TreePine className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground mb-0.5">Антенна вертикально</p>
+                  <p>Не кладите на землю. Чем выше — тем лучше. Привяжите к рюкзаку или дереву.</p>
+                </div>
               </div>
-              <div className="ml-9 space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Приватный канал с общим ключом (PSK) объединяет устройства в одну сеть. Без него все видят
-                  только «общий» канал с помехами.
-                </p>
-
-                <p className="text-sm font-medium">На первом устройстве (Base Station):</p>
-                <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1.5 ml-4">
-                  <li>В приложении Meshtastic → <strong>Channel Settings</strong></li>
-                  <li>Нажмите <strong>«+ New channel»</strong></li>
-                  <li>Тип: <strong>Private / Encrypted</strong></li>
-                  <li>Название: <code className="bg-muted px-1 rounded">forest-track</code></li>
-                  <li>Модем: <strong>LongModerate</strong> (рекомендуется для смешанного леса)</li>
-                  <li>Нажмите <strong>Share → QR Code</strong></li>
-                </ol>
-
-                <p className="text-sm font-medium mt-3">На трекерах Alpha и Bravo:</p>
-                <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1.5 ml-4">
-                  <li>Подключитесь к трекеру по Bluetooth</li>
-                  <li>Нажмите <strong>Scan QR</strong></li>
-                  <li>Отсканируйте QR-код с Base Station</li>
-                  <li>Канал, PSK и настройки применятся автоматически</li>
-                </ol>
-
-                <p className="text-sm font-medium mt-3">Или через компьютер (USB) на Base Station:</p>
-                <div className="relative">
-                  <code className="block bg-muted p-2 rounded text-xs font-mono break-all">
-                    python -m meshtastic --ch-add forest-track --ch-set psk --ch-set modem_preset LongModerate
-                  </code>
-                  <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7"
-                    onClick={() => handleCopyCommand('python -m meshtastic --ch-add forest-track --ch-set psk --ch-set modem_preset LongModerate')}>
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
+                <BatteryCharging className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground mb-0.5">Автономность</p>
+                  <p>TRACKER + power_saving: ~3-5 дней при GPS каждые 30 сек. Увеличьте интервал до 60 сек для дольше.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
+                <MapPin className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground mb-0.5">GPS в лесу</p>
+                  <p>Точность 10-30 м (вместо 3-5 м на открытом). Холодный старт 2-5 мин. Синий LED = фиксация.</p>
                 </div>
               </div>
             </div>
 
-            <Separator />
+            {/* Mesh & sleep explanation */}
+            <Alert className="border-purple-300/50 bg-purple-50/50 dark:bg-purple-950/20">
+              <AlertTriangle className="h-4 w-4 text-purple-600" />
+              <AlertTitle className="text-sm">Mesh и спящие узлы</AlertTitle>
+              <AlertDescription className="text-xs text-purple-800 dark:text-purple-200">
+                Спящий трекер <strong>не ретранслирует</strong> пакеты. ROUTER и REPEATER всегда бодрствуют.
+                Устанавливайте <strong>разные интервалы сна</strong> на трекерах — выше шанс, что хотя бы один
+                бодрствует для ретрансляции.
+              </AlertDescription>
+            </Alert>
 
-            {/* ── Step 4: Set Roles ── */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <StepIndicator step={4} title="Настройте роли устройств" completed={completedSteps.has(4)} active={completedSteps.has(3) && !completedSteps.has(4)} />
-                <Button variant="ghost" size="sm" onClick={() => toggleStep(4)} className="text-xs">
-                  {completedSteps.has(4) ? 'Отменить' : 'Готово'}
-                </Button>
-              </div>
-              <div className="ml-9 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <Card className="bg-muted/50 border-teal-200 dark:border-teal-800">
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Cable className="h-4 w-4 text-teal-500" />
-                      <span className="font-medium text-sm">Base Station</span>
-                    </div>
-                    <Badge variant="default" className="text-xs mb-1">ROUTER</Badge>
-                    <p className="text-xs text-muted-foreground">Подключён к ПК по USB. Ретранслирует пакеты. Не спит — всегда на связи.</p>
-                    <div className="relative mt-2">
-                      <code className="block bg-background p-1.5 rounded text-xs font-mono">
-                        python -m meshtastic --set device.role ROUTER
-                      </code>
-                      <Button variant="ghost" size="icon" className="absolute top-0.5 right-0.5 h-6 w-6"
-                        onClick={() => handleCopyCommand('python -m meshtastic --set device.role ROUTER')}>
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-amber-50/30 dark:bg-amber-950/10 border-amber-200 dark:border-amber-800">
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Radio className="h-4 w-4 text-amber-500" />
-                      <span className="font-medium text-sm">Repeater</span>
-                    </div>
-                    <Badge variant="secondary" className="text-xs mb-1">REPEATER</Badge>
-                    <p className="text-xs text-muted-foreground">На возвышенности. Только ретрансляция — заполняет пробелы в mesh. Не спит, нужен стационар.</p>
-                    <div className="relative mt-2">
-                      <code className="block bg-background p-1.5 rounded text-xs font-mono">
-                        python -m meshtastic --set device.role REPEATER
-                      </code>
-                      <Button variant="ghost" size="icon" className="absolute top-0.5 right-0.5 h-6 w-6"
-                        onClick={() => handleCopyCommand('python -m meshtastic --set device.role REPEATER')}>
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <MapPin className="h-4 w-4 text-green-500" />
-                      <span className="font-medium text-sm">Tracker Alpha</span>
-                    </div>
-                    <Badge variant="destructive" className="text-xs mb-1">TRACKER</Badge>
-                    <p className="text-xs text-muted-foreground">Спит 5 мин, бодрствует 10 сек. Шлёт GPS + телеметрию.</p>
-                    <div className="relative mt-2">
-                      <code className="block bg-background p-1.5 rounded text-[10px] font-mono leading-relaxed">
-                        python -m meshtastic --set device.role TRACKER --set power.ls_secs 300
-                      </code>
-                      <Button variant="ghost" size="icon" className="absolute top-0.5 right-0.5 h-6 w-6"
-                        onClick={() => handleCopyCommand('python -m meshtastic --set device.role TRACKER --set power.ls_secs 300')}>
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <MapPin className="h-4 w-4 text-green-500" />
-                      <span className="font-medium text-sm">Tracker Bravo</span>
-                    </div>
-                    <Badge variant="destructive" className="text-xs mb-1">TRACKER</Badge>
-                    <p className="text-xs text-muted-foreground">Спит 45 мин, бодрствует 10 сек. Другой интервал = лучше mesh.</p>
-                    <div className="relative mt-2">
-                      <code className="block bg-background p-1.5 rounded text-[10px] font-mono leading-relaxed">
-                        python -m meshtastic --set device.role TRACKER --set power.ls_secs 2700
-                      </code>
-                      <Button variant="ghost" size="icon" className="absolute top-0.5 right-0.5 h-6 w-6"
-                        onClick={() => handleCopyCommand('python -m meshtastic --set device.role TRACKER --set power.ls_secs 2700')}>
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              <div className="ml-9">
-                <p className="text-xs text-muted-foreground">
-                  Или через приложение: Device Settings → Device Role → ROUTER / REPEATER / TRACKER
-                </p>
-                <Alert className="border-amber-300/50 bg-amber-50/50 dark:bg-amber-950/20 mt-2">
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                  <AlertDescription className="text-[10px] text-amber-800 dark:text-amber-200">
-                    <strong>Разные интервалы сна</strong> на трекерах — ключ к надёжной mesh-связи!
-                    Если Tracker Alpha спит 5 мин, а Bravo — 45 мин, выше шанс, что хотя бы один
-                    бодрствует, когда другой передаёт данные.
-                  </AlertDescription>
-                </Alert>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* ── Step 5: GPS Settings for Forest ── */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <StepIndicator step={5} title="Настройте GPS на трекерах" completed={completedSteps.has(5)} active={completedSteps.has(4) && !completedSteps.has(5)} />
-                <Button variant="ghost" size="sm" onClick={() => toggleStep(5)} className="text-xs">
-                  {completedSteps.has(5) ? 'Отменить' : 'Готово'}
-                </Button>
-              </div>
-              <div className="ml-9 space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  T-Echo имеет встроенный GPS-модуль. В лесу GPS работает хуже из-за кроны деревьев.
-                  Настройте частоту обновления:
-                </p>
-                <div className="relative">
-                  <code className="block bg-muted p-2 rounded text-sm font-mono">
-                    python -m meshtastic --set gps.enabled true --set gps.update_interval 30
-                  </code>
-                  <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7"
-                    onClick={() => handleCopyCommand('python -m meshtastic --set gps.enabled true --set gps.update_interval 30')}>
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <ul className="text-sm text-muted-foreground list-disc list-inside ml-4 space-y-1">
-                  <li><strong>update_interval: 30</strong> — обновлять GPS каждые 30 сек (баланс батареи/точности)</li>
-                  <li>В густом лесу «холодный старт» GPS может занять 2–5 минут</li>
-                  <li>На открытых полянах позиция восстановится за 10–30 сек</li>
-                  <li>Синий светодиод на T-Echo = GPS фиксирует позицию</li>
-                  <li>Если GPS потерян — T-Echo отправит последнюю известную позицию</li>
-                </ul>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* ── Step 6: Optimize for Forest ── */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <StepIndicator step={6} title="Оптимизируйте настройки для леса" completed={completedSteps.has(6)} active={completedSteps.has(5) && !completedSteps.has(6)} />
-                <Button variant="ghost" size="sm" onClick={() => toggleStep(6)} className="text-xs">
-                  {completedSteps.has(6) ? 'Отменить' : 'Готово'}
-                </Button>
-              </div>
-              <div className="ml-9 space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Дополнительные настройки для улучшения работы в лесу на 433 МГц:
-                </p>
-                <div className="relative">
-                  <code className="block bg-muted p-2 rounded text-xs font-mono break-all">
-                    python -m meshtastic --set telemetry.environment_update_interval 120 --set telemetry.device_update_interval 120 --set power.is_power_saving true
-                  </code>
-                  <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7"
-                    onClick={() => handleCopyCommand('python -m meshtastic --set telemetry.environment_update_interval 120 --set telemetry.device_update_interval 120 --set power.is_power_saving true')}>
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <ul className="text-sm text-muted-foreground list-disc list-inside ml-4 space-y-1">
-                  <li><strong>environment_update_interval: 120</strong> — телеметрия (температура, влажность) каждые 2 мин</li>
-                  <li><strong>device_update_interval: 120</strong> — данные устройства (батарея, напряжение) каждые 2 мин</li>
-                  <li><strong>is_power_saving: true</strong> — режим экономии энергии (спит между передачами)</li>
-                </ul>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* ── Step 7: Connect Base Station to Dashboard ── */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <StepIndicator step={7} title="Подключите Base Station к дашборду" completed={completedSteps.has(7)} active={completedSteps.has(6) && !completedSteps.has(7)} />
-                <Button variant="ghost" size="sm" onClick={() => toggleStep(7)} className="text-xs">
-                  {completedSteps.has(7) ? 'Отменить' : 'Готово'}
-                </Button>
-              </div>
-              <div className="ml-9 space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Подключите Base Station к ПК по USB и запустите скрипт-мост:
-                </p>
-                <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1 ml-4">
-                  <li>Подключите T-Echo (Base Station) к компьютеру по USB</li>
-                  <li>Проверьте, что устройство определилось:</li>
-                </ol>
-                <div className="relative ml-8">
-                  <code className="block bg-muted p-2 rounded text-sm font-mono">
-                    python -m meshtastic --info
-                  </code>
-                  <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7"
-                    onClick={() => handleCopyCommand('python -m meshtastic --info')}>
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground ml-8">3. Установите зависимости и запустите скрипт:</p>
-                <div className="relative ml-8">
-                  <code className="block bg-muted p-2 rounded text-sm font-mono break-all">
-                    pip install meshtastic requests && python techo-bridge.py --mode serial --port /dev/ttyUSB0 --dashboard http://localhost:3000
-                  </code>
-                  <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7"
-                    onClick={() => handleCopyCommand('pip install meshtastic requests && python techo-bridge.py --mode serial --port /dev/ttyUSB0 --dashboard http://localhost:3000')}>
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground ml-8">
-                  Linux: <code>/dev/ttyUSB0</code> · macOS: <code>/dev/cu.usbmodem*</code> · Windows: <code>COM3</code>
-                </p>
-                <p className="text-sm text-muted-foreground ml-8 mt-2">
-                  4. Скрипт автоматически обнаружит все 3 устройства в mesh-сети и начнёт передавать данные в дашборд.
-                </p>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* ── Step 8: Verify ── */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <StepIndicator step={8} title="Проверьте работу" completed={completedSteps.has(8)} active={completedSteps.has(7) && !completedSteps.has(8)} />
-                <Button variant="ghost" size="sm" onClick={() => toggleStep(8)} className="text-xs">
-                  {completedSteps.has(8) ? 'Отменить' : 'Готово'}
-                </Button>
-              </div>
-              <div className="ml-9 space-y-2">
-                <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1 ml-4">
-                  <li>Откройте вкладку <strong>«Статус»</strong> — все 3 устройства должны появиться</li>
-                  <li>Откройте вкладку <strong>«Карта»</strong> — позиции трекеров на карте</li>
-                  <li>Убедитесь, что SNR &gt; 0 и RSSI &gt; -120 дБм (хороший сигнал)</li>
-                  <li>Выйдите с трекером на улицу и проверьте обновление позиции</li>
-                </ol>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* ── Forest-specific tips for 433 MHz ── */}
-            <div className="space-y-3">
-              <h4 className="font-semibold text-sm flex items-center gap-2">
-                <Antenna className="h-4 w-4 text-amber-500" />
-                Советы для лесного трекинга на 433 МГц
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 ml-4">
-                <Card className="bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                  <CardContent className="p-3">
-                    <h5 className="font-medium text-sm mb-1 flex items-center gap-1.5">
-                      <Antenna className="h-3.5 w-3.5 text-amber-600" />
-                      Модем LongModerate
-                    </h5>
-                    <p className="text-xs text-muted-foreground">
-                      Для смешанного леса оптимальный пресет — <strong>LongModerate</strong>. Дальность на 433 МГц: ~10 км
-                      на открытой местности, ~3–5 км в густом лесу. Если лес очень густой — попробуйте VeryLongFast.
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                  <CardContent className="p-3">
-                    <h5 className="font-medium text-sm mb-1 flex items-center gap-1.5">
-                      <TreePine className="h-3.5 w-3.5 text-amber-600" />
-                      Позиция антенны
-                    </h5>
-                    <p className="text-xs text-muted-foreground">
-                      Держите T-Echo <strong>вертикально</strong> (антенной вверх). Не кладите на землю.
-                      Чем выше антенна — тем лучше сигнал. Привяжите к рюкзаку или дереву.
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                  <CardContent className="p-3">
-                    <h5 className="font-medium text-sm mb-1 flex items-center gap-1.5">
-                      <BatteryCharging className="h-3.5 w-3.5 text-amber-600" />
-                      Автономность
-                    </h5>
-                    <p className="text-xs text-muted-foreground">
-                      Роль TRACKER + power_saving: батарея T-Echo (~1000 мАч) держится <strong>3–5 дней</strong> при
-                      GPS-обновлении каждые 30 сек. Для ещё большей автономности увеличьте интервал до 60 сек.
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                  <CardContent className="p-3">
-                    <h5 className="font-medium text-sm mb-1 flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-amber-600" />
-                      GPS в лесу
-                    </h5>
-                    <p className="text-xs text-muted-foreground">
-                      Точность GPS в лесу: 10–30 м вместо 3–5 м на открытом небе.
-                      Хвойный лес хуже для GPS, чем лиственный. После выхода на поляну точность восстановится за 10–30 сек.
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
-                  <CardContent className="p-3">
-                    <h5 className="font-medium text-sm mb-1 flex items-center gap-1.5">
-                      <Radio className="h-3.5 w-3.5 text-green-600" />
-                      Преимущество 433 МГц
-                    </h5>
-                    <p className="text-xs text-muted-foreground">
-                      433 МГц лучше проникает сквозь деревья, чем 868 МГц. Дальность в лесу на 40–60% больше.
-                      Диапазон LPD433 легален в России (до 10 мВт мощность).
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                  <CardContent className="p-3">
-                    <h5 className="font-medium text-sm mb-1 flex items-center gap-1.5">
-                      <Zap className="h-3.5 w-3.5 text-amber-600" />
-                      Помехи
-                    </h5>
-                    <p className="text-xs text-muted-foreground">
-                      433 МГц — популярный диапазон (дверные звонки, метеостанции). Если много помех —
-                      смените канал на приватный с уникальным PSK. Модем LongModerate устойчивее к помехам.
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* ── Quick reference command card ── */}
-            <Card className="border-teal-300 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20">
-              <CardContent className="p-4">
-                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-teal-600" />
-                  Быстрая настройка нового T-Echo (все команды)
-                </h4>
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground font-medium">Подключите T-Echo по USB и выполните:</p>
-                  <div className="relative">
-                    <code className="block bg-background p-3 rounded text-xs font-mono leading-relaxed whitespace-pre">
-{`# 1. Регион 433 МГц
+            {/* All commands copy-paste */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Все команды одной копией</h4>
+              <div className="flex items-start gap-2">
+                <code className="text-[11px] font-mono bg-muted p-3 rounded leading-relaxed flex-1 whitespace-pre-wrap max-h-48 overflow-y-auto">
+{`# 1. Установить регион
 python -m meshtastic --set lora.region EU_433
 
-# 2. Роль TRACKER (для лесных трекеров)
-python -m meshtastic --set device.role TRACKER
+# 2. Настроить роли
+python -m meshtastic --set device.role ROUTER      # Base Station
+python -m meshtastic --set device.role REPEATER     # Ретранслятор
+python -m meshtastic --set device.role TRACKER --set power.ls_secs 300   # Трекер 5 мин
+python -m meshtastic --set device.role TRACKER --set power.ls_secs 2700  # Трекер 45 мин
 
-# 3. GPS включён, обновление каждые 30 сек
+# 3. Настроить GPS и телеметрию
 python -m meshtastic --set gps.enabled true --set gps.update_interval 30
+python -m meshtastic --set telemetry.environment_update_interval 120
+python -m meshtastic --set telemetry.device_update_interval 120
+python -m meshtastic --set power.is_power_saving true
 
-# 4. Экономия батареи + интервал сна
-python -m meshtastic --set power.is_power_saving true \\
-  --set power.ls_secs 300 --set power.min_wake_secs 10
-
-# 5. Телеметрия каждые 2 мин
-python -m meshtastic --set telemetry.environment_update_interval 120 \\
-  --set telemetry.device_update_interval 120
-
-# ═══ Для REPEATER (на холме/дереве) ═══
-# python -m meshtastic --set device.role REPEATER
-# ═══ Для ROUTER (Base Station) ═══
-# python -m meshtastic --set device.role ROUTER`}
-                    </code>
-                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7"
-                      onClick={() => handleCopyCommand(`python -m meshtastic --set lora.region EU_433\npython -m meshtastic --set device.role TRACKER\npython -m meshtastic --set gps.enabled true --set gps.update_interval 30\npython -m meshtastic --set power.is_power_saving true\npython -m meshtastic --set telemetry.environment_update_interval 120 --set telemetry.device_update_interval 120`)}>
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Для <strong>ROUTER</strong>: замените TRACKER на ROUTER и уберите power_saving.<br/>
-                    Для <strong>REPEATER</strong>: замените TRACKER на REPEATER, уберите power_saving и GPS.<br/>
-                    <strong>Разные ls_secs</strong> на трекерах = надёжнее mesh!
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </CardContent>
-        )}
-      </Card>
-
-      {/* ── Two Methods ── */}
-      <Tabs defaultValue="serial">
-        <TabsList className="w-full">
-          <TabsTrigger value="serial" className="flex-1 gap-1.5">
-            <Cable className="h-4 w-4" />
-            USB / Serial
-          </TabsTrigger>
-          <TabsTrigger value="mqtt" className="flex-1 gap-1.5">
-            <Wifi className="h-4 w-4" />
-            MQTT
-          </TabsTrigger>
-        </TabsList>
-
-        {/* ── Serial Method ── */}
-        <TabsContent value="serial" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Usb className="h-5 w-5 text-teal-500" />
-                  Подключение через USB
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowSerialGuide(!showSerialGuide)}
-                  className="gap-1"
-                >
-                  {showSerialGuide ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  Инструкция
-                </Button>
-              </div>
-              <CardDescription>
-                Подключите T-Echo к компьютеру по USB и запустите скрипт-мост
-              </CardDescription>
-            </CardHeader>
-
-            {showSerialGuide && (
-              <CardContent className="space-y-4 border-t pt-4">
-                <Alert className="border-teal-500/50 bg-teal-50 dark:bg-teal-950/20">
-                  <MonitorSmartphone className="h-4 w-4 text-teal-600" />
-                  <AlertTitle>Как это работает</AlertTitle>
-                  <AlertDescription className="text-teal-800 dark:text-teal-200">
-                    Python-скрипт подключается к T-Echo через USB, считывает данные всех узлов в mesh-сети
-                    и отправляет их в дашборд. Одно устройство выступает шлюзом для всей сети.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm">Шаг 1: Установите Python-зависимости</h4>
-                  <div className="relative">
-                    <code className="block bg-muted p-3 rounded-md text-sm font-mono">
-                      pip install meshtastic requests
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 h-7 w-7"
-                      onClick={() => handleCopyCommand('pip install meshtastic requests')}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm">Шаг 2: Подключите T-Echo по USB</h4>
-                  <div className="relative">
-                    <code className="block bg-muted p-3 rounded-md text-sm font-mono">
-                      python -m meshtastic --info
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 h-7 w-7"
-                      onClick={() => handleCopyCommand('python -m meshtastic --info')}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm">Шаг 3: Скачайте и запустите скрипт</h4>
-                  <Button onClick={handleDownloadScript} className="gap-1.5 mb-2">
-                    <Download className="h-4 w-4" />
-                    Скачать techo-bridge.py
-                  </Button>
-                  <div className="relative">
-                    <code className="block bg-muted p-3 rounded-md text-sm font-mono break-all">
-                      python techo-bridge.py --mode serial --port /dev/ttyUSB0 --dashboard http://localhost:3000
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 h-7 w-7"
-                      onClick={() => handleCopyCommand('python techo-bridge.py --mode serial --port /dev/ttyUSB0 --dashboard http://localhost:3000')}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
-          {/* Serial Config */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Настройки Serial</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="serial-port">Serial порт</Label>
-                  <Input
-                    id="serial-port"
-                    placeholder="/dev/ttyUSB0"
-                    value={config?.serialPort || ''}
-                    onChange={(e) => updateConfig({ serialPort: e.target.value, type: 'serial' })}
-                    className="font-mono"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Linux: /dev/ttyUSB0 · macOS: /dev/cu.usbmodem · Windows: COM3
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Интервал опроса</Label>
-                  <Input
-                    value="30 сек"
-                    disabled
-                    className="bg-muted"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Настраивается в скрипте: --interval 30
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Label>Включить подключение</Label>
-                  {config?.isEnabled && config.type === 'serial' && (
-                    <Badge variant="default" className="bg-green-500 text-xs">Активно</Badge>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  Сохранить
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ── MQTT Method ── */}
-        <TabsContent value="mqtt" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Wifi className="h-5 w-5 text-teal-500" />
-                  Подключение через MQTT
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowMqttGuide(!showMqttGuide)}
-                  className="gap-1"
-                >
-                  {showMqttGuide ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  Инструкция
-                </Button>
-              </div>
-              <CardDescription>
-                Используйте MQTT-брокер для получения данных через WiFi
-              </CardDescription>
-            </CardHeader>
-
-            {showMqttGuide && (
-              <CardContent className="space-y-4 border-t pt-4">
-                <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <AlertTitle>Требование</AlertTitle>
-                  <AlertDescription className="text-amber-800 dark:text-amber-200">
-                    Для MQTT хотя бы одно устройство должно быть подключено к WiFi и настроено на MQTT-брокер.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm">Шаг 1: Настройте T-Echo для MQTT</h4>
-                  <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1 ml-2">
-                    <li>Подключитесь к T-Echo по Bluetooth</li>
-                    <li>Module Settings → MQTT → Включите MQTT</li>
-                    <li>Адрес брокера: <code className="bg-muted px-1 rounded">mqtt.meshtastic.org</code></li>
-                    <li>Включите MQTT encryption</li>
-                  </ol>
-                </div>
-
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm">Шаг 2: Запустите MQTT-мост</h4>
-                  <div className="relative">
-                    <code className="block bg-muted p-3 rounded-md text-sm font-mono break-all">
-                      python techo-bridge.py --mode mqtt --broker mqtt://mqtt.meshtastic.org:1883 --dashboard http://localhost:3000
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 h-7 w-7"
-                      onClick={() => handleCopyCommand('python techo-bridge.py --mode mqtt --broker mqtt://mqtt.meshtastic.org:1883 --dashboard http://localhost:3000')}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
-          {/* MQTT Config */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Настройки MQTT</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="mqtt-broker">MQTT брокер</Label>
-                <Input
-                  id="mqtt-broker"
-                  placeholder="mqtt.meshtastic.org:1883"
-                  value={config?.mqttBroker || ''}
-                  onChange={(e) => updateConfig({ mqttBroker: e.target.value, type: 'mqtt' })}
-                  className="font-mono"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mqtt-topic">MQTT топик</Label>
-                <Input
-                  id="mqtt-topic"
-                  placeholder="msh/EU_433/#"
-                  value={config?.mqttTopic || ''}
-                  onChange={(e) => updateConfig({ mqttTopic: e.target.value })}
-                  className="font-mono"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Для 433 МГц используйте <code className="bg-muted px-1 rounded">msh/EU_433/#</code>
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="mqtt-user">Имя пользователя (опционально)</Label>
-                  <Input
-                    id="mqtt-user"
-                    placeholder="username"
-                    value={config?.mqttUsername || ''}
-                    onChange={(e) => updateConfig({ mqttUsername: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mqtt-pass">Пароль (опционально)</Label>
-                  <Input
-                    id="mqtt-pass"
-                    type="password"
-                    placeholder="password"
-                    value={config?.mqttPassword || ''}
-                    onChange={(e) => updateConfig({ mqttPassword: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Label>Включить подключение</Label>
-                  {config?.isEnabled && config.type === 'mqtt' && (
-                    <Badge variant="default" className="bg-green-500 text-xs">Активно</Badge>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  Сохранить
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* ── Download Script Card ── */}
-      <Card className="border-teal-300 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-teal-500/10">
-                <Download className="h-5 w-5 text-teal-600" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">Скрипт-мост techo-bridge.py</p>
-                <p className="text-xs text-muted-foreground">
-                  Python-скрипт для связи T-Echo с дашбордом по USB или MQTT
-                </p>
+# 4. Проверить настройки
+python -m meshtastic --info`}
+                </code>
+                <CopyButton text={`# 1. Установить регион\npython -m meshtastic --set lora.region EU_433\n\n# 2. Настроить роли\npython -m meshtastic --set device.role ROUTER\npython -m meshtastic --set device.role REPEATER\npython -m meshtastic --set device.role TRACKER --set power.ls_secs 300\npython -m meshtastic --set device.role TRACKER --set power.ls_secs 2700\n\n# 3. Настроить GPS и телеметрию\npython -m meshtastic --set gps.enabled true --set gps.update_interval 30\npython -m meshtastic --set telemetry.environment_update_interval 120\npython -m meshtastic --set telemetry.device_update_interval 120\npython -m meshtastic --set power.is_power_saving true\n\n# 4. Проверить настройки\npython -m meshtastic --info`} />
               </div>
             </div>
-            <Button onClick={handleDownloadScript} variant="outline" className="gap-1.5">
-              <Download className="h-4 w-4" />
-              Скачать скрипт
-            </Button>
-          </div>
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
     </div>
   )
