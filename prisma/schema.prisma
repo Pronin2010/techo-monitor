@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Node {
+  id            String    @id @default(cuid())
+  nodeId        Int       @unique
+  name          String
+  shortName     String
+  hardwareModel String    @default("T-Echo")
+  role          String    @default("CLIENT")
+  status        String    @default("online") // online, offline, unknown
+  batteryLevel  Int       @default(100)
+  voltage       Float     @default(3.7)
+  snr           Float     @default(0.0)
+  rssi          Int       @default(0)
+  latitude      Float?
+  longitude     Float?
+  altitude      Float?
+  lsSecs        Int?      // Light sleep interval in seconds (for TRACKER/CLIENT roles)
+  minWakeSecs   Int?      @default(10) // Minimum awake time in seconds before sleeping
+  lastSeen      DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  telemetry     Telemetry[]
+}
+
+model Channel {
+  id          String  @id @default(cuid())
+  index       Int     @default(0)
+  name        String
+  psk         String
+  uplink      Boolean @default(true)
+  downlink    Boolean @default(true)
+  modemPreset String  @default("LongFast")
+  region      String  @default("EU_433")
+  isDefault   Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Telemetry {
+  id          String   @id @default(cuid())
+  nodeId      String
+  batteryLevel Int
+  voltage     Float
+  snr         Float
+  rssi        Int
+  temperature Float?
+  humidity    Float?
+  createdAt   DateTime @default(now())
+
+  node        Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+}
+
+model ConnectionConfig {
+  id          String   @id @default(cuid())
+  type        String   @default("serial") // serial, mqtt, disabled
+  serialPort  String   @default("")
+  mqttBroker  String   @default("")
+  mqttTopic   String   @default("msh/EU_433/#")
+  mqttUsername String  @default("")
+  mqttPassword String  @default("")
+  isEnabled   Boolean  @default(false)
+  lastSync    DateTime?
+  status      String   @default("disconnected") // connected, disconnected, error
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
