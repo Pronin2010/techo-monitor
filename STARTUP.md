@@ -21,9 +21,10 @@ curl -fsSL https://bun.sh/install | bash
 > Альтернатива: можно использовать **Node.js 20+** вместо Bun.
 > Скачайте с https://nodejs.org → кнопка «LTS»
 
-### 2. Распакуйте архив
+### 2. Клонируйте репозиторий
 
-Распакуйте `techo-monitor.zip` в любую папку.
+git clone https://github.com/Pronin2010/techo-monitor.git
+cd techo-monitor
 
 ### 3. Откройте терминал в папке проекта
 

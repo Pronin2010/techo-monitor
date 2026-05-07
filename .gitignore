@@ -57,4 +57,4 @@ server.log
 *.db 
 *.db-journal 
  
-# Database files  *.db  *.db-journal  !.env.example 
+!.env.example 
