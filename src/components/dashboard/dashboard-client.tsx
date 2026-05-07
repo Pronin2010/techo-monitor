@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { MeshNode, Channel } from '@/lib/types'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { toast } from '@/hooks/use-toast'
 import NodeStatusCard from '@/components/dashboard/node-status-card'
@@ -17,20 +18,14 @@ import {
   Radio,
   Map,
   Settings,
-  Wifi,
-  WifiOff,
-  Battery,
-  Signal,
   RefreshCw,
   Download,
   Activity,
-  Plus,
-  Users,
-  Cable,
+  Search,
 } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
-// Data fetching helpers (still used for client-side refresh / mutations)
+// Data fetching helpers
 // ---------------------------------------------------------------------------
 
 async function fetchNodes(): Promise<MeshNode[]> {
@@ -51,78 +46,6 @@ async function seedDatabase(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Network Stats Overview
-// ---------------------------------------------------------------------------
-
-function NetworkStats({ nodes }: { nodes: MeshNode[] }) {
-  const onlineCount = nodes.filter(n => n.status === 'online').length
-  const offlineCount = nodes.filter(n => n.status === 'offline').length
-  const avgBattery = nodes.length > 0
-    ? Math.round(nodes.reduce((acc, n) => acc + n.batteryLevel, 0) / nodes.length)
-    : 0
-  const avgSnr = nodes.length > 0
-    ? (nodes.reduce((acc, n) => acc + n.snr, 0) / nodes.length).toFixed(1)
-    : '0.0'
-
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-500/10">
-              <Wifi className="h-4 w-4 text-green-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{onlineCount}</p>
-              <p className="text-xs text-muted-foreground">В сети</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-red-500/10">
-              <WifiOff className="h-4 w-4 text-red-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{offlineCount}</p>
-              <p className="text-xs text-muted-foreground">Не в сети</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-yellow-500/10">
-              <Battery className="h-4 w-4 text-yellow-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{avgBattery}%</p>
-              <p className="text-xs text-muted-foreground">Ср. батарея</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-teal-500/10">
-              <Signal className="h-4 w-4 text-teal-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{avgSnr}</p>
-              <p className="text-xs text-muted-foreground">Ср. SNR (дБ)</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
@@ -140,18 +63,26 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
   const [channels, setChannels] = useState<Channel[]>(initialChannels)
   const [activeTab, setActiveTab] = useState('status')
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [addNodeOpen, setAddNodeOpen] = useState(false)
   const [editNodeOpen, setEditNodeOpen] = useState(false)
   const [editingNode, setEditingNode] = useState<MeshNode | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Track consecutive errors for backoff
   const errorCountRef = useRef(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const loadData = useCallback(async (showLoadingSpinner = false) => {
-    if (showLoadingSpinner) {
-      // We don't have a separate isLoading state anymore — data is already present
-    }
+  // Filter nodes by search query
+  const filteredNodes = searchQuery.trim()
+    ? nodes.filter(n => {
+        const q = searchQuery.toLowerCase()
+        return (
+          n.name.toLowerCase().includes(q) ||
+          n.shortName.toLowerCase().includes(q)
+        )
+      })
+    : nodes
+
+  const loadData = useCallback(async () => {
     try {
       const [nodesData, channelsData] = await Promise.allSettled([
         fetchNodes(),
@@ -211,20 +142,6 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
   }
 
   // ── Node CRUD handlers ──
-
-  const handleCreateNode = async (data: Record<string, unknown>) => {
-    const res = await fetch('/api/nodes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    })
-    if (!res.ok) throw new Error('Failed to create node')
-    await loadData()
-    toast({
-      title: 'Узел добавлен',
-      description: `Устройство «${data.name}» добавлено в сеть`,
-    })
-  }
 
   const handleUpdateNode = async (data: Record<string, unknown>) => {
     if (!editingNode) return
@@ -292,7 +209,6 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
 
   useEffect(() => {
     const startPolling = () => {
-      // Exponential backoff: 30s → 60s → 120s → 120s (max)
       const baseInterval = 30000
       const backoff = Math.min(baseInterval * Math.pow(2, errorCountRef.current), 120000)
       const interval = errorCountRef.current === 0 ? baseInterval : backoff
@@ -303,7 +219,6 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
       }, interval)
     }
 
-    // Initial auto-refresh
     startPolling()
 
     return () => {
@@ -311,16 +226,13 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
     }
   }, [loadData])
 
-  // Sync with server-fetched data when initial props change (hot reload / navigation)
+  // Sync with server-fetched data when initial props change
   useEffect(() => {
     setNodes(initialNodes)
     setChannels(initialChannels)
   }, [initialNodes, initialChannels])
 
-  const hasData = nodes.length > 0 || channels.length > 0
-  const nextNodeId = nodes.length > 0
-    ? Math.max(...nodes.map((n) => n.nodeId)) + 1
-    : 1001
+  const hasData = nodes.length > 0
 
   return (
     <TooltipProvider>
@@ -370,11 +282,6 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
 
         {/* ── Main Content ── */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Network Stats Overview */}
-          <div className="mb-6">
-            <NetworkStats nodes={nodes} />
-          </div>
-
           {/* Tabbed Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
@@ -396,7 +303,7 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
                 Каналы
               </TabsTrigger>
               <TabsTrigger value="connection" className="gap-1.5">
-                <Cable className="h-4 w-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a1 1 0 0 1-1-1v-1a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1"></path><path d="M19 15V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V9"></path><path d="M21 21v-2h-4"></path><path d="M3 5h4V3"></path><path d="M7 5a1 1 0 0 1 1 1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1V3"></path></svg>
                 Подключение
               </TabsTrigger>
             </TabsList>
@@ -409,50 +316,54 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
                     <Radio className="h-16 w-16 text-muted-foreground/30 mb-4" />
                     <h3 className="text-lg font-medium mb-2">Нет устройств</h3>
                     <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-                      Устройства T-Echo не найдены. Добавьте устройство вручную или
-                      загрузите демо-данные для просмотра интерфейса.
+                      Устройства T-Echo не найдены. Загрузите демо-данные для
+                      просмотра интерфейса или подключитесь к сети через вкладку «Подключение».
                     </p>
-                    <div className="flex items-center gap-3">
-                      <Button onClick={() => setAddNodeOpen(true)} className="gap-1.5">
-                        <Plus className="h-4 w-4" />
-                        Добавить узел
-                      </Button>
-                      <Button onClick={handleSeed} variant="outline" className="gap-1.5">
-                        <Download className="h-4 w-4" />
-                        Демо-данные
-                      </Button>
-                    </div>
+                    <Button onClick={handleSeed} variant="outline" className="gap-1.5">
+                      <Download className="h-4 w-4" />
+                      Демо-данные
+                    </Button>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="space-y-4">
-                  {/* Add node button bar */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>{nodes.length} устройств в сети</span>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => setAddNodeOpen(true)}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Добавить узел
-                    </Button>
+                  {/* Search bar */}
+                  <div className="relative max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Поиск по названию или позывному..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
                   </div>
 
-                  {/* Node cards grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {nodes.map(node => (
-                      <NodeStatusCard
-                        key={node.id}
-                        node={node}
-                        onDelete={handleDeleteNode}
-                        onEdit={handleEditNode}
-                      />
-                    ))}
+                  {/* Node count */}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>
+                      {searchQuery.trim()
+                        ? `Найдено ${filteredNodes.length} из ${nodes.length}`
+                        : `${nodes.length} устройств`}
+                    </span>
                   </div>
+
+                  {/* Node rows */}
+                  {filteredNodes.length > 0 ? (
+                    <div className="border rounded-lg divide-y overflow-hidden">
+                      {filteredNodes.map(node => (
+                        <NodeStatusCard
+                          key={node.id}
+                          node={node}
+                          onDelete={handleDeleteNode}
+                          onEdit={handleEditNode}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-sm text-muted-foreground">
+                      Ничего не найдено по запросу «{searchQuery}»
+                    </div>
+                  )}
                 </div>
               )}
             </TabsContent>
@@ -460,18 +371,16 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
             {/* ── Map Tab ── */}
             <TabsContent value="map">
               <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Map className="h-5 w-5 text-teal-500" />
-                      Карта сети
-                    </CardTitle>
-                    <Badge variant="secondary" className="text-xs">
-                      {nodes.filter(n => n.latitude && n.longitude).length} из{' '}
-                      {nodes.length} с позицией
-                    </Badge>
+                <div className="flex items-center justify-between px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <Map className="h-5 w-5 text-teal-500" />
+                    <h3 className="text-base font-medium">Карта сети</h3>
                   </div>
-                </CardHeader>
+                  <Badge variant="secondary" className="text-xs">
+                    {nodes.filter(n => n.latitude && n.longitude).length} из{' '}
+                    {nodes.length} с позицией
+                  </Badge>
+                </div>
                 <CardContent>
                   <div className="h-[500px] sm:h-[600px]">
                     <MapView nodes={nodes} />
@@ -514,14 +423,6 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
             </div>
           </div>
         </footer>
-
-        {/* ── Add Node Dialog ── */}
-        <NodeFormDialog
-          open={addNodeOpen}
-          onOpenChange={setAddNodeOpen}
-          onSubmit={handleCreateNode}
-          nextNodeId={nextNodeId}
-        />
 
         {/* ── Edit Node Dialog ── */}
         <NodeFormDialog
