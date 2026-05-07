@@ -35,7 +35,6 @@ import {
   Moon,
   Sun,
   Repeat,
-  Eye,
   EyeOff,
   Thermometer,
   Droplets,
@@ -124,29 +123,24 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
   const hasHumidity = lastTelemetry?.humidity != null
 
   return (
-    <div className="border rounded-lg overflow-hidden transition-colors hover:bg-muted/30">
-      {/* ── Collapsed row ── */}
-      <div
-        className="flex items-center gap-4 px-4 py-3 cursor-pointer select-none"
-        onClick={() => setExpanded(!expanded)}
-      >
+    <div className="border-b last:border-b-0">
+      {/* ── Single row ── */}
+      <div className="flex items-center gap-3 px-4 py-2.5 cursor-pointer select-none hover:bg-muted/30 transition-colors">
         {/* Expand icon */}
-        <span className="text-muted-foreground">
+        <span className="text-muted-foreground shrink-0">
           {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </span>
 
         {/* Status dot */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="relative flex h-3 w-3 shrink-0">
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
               {statusDot.pulse && (
                 <span
                   className={`absolute inline-flex h-full w-full rounded-full ${statusDot.color} opacity-75 animate-ping`}
                 />
               )}
-              <span
-                className={`relative inline-flex h-3 w-3 rounded-full ${statusDot.color}`}
-              />
+              <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${statusDot.color}`} />
             </span>
           </TooltipTrigger>
           <TooltipContent>
@@ -160,58 +154,52 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
           </TooltipContent>
         </Tooltip>
 
-        {/* Name + shortName */}
-        <div className="flex items-center gap-2 min-w-0 w-[200px]">
-          <span className="font-medium truncate">{node.name}</span>
-          <Badge variant="outline" className="font-mono text-[10px] shrink-0">
-            {node.shortName}
-          </Badge>
-        </div>
+        {/* Name */}
+        <span className="font-medium text-sm min-w-0 truncate">{node.name}</span>
+
+        {/* Short name */}
+        <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 shrink-0">
+          {node.shortName}
+        </Badge>
 
         {/* Role */}
-        <Badge variant="secondary" className="text-xs shrink-0 w-[130px] justify-center">
+        <Badge variant="secondary" className="text-[11px] px-2 py-0 shrink-0">
           {meta?.label ?? node.role}
         </Badge>
 
         {/* Battery */}
-        <div className="flex items-center gap-2 w-[140px] shrink-0">
-          <BatteryLevelIcon level={node.batteryLevel} className={`h-4 w-4 ${batteryTextColor}`} />
-          <div className="flex-1">
-            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className={`h-full transition-all duration-500 ease-out rounded-full ${batteryColor}`}
-                style={{ width: `${Math.max(node.batteryLevel, 0)}%` }}
-              />
-            </div>
+        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+          <BatteryLevelIcon level={node.batteryLevel} className={`h-3.5 w-3.5 ${batteryTextColor}`} />
+          <span className={`text-xs font-medium ${batteryTextColor}`}>{node.batteryLevel}%</span>
+          <div className="w-12 h-1.5 overflow-hidden rounded-full bg-muted">
+            <div
+              className={`h-full rounded-full ${batteryColor} transition-all duration-500`}
+              style={{ width: `${Math.max(node.batteryLevel, 0)}%` }}
+            />
           </div>
-          <span className={`text-xs font-medium ${batteryTextColor} w-8 text-right`}>
-            {node.batteryLevel}%
-          </span>
         </div>
 
         {/* Signal RSSI */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground w-[80px] shrink-0">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0 ml-2">
           <Radio className="h-3.5 w-3.5" />
           <span>{node.rssi} дБм</span>
         </div>
 
         {/* Last seen */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground w-[120px] shrink-0">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0 ml-2">
           <Clock className="h-3 w-3" />
           <span>{getRelativeTime(node.lastSeen)}</span>
         </div>
 
+        {/* Spacer */}
+        <div className="flex-1" />
+
         {/* Actions */}
-        <div className="flex items-center gap-1 shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
           {onEdit && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => onEdit(node)}
-                >
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(node)}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
@@ -249,24 +237,24 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
 
       {/* ── Expanded details ── */}
       {expanded && (
-        <div className="border-t px-4 py-4 bg-muted/20">
-          <div className="grid grid-cols-4 gap-x-8 gap-y-3">
+        <div className="px-4 py-3 bg-muted/20 border-t">
+          <div className="grid grid-cols-4 gap-x-8 gap-y-2.5 text-sm">
             {/* SNR */}
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               <Signal className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground">SNR:</span>
               <span className="font-medium">{node.snr.toFixed(1)} дБ</span>
             </div>
 
             {/* Voltage */}
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground">Напряжение:</span>
               <span className="font-medium">{node.voltage.toFixed(2)} В</span>
             </div>
 
             {/* Temperature */}
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               <Thermometer className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground">Температура:</span>
               <span className="font-medium">
@@ -275,7 +263,7 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
             </div>
 
             {/* Humidity */}
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               <Droplets className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground">Влажность:</span>
               <span className="font-medium">
@@ -284,7 +272,7 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
             </div>
 
             {/* Position */}
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground">Позиция:</span>
               <span className="font-medium">
@@ -296,40 +284,34 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
 
             {/* Altitude */}
             {hasPosition && node.altitude != null && (
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-muted-foreground">Высота:</span>
                 <span className="font-medium">{node.altitude.toFixed(0)} м</span>
               </div>
             )}
 
-            {/* Sleep/Relay behavior */}
-            <div className="flex items-center gap-2 text-sm">
+            {/* Sleep behavior */}
+            <div className="flex items-center gap-2">
               {sleeps ? (
                 <>
                   <Moon className="h-4 w-4 text-purple-500 shrink-0" />
                   <span className="text-muted-foreground">Сон:</span>
-                  <span className="font-medium">
-                    каждые {formatSleepInterval(node.lsSecs)}
-                  </span>
+                  <span className="font-medium">каждые {formatSleepInterval(node.lsSecs)}</span>
                   {node.minWakeSecs != null && (
-                    <span className="text-muted-foreground text-xs">
-                      (бодр. {formatWakeTime(node.minWakeSecs)})
-                    </span>
+                    <span className="text-muted-foreground text-xs">(бодр. {formatWakeTime(node.minWakeSecs)})</span>
                   )}
                 </>
               ) : (
                 <>
                   <Sun className="h-4 w-4 text-green-500 shrink-0" />
-                  <span className="font-medium text-green-600 dark:text-green-400">
-                    Всегда бодрствует
-                  </span>
+                  <span className="font-medium text-green-600 dark:text-green-400">Всегда бодрствует</span>
                 </>
               )}
             </div>
 
             {/* Relay */}
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               {relays ? (
                 <>
                   <Repeat className="h-4 w-4 text-teal-500 shrink-0" />
@@ -344,7 +326,7 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
             </div>
 
             {/* Hardware model */}
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               <Cpu className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground">Модель:</span>
               <span className="font-medium">{node.hardwareModel}</span>
