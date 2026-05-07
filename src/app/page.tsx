@@ -74,7 +74,7 @@ export default async function DashboardPage() {
         include: {
           telemetry: {
             orderBy: { createdAt: 'desc' },
-            take: 1,
+            take: 20,
           },
         },
       }),

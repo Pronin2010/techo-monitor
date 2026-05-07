@@ -99,6 +99,41 @@ function formatWakeTime(seconds: number | null): string {
 }
 
 // ---------------------------------------------------------------------------
+// Battery runtime estimation
+// ---------------------------------------------------------------------------
+
+function estimateRuntime(node: MeshNode): string | null {
+  const telemetry = node.telemetry
+  if (!telemetry || telemetry.length < 2) return null
+
+  // Telemetry is ordered desc by createdAt, so last item is the oldest
+  const newest = telemetry[0]
+  const oldest = telemetry[telemetry.length - 1]
+
+  const timeDiffMs = new Date(newest.createdAt).getTime() - new Date(oldest.createdAt).getTime()
+  const timeDiffHours = timeDiffMs / 3600000
+
+  if (timeDiffHours < 0.5) return null // Need at least 30 min of data
+
+  // Battery dropped from oldest to newest (desc order → oldest has higher index)
+  const batteryDrop = oldest.batteryLevel - newest.batteryLevel
+
+  if (batteryDrop <= 0) return null // Battery stable or charging
+
+  // Drain rate: % per hour
+  const drainPerHour = batteryDrop / timeDiffHours
+
+  // Estimated remaining hours until 0%
+  const remainingHours = node.batteryLevel / drainPerHour
+
+  if (remainingHours <= 0) return 'мало'
+  if (remainingHours < 1) return `${Math.round(remainingHours * 60)} мин`
+  if (remainingHours < 24) return `~${Math.round(remainingHours)} ч`
+  if (remainingHours < 48) return `~${Math.round(remainingHours * 10) / 10} дн`
+  return `~${Math.floor(remainingHours / 24)} дн`
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -121,6 +156,7 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
   const lastTelemetry = node.telemetry?.[0]
   const hasTemp = lastTelemetry?.temperature != null
   const hasHumidity = lastTelemetry?.humidity != null
+  const estimatedRuntime = estimateRuntime(node)
 
   return (
     <div className="border-b last:border-b-0">
@@ -167,7 +203,7 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
           {meta?.label ?? node.role}
         </Badge>
 
-        {/* Battery */}
+        {/* Battery + runtime estimate */}
         <div className="flex items-center gap-1.5 shrink-0 ml-2">
           <BatteryLevelIcon level={node.batteryLevel} className={`h-3.5 w-3.5 ${batteryTextColor}`} />
           <span className={`text-xs font-medium ${batteryTextColor}`}>{node.batteryLevel}%</span>
@@ -177,6 +213,16 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
               style={{ width: `${Math.max(node.batteryLevel, 0)}%` }}
             />
           </div>
+          {estimatedRuntime && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-[10px] text-muted-foreground ml-1">(~{estimatedRuntime})</span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Примерное время работы до разряда (на основе расхода батареи)</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
         {/* Signal RSSI */}
