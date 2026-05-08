@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Node {
+  id            String    @id @default(cuid())
+  nodeId        BigInt    @unique
+  name          String
+  shortName     String
+  hardwareModel String    @default("T-Echo")
+  role          String    @default("CLIENT")
+  status        String    @default("online") // online, offline, unknown
+  batteryLevel  Int?      // null = данные ещё не получены
+  voltage       Float?    // null = данные ещё не получены
+  usbPower      Boolean   @default(false) // напряжение > 3.9V = USB питание
+  snr           Float     @default(0.0)
+  rssi          Int       @default(0)
+  latitude      Float?
+  longitude     Float?
+  altitude      Float?
+  lsSecs        Int?      // Light sleep interval in seconds (for TRACKER/CLIENT roles)
+  minWakeSecs   Int?      @default(10) // Minimum awake time in seconds before sleeping
+  lastSeen      DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  telemetry     Telemetry[]
+}
+
+model Channel {
+  id          String   @id @default(cuid())
+  index       Int      @default(0)
+  name        String
+  psk         String
+  uplink      Boolean  @default(true)
+  downlink    Boolean  @default(true)
+  modemPreset String   @default("LongFast")
+  region      String   @default("EU_433")
+  frequency   Float?   // Переопределение частоты в МГц (null = стандартная для региона)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  connection  ConnectionConfig?
+}
+
+model Telemetry {
+  id            String   @id @default(cuid())
+  nodeId        String
+  batteryLevel  Int?
+  voltage       Float?
+  snr           Float
+  rssi          Int
+  temperature   Float?
+  humidity      Float?
+  latitude      Float?
+  longitude     Float?
+  altitude      Float?
+  createdAt     DateTime @default(now())
+
+  node          Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+}
+
+model ConnectionConfig {
+  id          String   @id @default(cuid())
+  type        String   @default("serial") // serial, mqtt, disabled
+  serialPort  String   @default("")
+  mqttBroker  String   @default("")
+  mqttTopic   String   @default("msh/EU_433/#")
+  mqttUsername String  @default("")
+  mqttPassword String  @default("")
+  channelId   String?  @unique // Привязка к каналу из Channel
+  isEnabled   Boolean  @default(false)
+  lastSync    DateTime?
+  status      String   @default("disconnected") // connected, disconnected, error
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  channel     Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+}
+
+model SyncLog {
+  id          String   @id @default(cuid())
+  source      String   // serial, mqtt, test
+  nodeId      BigInt?
+  nodeName    String?
+  action      String   // created, updated, synced
+  eventType   String?  // battery, position, telemetry, heartbeat, device_info
+  details     String?  // JSON: что конкретно пришло/изменилось
+  createdAt   DateTime @default(now())
+}
