@@ -94,6 +94,7 @@ src/
 └── prisma/
     └── schema.prisma             # Схема базы данных
 techo-bridge.py                   # Python-мост (Serial/MQTT → HTTP API)
+techo-dump-config.py              # Скрипт чтения конфигурации устройства
 AI_PROMPT.md                      # Контекст проекта для AI-ассистента
 PROJECT_RULES.md                  # Правила проекта
 STARTUP.md                        # Инструкция по установке

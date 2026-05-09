@@ -255,6 +255,23 @@ REBROADCAST_MODE_MAP = {
     'KNOWN_ONLY': 3, 'NONE': 4, 'CORE_PORTNUMS_ONLY': 5,
 }
 
+# ─── Обратные маппинги: int → строка (для чтения конфигурации) ──────────
+
+ROLE_REVERSE = {v: k for k, v in ROLE_MAP.items()}
+GPS_MODE_REVERSE = {v: k for k, v in GPS_MODE_MAP.items()}
+MODEM_PRESET_REVERSE = {v: k for k, v in MODEM_PRESET_MAP.items()}
+REGION_REVERSE = {
+    0: 'UNSET', 1: 'US', 2: 'EU_433', 3: 'EU_868',
+    4: 'CN', 5: 'JP', 6: 'ANZ', 7: 'KR',
+    8: 'TW', 9: 'RU', 10: 'IN', 11: 'NZ_865',
+    12: 'TH', 13: 'LORA_24', 14: 'UA_433', 15: 'UA_868',
+    16: 'MY_433', 17: 'MY_919', 18: 'SG_923',
+    19: 'PH_433', 20: 'PH_868', 21: 'PH_915',
+    22: 'ANZ_433', 23: 'KZ_433', 24: 'KZ_863',
+    25: 'NP_865', 26: 'BR_902',
+}
+REBROADCAST_MODE_REVERSE = {v: k for k, v in REBROADCAST_MODE_MAP.items()}
+
 
 def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                           device_name=None, device_short_name=None,
@@ -636,7 +653,8 @@ class BridgeHTTPHandler(BaseHTTPRequestHandler):
         return {}
 
     def do_GET(self):
-        """GET /api/status — статус моста и список узлов."""
+        """GET /api/status — статус моста и список узлов.
+           GET /api/device-config — полная конфигурация устройства."""
         if self.path == '/api/status':
             iface = _bridge_interface[0]
             nodes_list = []
@@ -672,6 +690,112 @@ class BridgeHTTPHandler(BaseHTTPRequestHandler):
                 "nodes": nodes_list,
                 "uptime": time.time() - _bridge_nodes_info.get("start_time", time.time()),
             })
+        elif self.path == '/api/device-config':
+            # Полная конфигурация устройства для диагностики и сопоставления
+            iface = _bridge_interface[0]
+            if not iface:
+                self._send_json({"success": False, "message": "Мост не подключён к устройству"}, 503)
+                return
+            try:
+                node = iface.localNode
+                my_info = iface.getMyNodeInfo()
+                user = my_info.get("user", {}) if my_info else {}
+
+                d = node.localConfig.device
+                p = node.localConfig.position
+                pw = node.localConfig.power
+                l = node.localConfig.lora
+                bt = node.localConfig.bluetooth
+                disp = node.localConfig.display
+                n = node.localConfig.network
+
+                # Telemetry (module)
+                telem = {}
+                try:
+                    t = node.moduleConfig.telemetry
+                    telem = {
+                        "deviceUpdateInterval": t.device_update_interval,
+                        "environmentMeasurementEnabled": t.environment_measurement_enabled,
+                    }
+                except Exception:
+                    telem = {"error": "Не удалось прочитать moduleConfig.telemetry"}
+
+                # Каналы
+                channels = []
+                for i, ch in enumerate(node.channels):
+                    if ch is None:
+                        continue
+                    ch_settings = ch.settings if hasattr(ch, 'settings') else None
+                    if ch_settings is None:
+                        continue
+                    psk_bytes = ch_settings.psk if ch_settings.psk else b''
+                    channels.append({
+                        "index": i,
+                        "name": ch_settings.name if ch_settings.name else "",
+                        "pskLength": len(psk_bytes),
+                        "pskSet": len(psk_bytes) > 0,
+                        "uplinkEnabled": ch_settings.uplink_enabled,
+                        "downlinkEnabled": ch_settings.downlink_enabled,
+                    })
+
+                config = {
+                    "success": True,
+                    "owner": {
+                        "longName": user.get("longName", ""),
+                        "shortName": user.get("shortName", ""),
+                        "nodeId": f"!{my_info['num']:08x}" if my_info and 'num' in my_info else "",
+                    },
+                    "device": {
+                        "role": ROLE_REVERSE.get(d.role, f'UNKNOWN({d.role})'),
+                        "roleValue": d.role,
+                        "nodeInfoBroadcastSecs": d.node_info_broadcast_secs,
+                        "rebroadcastMode": REBROADCAST_MODE_REVERSE.get(d.rebroadcast_mode, f'UNKNOWN({d.rebroadcast_mode})'),
+                        "rebroadcastModeValue": d.rebroadcast_mode,
+                        "ledHeartbeatDisabled": d.led_heartbeat_disabled,
+                    },
+                    "position": {
+                        "gpsMode": GPS_MODE_REVERSE.get(p.gps_mode, f'UNKNOWN({p.gps_mode})'),
+                        "gpsModeValue": p.gps_mode,
+                        "positionBroadcastSecs": p.position_broadcast_secs,
+                        "positionFlags": p.position_flags,
+                        "gpsUpdateInterval": p.gps_update_interval,
+                        "gpsAttemptTime": p.gps_attempt_time,
+                        "smartBroadcastEnabled": p.position_broadcast_smart_enabled,
+                    },
+                    "power": {
+                        "powerSaving": pw.is_power_saving,
+                        "lsSecs": pw.ls_secs,
+                        "minWakeSecs": pw.min_wake_secs,
+                    },
+                    "lora": {
+                        "region": REGION_REVERSE.get(l.region, f'UNKNOWN({l.region})'),
+                        "regionValue": l.region,
+                        "modemPreset": MODEM_PRESET_REVERSE.get(l.modem_preset, f'UNKNOWN({l.modem_preset})'),
+                        "modemPresetValue": l.modem_preset,
+                        "hopLimit": l.hop_limit,
+                        "txPower": l.tx_power,
+                    },
+                    "bluetooth": {
+                        "enabled": bt.enabled,
+                        "fixedPin": bt.fixed_pin if bt.fixed_pin else None,
+                    },
+                    "display": {
+                        "screenOnSecs": disp.screen_on_secs,
+                    },
+                    "network": {
+                        "wifiSsid": n.wifi_ssid if n.HasField('wifi_ssid') else "",
+                        "wifiEnabled": n.wifi_enabled,
+                    },
+                    "telemetry": telem,
+                    "channels": channels,
+                    "_meta": {
+                        "timestamp": format_timestamp(),
+                        "firmwareVersion": my_info.get("firmwareVersion", "") if my_info else "",
+                    },
+                }
+                self._send_json(config)
+            except Exception as e:
+                self._send_json({"success": False, "message": f"Ошибка чтения конфигурации: {e}"}, 500)
         else:
             self._send_json({"error": "Неизвестный маршрут"}, 404)
 
@@ -761,6 +885,7 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
     print(f"  \033[32mHTTP API запущен на порту {api_port}\033[0m")
     print(f"  POST http://localhost:{api_port}/api/apply-config — применить конфиг")
     print(f"  GET  http://localhost:{api_port}/api/status — статус моста")
+    print(f"  GET  http://localhost:{api_port}/api/device-config — конфигурация устройства")
 
     running = True
 

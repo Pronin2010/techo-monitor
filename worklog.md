@@ -442,3 +442,27 @@ Stage Summary:
 - LONG_MODERATE теперь правильно = 7 (было 1 = LONG_SLOW!)
 - EU_433 теперь правильно = 2 (было 3 = EU_868!)
 - Это объясняет, почему роль и настройки не применялись корректно
+
+---
+Task ID: 22
+Agent: main
+Task: Скрипт techo-dump-config.py + GET /api/device-config — чтение конфигурации устройства
+
+Work Log:
+- Создан techo-dump-config.py — standalone скрипт для чтения ВСЕХ настроек из устройства
+  - Подключается к T-Echo через USB, читает device/position/power/lora/bluetooth/display/network/telemetry/channels
+  - Выводит человекочитаемый результат в консоль с цветами
+  - Сохраняет в JSON (--output device-config.json)
+  - Сравнивает с пресетом (--compare preset.json)
+  - Обратные маппинги: int → строка (ROLE_REVERSE, MODEM_PRESET_REVERSE и т.д.)
+- Добавлен GET /api/device-config в мост — полная конфигурация устройства по HTTP
+  - Формат совместим с пресетами дашборда
+  - Числовой + строковый формат для каждого enum
+  - Каналы с информацией о PSK (длина, наличие)
+- Добавлены обратные маппинги в techo-bridge.py (ROLE_REVERSE, REGION_REVERSE и т.д.)
+- Обновлена документация: AI_PROMPT.md, README.md, STARTUP.md, PROJECT_RULES.md, worklog.md
+
+Stage Summary:
+- techo-dump-config.py: python techo-dump-config.py --port COM5 [--output file.json] [--compare preset.json]
+- GET /api/device-config: JSON со всеми настройками устройства
+- Можно сопоставлять конфигурацию устройства с пресетами дашборда

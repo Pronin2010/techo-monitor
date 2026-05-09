@@ -66,6 +66,7 @@ src/
 prisma/
 └── schema.prisma                 # 6 моделей: Node, Channel, Telemetry, ConnectionConfig, Preset, SyncLog
 techo-bridge.py                   # Python-мост (Serial/MQTT → HTTP API :8420)
+techo-dump-config.py              # Скрипт чтения конфигурации устройства (standalone)
 ```
 
 ---
@@ -215,6 +216,7 @@ SyncLog
   - При factory reset — автоматическое пересоздание SerialInterface с повторными попытками
   - После перезагрузки устройства (reboot) — мост автоматически переподключается для продолжения мониторинга
 - **GET /api/status** — статус моста и список узлов (nodeId в hex-формате `!a1b2c3d4`)
+- **GET /api/device-config** — полная конфигурация устройства (все секции + каналы + владелец) для диагностики и сопоставления с пресетами
 - Транзакционное применение: все настройки в одной транзакции
 - Fallback: writeModuleConfig() для старых версий meshtastic-библиотеки
 
@@ -243,6 +245,7 @@ SyncLog
 18. Фикс factory reset: ensureSessionKey() + factory_reset_config=1 (node.factoryReset() багует с True→TypeError)
 19. Фикс применения конфига: задержки между writeConfig() + задержка перед reboot + диагностика после перезагрузки
 20. Фикс ВСЕХ protobuf enum маппингов: ROLE_MAP (ROUTER=2 не 4), MODEM_PRESET_MAP (LONG_MODERATE=7 не 1), REGION_MAP (EU_433=2 не 3)
+21. Скрипт techo-dump-config.py + GET /api/device-config — чтение и выгрузка конфигурации устройства
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -270,4 +273,4 @@ ALL, LOCAL_SKIP, SIMPLE
 
 ---
 
-_Последнее обновление: 2026-05-09 (фикс protobuf enum: ROLE_MAP, MODEM_PRESET_MAP, REGION_MAP)_
+_Последнее обновление: 2026-05-09 (techo-dump-config.py + GET /api/device-config)_
