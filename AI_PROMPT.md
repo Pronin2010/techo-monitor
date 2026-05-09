@@ -209,9 +209,10 @@ SyncLog
 - **POST /api/apply-config** — применение конфигурации на устройство
   - Параметры: role, region, modemPreset, lsSecs, minWakeSecs, gpsMode, agpsEnabled, и т.д.
   - deviceName, deviceShortName — установка имени через setOwner()
-  - factoryReset — сброс до заводских перед применением (ожидание 20 сек)
-  - Порядок: factoryReset → reconnect → setOwner → beginTransaction → writeConfig × N → commit → reboot
+  - factoryReset — сброс до заводских перед применением (ожидание + пересоздание SerialInterface с 5 попытками)
+  - Порядок: factoryReset → device reboot → _reconnect_interface() → setOwner → beginTransaction → writeConfig × N → commit → reboot
   - При ошибке записи — перезагрузка для отката (вместо commit частичных данных)
+  - При factory reset — автоматическое пересоздание SerialInterface с повторными попытками
 - **GET /api/status** — статус моста и список узлов (nodeId в hex-формате `!a1b2c3d4`)
 - Транзакционное применение: все настройки в одной транзакции
 - Fallback: writeModuleConfig() для старых версий meshtastic-библиотеки
@@ -235,6 +236,7 @@ SyncLog
 12. Полный код-ревью + создание AI_PROMPT.md + правило AI-контекста
 13. Правило «только десктоп» в документации
 14. Фикс 7 багов в push-to-device (критические: откат транзакции, positionPrecision, nodeId-формат)
+15. Фикс factory reset: пересоздание SerialInterface при потере соединения
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах

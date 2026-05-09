@@ -303,10 +303,16 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                 except Exception as e2:
                     return {'success': False, 'message': f'Ошибка factory reset: {e2}', 'sections': sections_written}
             sections_written.append("factory_reset")
-            # После factoryReset устройство перезагружается — ждём повторного подключения
-            print("\033[33m[CFG] Ожидание перезагрузки (20 сек)...\033[0m")
-            time.sleep(20)
-            # Переподключаемся к узлу
+            # После factoryReset устройство перезагружается — серийное соединение разрывается.
+            # Нельзя использовать старый interface — нужно пересоздать SerialInterface.
+            print("\033[33m[CFG] Ожидание перезагрузки (10 сек)...\033[0m")
+            time.sleep(10)
+            # Пересоздаём интерфейс (закрываем старый, открываем новый)
+            new_iface = _reconnect_interface(max_retries=5, retry_delay=5)
+            if not new_iface:
+                return {'success': False, 'message': 'Сброс выполнен, но не удалось переподключиться к устройству. Перезапустите мост вручную.', 'sections': sections_written}
+            interface = new_iface
+            # Получаем свежую ссылку на узел
             try:
                 if node_id and node_id.strip():
                     node = interface.getNode(node_id, timeout=120)
@@ -314,8 +320,8 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                     node = interface.localNode
                 print("\033[32m[CFG] Повторное подключение после сброса — ОК\033[0m")
             except Exception as e:
-                print(f"\033[31m[CFG] Не удалось переподключиться после сброса: {e}\033[0m")
-                return {'success': False, 'message': f'Сброс выполнен, но не удалось переподключиться: {e}', 'sections': sections_written}
+                print(f"\033[31m[CFG] Не удалось получить узел после переподключения: {e}\033[0m")
+                return {'success': False, 'message': f'Сброс выполнен, мост переподключён, но не удалось получить узел: {e}', 'sections': sections_written}
 
         # ── Имя устройства ──
         if device_name or device_short_name:
@@ -508,6 +514,50 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
 _bridge_interface = [None]   # [interface] — mutable для замыкания
 _bridge_running = [False]
 _bridge_nodes_info = {}    # Последний snapshot узлов
+_bridge_port = [None]      # Serial port для переподключения
+
+
+def _reconnect_interface(max_retries=5, retry_delay=5):
+    """Пересоздать SerialInterface после отключения устройства.
+    
+    При factory reset / перезагрузке устройства серийное соединение разрывается.
+    Эта функция закрывает старый интерфейс и создаёт новый.
+    
+    Returns:
+        Новый SerialInterface или None при неудаче
+    """
+    if not HAS_MESHTASTIC or not _bridge_port[0]:
+        return None
+    
+    port = _bridge_port[0]
+    print(f"\033[33m[BRIDGE] Переподключение к {port}...\033[0m")
+    
+    # Закрыть старый интерфейс
+    old_iface = _bridge_interface[0]
+    if old_iface:
+        try:
+            old_iface.close()
+        except Exception:
+            pass
+        _bridge_interface[0] = None
+    
+    # Попытки переподключения с задержкой
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"\033[33m[BRIDGE] Попытка {attempt}/{max_retries}...\033[0m")
+            new_iface = meshtastic.serial_interface.SerialInterface(devPath=port)
+            _bridge_interface[0] = new_iface
+            # Дадим интерфейсу время на инициализацию
+            time.sleep(3)
+            print(f"\033[32m[BRIDGE] Переподключение успешно!\033[0m")
+            return new_iface
+        except Exception as e:
+            print(f"\033[31m[BRIDGE] Попытка {attempt} не удалась: {e}\033[0m")
+            if attempt < max_retries:
+                time.sleep(retry_delay)
+    
+    print(f"\033[31m[BRIDGE] Не удалось переподключиться после {max_retries} попыток\033[0m")
+    return None
 
 
 class BridgeHTTPHandler(BaseHTTPRequestHandler):
@@ -650,6 +700,7 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
     # Сохраняем interface глобально для HTTP API
     _bridge_interface[0] = interface
     _bridge_running[0] = True
+    _bridge_port[0] = port  # Сохраняем порт для переподключения после factory reset
     _bridge_nodes_info['start_time'] = time.time()
 
     # Запускаем HTTP API сервер для приёма команд от дашборда

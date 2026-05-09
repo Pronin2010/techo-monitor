@@ -58,3 +58,4 @@ server.log
 *.db-journal 
  
 !.env.example 
+__pycache__/

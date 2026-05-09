@@ -302,3 +302,21 @@ Stage Summary:
 - Ключевой фикс: откат транзакции через reboot вместо commit при ошибке
 - nodeId теперь в hex-формате для корректной удалённой отправки
 - positionPrecision:0 теперь правильно означает «не отправлять позицию»
+
+---
+Task ID: 15
+Agent: main
+Task: Фикс factory reset — мост теряет подключение при перезагрузке устройства
+
+Work Log:
+- Проблема: при factory reset устройство перезагружается, SerialInterface теряет серийное соединение, старый interface становится мёртвым
+- Добавлена функция _reconnect_interface(): закрывает старый интерфейс, создаёт новый SerialInterface с повторными попытками (5 попыток по 5 сек)
+- Сохраняется _bridge_port[0] для переподключения (порт из serial_mode)
+- В apply_config_to_node() после factory reset: sleep(10) → _reconnect_interface() → свежий node
+- pub.subscribe не нужно переподписывать — глобальная подписка работает с новым интерфейсом автоматически
+- Обновлена документация: AI_PROMPT.md, STARTUP.md
+
+Stage Summary:
+- При factory reset мост автоматически пересоздаёт SerialInterface
+- 5 попыток переподключения с задержкой 5 сек между попытками
+- Обновляется глобальная ссылка _bridge_interface[0] — HTTP API продолжает работать
