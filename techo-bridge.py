@@ -287,7 +287,21 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
         # ── Factory Reset ──
         if factory_reset:
             print("\033[1;31m[CFG] ⚠ СБРОС ДО ЗАВОДСКИХ НАСТРОЕК...\033[0m")
-            node.factoryReset()
+            # Прямая отправка AdminMessage — node.factoryReset() не работает
+            # (factory_reset_config ожидает int32, а не bool в прошивке 2.7.15)
+            try:
+                from meshtastic.protobuf import admin_pb2
+                p = admin_pb2.AdminMessage()
+                p.factory_reset_config = 1  # int32, не bool
+                node._sendAdmin(p)
+                print("\033[32m[CFG] AdminMessage.factory_reset_config=1 отправлен\033[0m")
+            except Exception as e:
+                # Фоллбэк — попробовать стандартный метод
+                print(f"\033[33m[CFG] Прямая отправка не удалась, пробуем node.factoryReset(): {e}\033[0m")
+                try:
+                    node.factoryReset()
+                except Exception as e2:
+                    return {'success': False, 'message': f'Ошибка factory reset: {e2}', 'sections': sections_written}
             sections_written.append("factory_reset")
             # После factoryReset устройство перезагружается — ждём повторного подключения
             print("\033[33m[CFG] Ожидание перезагрузки (10 сек)...\033[0m")
