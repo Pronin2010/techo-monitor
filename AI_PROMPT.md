@@ -242,6 +242,7 @@ SyncLog
 17. Фикс 3 багов: stale closure (factoryReset не отправлялся), время ожидания перезагрузки 20с, сообщение об успехе
 18. Фикс factory reset: ensureSessionKey() + factory_reset_config=1 (node.factoryReset() багует с True→TypeError)
 19. Фикс применения конфига: задержки между writeConfig() + задержка перед reboot + диагностика после перезагрузки
+20. Фикс ВСЕХ protobuf enum маппингов: ROLE_MAP (ROUTER=2 не 4), MODEM_PRESET_MAP (LONG_MODERATE=7 не 1), REGION_MAP (EU_433=2 не 3)
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -269,4 +270,4 @@ ALL, LOCAL_SKIP, SIMPLE
 
 ---
 
-_Последнее обновление: 2026-05-09 (фикс factory reset: ensureSessionKey + int вместо bool)_
+_Последнее обновление: 2026-05-09 (фикс protobuf enum: ROLE_MAP, MODEM_PRESET_MAP, REGION_MAP)_

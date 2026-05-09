@@ -417,3 +417,28 @@ Stage Summary:
 - Задержки 0.5с между writeConfig() + 3с перед reboot
 - Диагностика после перезагрузки показывает реально применённые настройки
 - Если [DIAG] показывает заводские значения — проблема глубже (session key)
+
+---
+Task ID: 21
+Agent: main
+Task: Фикс ВСЕХ protobuf enum маппингов — значения были неправильные
+
+Work Log:
+- Диагностика [DIAG] показала: role=0 (CLIENT) вместо ROUTER, но region=3 и modem=1 — правильные
+- Проверены реальные protobuf enum через config_pb2:
+  - ROLE_MAP: все значения были неправильные! CLIENT=0(не 1), ROUTER=2(не 4), TRACKER=5(не 6) и т.д.
+  - MODEM_PRESET_MAP: LONG_MODERATE=7(не 1!), MEDIUM_FAST=4(не 2), SHORT_FAST=6(не 4)
+  - REGION_MAP: EU_433=2(не 3!), ANZ_433=22(не 4), UA_433=14(не 5)
+  - REBROADCAST_MODE_MAP: LOCAL_SKIP не существует, правильные: ALL=0, ALL_SKIP_DECODING=1, LOCAL_ONLY=2
+  - GPS_MODE_MAP: был верен ✅
+- Причина: маппинги были написаны «на глаз», без проверки реальных protobuf значений
+- Исправлены все 4 маппинга на основе config_pb2
+- Удалены несуществующие ключи (LITE_FAST, LITE_SLOW, NARROW_FAST, NARROW_SLOW, LOCAL_SKIP, SIMPLE)
+- Добавлены отсутствующие ключи (LONG_SLOW, VERY_LONG_SLOW, ALL_SKIP_DECODING, KNOWN_ONLY, NONE, CORE_PORTNUMS_ONLY)
+- Обновлена документация: AI_PROMPT.md, PROJECT_RULES.md, worklog.md
+
+Stage Summary:
+- ROUTER теперь правильно = 2 (было 4 = ROUTER_CLIENT, устаревшая роль)
+- LONG_MODERATE теперь правильно = 7 (было 1 = LONG_SLOW!)
+- EU_433 теперь правильно = 2 (было 3 = EU_868!)
+- Это объясняет, почему роль и настройки не применялись корректно

@@ -219,11 +219,13 @@ def _get_node_name(from_int):
 # ─── Config Apply — маппинг строковых значений в protobuf enum ────────────
 
 # Роли: строка → числовое значение enum Config.DeviceConfig.Role
+# Значения из protobuf config.proto (проверено через config_pb2)
 ROLE_MAP = {
-    'CLIENT': 1, 'CLIENT_MUTE': 2, 'CLIENT_HIDDEN': 3,
-    'ROUTER': 4, 'ROUTER_CLIENT': 5, 'TRACKER': 6,
-    'REPEATER': 7, 'SENSOR': 8, 'LOST_AND_FOUND': 9,
-    'TAK_TRACKER': 10, 'ROUTER_LATE': 11, 'CLIENT_BASE': 12,
+    'CLIENT': 0, 'CLIENT_MUTE': 1, 'ROUTER': 2,
+    'ROUTER_CLIENT': 3, 'REPEATER': 4, 'TRACKER': 5,
+    'SENSOR': 6, 'TAK': 7, 'CLIENT_HIDDEN': 8,
+    'LOST_AND_FOUND': 9, 'TAK_TRACKER': 10,
+    'ROUTER_LATE': 11, 'CLIENT_BASE': 12,
 }
 
 # GPS режимы: строка → числовое значение enum Config.PositionConfig.GpsMode
@@ -232,23 +234,25 @@ GPS_MODE_MAP = {
 }
 
 # Модем-пресеты: строка → числовое значение enum Config.LoRaConfig.ModemPreset
+# Значения из protobuf config.proto (проверено через config_pb2)
 MODEM_PRESET_MAP = {
-    'LONG_FAST': 0, 'LONG_MODERATE': 1, 'LONG_TURBO': 9,
-    'MEDIUM_FAST': 2, 'MEDIUM_SLOW': 3,
-    'SHORT_FAST': 4, 'SHORT_SLOW': 5, 'SHORT_TURBO': 10,
-    'LITE_FAST': 11, 'LITE_SLOW': 12,
-    'NARROW_FAST': 13, 'NARROW_SLOW': 14,
+    'LONG_FAST': 0, 'LONG_SLOW': 1, 'VERY_LONG_SLOW': 2,
+    'MEDIUM_SLOW': 3, 'MEDIUM_FAST': 4,
+    'SHORT_SLOW': 5, 'SHORT_FAST': 6,
+    'LONG_MODERATE': 7, 'SHORT_TURBO': 8, 'LONG_TURBO': 9,
 }
 
 # Регионы: строка → числовое значение enum Config.LoRaConfig.RegionCode
+# Только регионы 433 МГц (проверено через config_pb2)
 REGION_MAP = {
-    'EU_433': 3, 'ANZ_433': 4, 'UA_433': 5,
-    'KZ_433': 6, 'PH_433': 7, 'MY_433': 8,
+    'EU_433': 2, 'ANZ_433': 22, 'UA_433': 14,
+    'KZ_433': 23, 'PH_433': 19, 'MY_433': 16,
 }
 
-# Режимы ретрансляции: строка → числовое значение
+# Режимы ретрансляции: строка → числовое значение enum Config.DeviceConfig.RebroadcastMode
 REBROADCAST_MODE_MAP = {
-    'ALL': 0, 'LOCAL_SKIP': 1, 'SIMPLE': 2,
+    'ALL': 0, 'ALL_SKIP_DECODING': 1, 'LOCAL_ONLY': 2,
+    'KNOWN_ONLY': 3, 'NONE': 4, 'CORE_PORTNUMS_ONLY': 5,
 }
 
 
