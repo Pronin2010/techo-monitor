@@ -6,51 +6,20 @@ import { BUILTIN_PRESETS } from '@/lib/builtin-presets'
 // GET /api/presets — список всех пресетов (автосид + миграция встроенных)
 export async function GET() {
   try {
-    // Миграция встроенных пресетов:
-    // 1. Создаём новые, если их нет в БД
-    // 2. Обновляем существующие, если данные в коде изменились
-    // 3. Не трогаем пользовательские пресеты
+    // Очистка осиротевших встроенных пресетов (созданных до появления builtinId)
+    await db.preset.deleteMany({
+      where: { isBuiltIn: true, builtinId: null },
+    })
+
+    // Upsert каждого встроенного пресета — атомарная операция,
+    // исключающая дублирование при конкурентных запросах
     for (const builtin of BUILTIN_PRESETS) {
-      const existing = await db.preset.findFirst({
-        where: { builtinId: builtin.builtinId },
+      const { builtinId, ...data } = builtin
+      await db.preset.upsert({
+        where: { builtinId },
+        update: data,
+        create: { ...data, builtinId },
       })
-
-      if (!existing) {
-        // Создаём новый встроенный пресет
-        const { builtinId, ...data } = builtin
-        await db.preset.create({
-          data: { ...data, builtinId },
-        })
-        console.log(`[presets] Создан встроенный пресет: ${builtin.name}`)
-      } else {
-        // Обновляем если описание или ключевые параметры изменились
-        const needsUpdate =
-          existing.description !== builtin.description ||
-          existing.role !== builtin.role ||
-          existing.gpsMode !== builtin.gpsMode ||
-          existing.modemPreset !== builtin.modemPreset ||
-          existing.powerSaving !== builtin.powerSaving ||
-          existing.positionPrecision !== builtin.positionPrecision ||
-          existing.telemetryInterval !== builtin.telemetryInterval ||
-          existing.hopLimit !== builtin.hopLimit ||
-          existing.icon !== builtin.icon ||
-          existing.ledDisabled !== builtin.ledDisabled ||
-          existing.screenOnSecs !== builtin.screenOnSecs ||
-          existing.nodeInfoBroadcastSecs !== builtin.nodeInfoBroadcastSecs ||
-          existing.positionBroadcastSecs !== builtin.positionBroadcastSecs ||
-          existing.smartBroadcastEnabled !== builtin.smartBroadcastEnabled ||
-          existing.smartBroadcastMinDist !== builtin.smartBroadcastMinDist ||
-          existing.smartBroadcastMinInterval !== builtin.smartBroadcastMinInterval
-
-        if (needsUpdate) {
-          const { builtinId: _, isBuiltIn: __, ...data } = builtin
-          await db.preset.update({
-            where: { id: existing.id },
-            data,
-          })
-          console.log(`[presets] Обновлён встроенный пресет: ${builtin.name}`)
-        }
-      }
     }
 
     const presets = await db.preset.findMany({

@@ -123,11 +123,14 @@ export async function POST() {
     })
 
     // ── Встроенные пресеты ──
-    // Удаляем старые системные и создаём заново из актуальных данных
-    await db.preset.deleteMany({ where: { isBuiltIn: true } })
+    // Используем upsert для атомарности — исключает дублирование
     for (const builtin of BUILTIN_PRESETS) {
       const { builtinId, ...data } = builtin
-      await db.preset.create({ data: { ...data, builtinId } })
+      await db.preset.upsert({
+        where: { builtinId },
+        update: data,
+        create: { ...data, builtinId },
+      })
     }
 
     return NextResponse.json({ success: true, message: 'Forest tracker demo data seeded successfully' })
