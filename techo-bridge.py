@@ -39,6 +39,7 @@ if sys.platform == 'win32':
 try:
     import meshtastic
     import meshtastic.serial_interface
+    from meshtastic.protobuf import config_pb2
     HAS_MESHTASTIC = True
 except ImportError:
     HAS_MESHTASTIC = False
@@ -217,6 +218,10 @@ def _get_node_name(from_int):
 
 
 # ─── Config Apply — маппинг строковых значений в protobuf enum ────────────
+#
+# ВНИМАНИЕ: Все enum-значения взяты из protobuf config.proto прошивки 2.7.15!
+# НЕ использовать предположения — только из документации/исходников.
+# См. правило 4.1 в PROJECT_RULES.md
 
 # Роли: строка → числовое значение enum Config.DeviceConfig.Role
 # Значения из protobuf config.proto (проверено через config_pb2)
@@ -255,6 +260,13 @@ REBROADCAST_MODE_MAP = {
     'KNOWN_ONLY': 3, 'NONE': 4, 'CORE_PORTNUMS_ONLY': 5,
 }
 
+# BT режимы: строка → числовое значение enum Config.BluetoothConfig.PairingMode
+# ВНИМАНИЕ: FIXED_PIN = 1, НЕ 0! RANDOM_PIN = 0 (дефолт protobuf3)
+# Проверено по protobuf config.proto прошивки 2.7.15
+BT_MODE_MAP = {
+    'RANDOM_PIN': 0, 'FIXED_PIN': 1, 'NO_PIN': 2,
+}
+
 # ─── Обратные маппинги: int → строка (для чтения конфигурации) ──────────
 
 ROLE_REVERSE = {v: k for k, v in ROLE_MAP.items()}
@@ -272,6 +284,7 @@ REGION_REVERSE = {
 }
 REBROADCAST_MODE_REVERSE = {v: k for k, v in REBROADCAST_MODE_MAP.items()}
 # Protobuf PairingMode: RANDOM_PIN=0 (дефолт), FIXED_PIN=1, NO_PIN=2
+# Проверено по protobuf config.proto прошивки 2.7.15
 BT_MODE_REVERSE = {0: 'RANDOM_PIN', 1: 'FIXED_PIN', 2: 'NO_PIN'}
 
 
@@ -370,6 +383,14 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                 print(f"\033[31m[CFG] Ошибка установки имени: {e}\033[0m")
                 # Не прерываем — имя не критично, конфиг важнее
 
+        # ── Session key (обязательно для 2.7.x!) ──
+        # Без session_passkey Meshtastic 2.7.x МОЛЧА ИГНОРИРУЕТ admin-команды!
+        try:
+            node.ensureSessionKey()
+            print("\033[32m[CFG] session_passkey получен перед транзакцией\033[0m")
+        except Exception as e:
+            print(f"\033[33m[CFG] ensureSessionKey() не удался: {e} (продолжаем, но команды могут быть проигнорированы!)\033[0m")
+
         # ── Транзакция ──
         node.beginSettingsTransaction()
         print("\033[33m[CFG] Транзакция открыта\033[0m")
@@ -450,26 +471,44 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             print(f"\033[32m[CFG] lora: region={region_str}, modem={modem_str}, hop={config.get('hopLimit', 5)}\033[0m")
 
             # ── Bluetooth ──
-            # Protobuf: BluetoothConfig.PairingMode (из config.proto)
-            #   0 = RANDOM_PIN — случайный PIN при каждом подключении (ДЕФОЛТ)
-            #   1 = FIXED_PIN — сопряжение по фиксированному PIN
-            #   2 = NO_PIN — без сопряжения (открытый доступ)
+            # Protobuf: BluetoothConfig.PairingMode (из config.proto прошивки 2.7.15)
+            #   RANDOM_PIN = 0 — случайный PIN при каждом подключении (ДЕФОЛТ protobuf3)
+            #   FIXED_PIN = 1 — сопряжение по фиксированному PIN
+            #   NO_PIN = 2 — без сопряжения (открытый доступ)
+            # ВНИМАНИЕ: FIXED_PIN = 1, НЕ 0! Это проверено по исходникам прошивки.
             bt_enabled = config.get('bluetoothEnabled', True)
             bt_pin = config.get('bluetoothFixedPin')
             node.localConfig.bluetooth.enabled = bt_enabled
             if bt_enabled:
                 if bt_pin:
-                    # Фиксированный PIN — режим FIXED_PIN (1, НЕ 0!)
-                    node.localConfig.bluetooth.mode = 1  # FIXED_PIN
+                    # Фиксированный PIN — режим FIXED_PIN
+                    # Используем protobuf-константу вместо magic number
+                    if HAS_MESHTASTIC:
+                        node.localConfig.bluetooth.mode = config_pb2.Config.BluetoothConfig.FIXED_PIN  # = 1
+                    else:
+                        node.localConfig.bluetooth.mode = 1  # FIXED_PIN
                     try:
                         node.localConfig.bluetooth.fixed_pin = int(bt_pin)
                     except (ValueError, TypeError):
                         pass
                 else:
                     # Нет PIN — режим RANDOM_PIN (безопаснее, дефолт прошивки)
-                    node.localConfig.bluetooth.mode = 0  # RANDOM_PIN
+                    if HAS_MESHTASTIC:
+                        node.localConfig.bluetooth.mode = config_pb2.Config.BluetoothConfig.RANDOM_PIN  # = 0
+                    else:
+                        node.localConfig.bluetooth.mode = 0  # RANDOM_PIN
             node.writeConfig("bluetooth")
             time.sleep(0.5)
+            # Диагностика: проверяем, что BT-конфиг реально записался
+            try:
+                bt_read = node.localConfig.bluetooth
+                bt_mode_read = BT_MODE_REVERSE.get(bt_read.mode, f'UNKNOWN({bt_read.mode})')
+                print(f"\033[36m[DIAG] BT после записи: mode={bt_read.mode} ({bt_mode_read}), "
+                      f"fixed_pin={bt_read.fixed_pin}, enabled={bt_read.enabled}\033[0m")
+                if bt_pin and bt_read.mode != 1:
+                    print(f"\033[31m[DIAG] ⚠ BT mode={bt_read.mode}, ожидался FIXED_PIN(1)! Конфиг не применился!\033[0m")
+            except Exception as diag_err:
+                print(f"\033[33m[DIAG] Не удалось прочитать BT после записи: {diag_err}\033[0m")
             sections_written.append("bluetooth")
             bt_mode = 'FIXED_PIN' if bt_enabled and bt_pin else ('RANDOM_PIN' if bt_enabled else 'OFF')
             print(f"\033[32m[CFG] bluetooth: enabled={bt_enabled}, mode={bt_mode}"
@@ -573,7 +612,16 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                     d = fresh_node.localConfig.device
                     l = fresh_node.localConfig.lora
                     p = fresh_node.localConfig.position
+                    bt_fresh = fresh_node.localConfig.bluetooth
+                    bt_mode_fresh = BT_MODE_REVERSE.get(bt_fresh.mode, f'UNKNOWN({bt_fresh.mode})')
                     print(f"\033[36m[DIAG] После применения: role={d.role}, region={l.region}, modem={l.modem_preset}, gps_mode={p.gps_mode}, flags={p.position_flags}\033[0m")
+                    print(f"\033[36m[DIAG] BT после перезагрузки: mode={bt_fresh.mode} ({bt_mode_fresh}), fixed_pin={bt_fresh.fixed_pin}, enabled={bt_fresh.enabled}\033[0m")
+                    # Проверяем, что BT FIXED_PIN реально применился
+                    if bt_pin and bt_fresh.mode != 1:
+                        print(f"\033[31m[DIAG] ⚠⚠⚠ BT mode={bt_fresh.mode} после перезагрузки, ожидался FIXED_PIN(1)!\033[0m")
+                        print(f"\033[31m[DIAG] Возможная причина: известный баг nRF52 (GitHub #9812) — FIXED_PIN не работает на nRF52840 в прошивке 2.7.x\033[0m")
+                    elif bt_pin and bt_fresh.mode == 1:
+                        print(f"\033[32m[DIAG] ✓ BT FIXED_PIN успешно применился! PIN={bt_fresh.fixed_pin}\033[0m")
                 except Exception as diag_err:
                     print(f"\033[36m[DIAG] Не удалось прочитать конфиг после применения: {diag_err}\033[0m")
             else:

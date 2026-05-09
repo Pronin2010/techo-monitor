@@ -223,6 +223,17 @@ python -m meshtastic --ch-index 0 --ch-set name "forest-track"
 | **`REPEATER` и `ROUTER_CLIENT` устарели** | Не рекомендуются к использованию |
 | **Новые роли**: TAK_TRACKER, ROUTER_LATE, CLIENT_BASE | Расширенные возможности маршрутизации |
 | **Новые пресеты**: LITE_FAST/SLOW, NARROW_FAST/SLOW | Для узкополосных режимов |
+| **session_passkey обязателен** | Без ensureSessionKey() устройство молча игнорирует admin-команды |
+| **BT PairingMode: RANDOM_PIN=0, FIXED_PIN=1** | FIXED_PIN = 1, НЕ 0! (проверено по protobuf config.proto) |
+
+### ⚠️ Известные проблемы nRF52840 (T-Echo) в прошивке 2.7.x
+
+| Проблема | GitHub Issue | Описание |
+|----------|-------------|----------|
+| BT FIXED_PIN не работает | #9812 | На nRF52 без экрана NimBLE ставит IO capability NoInputNoOutput → конфликт с MITM |
+| Перезагрузка при BT-сопряжении | #7103 | nRF52840 может перезагружаться при BT-подключении в прошивке 2.7.x |
+
+> **Примечание**: T-Echo имеет экран, поэтому проблема #9812 может не проявляться. Если FIXED_PIN не работает, используйте RANDOM_PIN (безопаснее) или NO_PIN.
 
 ---
 

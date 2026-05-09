@@ -71,6 +71,10 @@ REBROADCAST_MODE_REVERSE = {
 
 BT_MODE_REVERSE = {0: 'RANDOM_PIN', 1: 'FIXED_PIN', 2: 'NO_PIN'}
 
+# Известные проблемы прошивки 2.7.x на nRF52840 (T-Echo):
+# - GitHub #9812: FIXED_PIN может не работать на nRF52 без экрана (IO capability conflict)
+# - GitHub #7103: Перезагрузка при BT-сопряжении на NRF52840 в прошивке 2.7.x
+
 
 # ─── Чтение конфигурации из устройства ──────────────────────────────────
 
