@@ -466,3 +466,27 @@ Stage Summary:
 - techo-dump-config.py: python techo-dump-config.py --port COM5 [--output file.json] [--compare preset.json]
 - GET /api/device-config: JSON со всеми настройками устройства
 - Можно сопоставлять конфигурацию устройства с пресетами дашборда
+
+---
+Task ID: 23
+Agent: main
+Task: Фикс protobuf «does not have presence» — скрипт techo-dump-config.py падал при чтении wifi_ssid
+
+Work Log:
+- Ошибка: `Field meshtastic.protobuf.Config.NetworkConfig.wifi_ssid does not have presence` — HasField() нельзя вызывать на скалярных полях protobuf3 без `optional`
+- Исправлено в techo-dump-config.py: `n.HasField('wifi_ssid')` → `n.wifi_ssid if n.wifi_ssid else ""`
+- Исправлено в techo-bridge.py: тот же HasField() в GET /api/device-config
+- Добавлена функция `_safe_get()` — безопасный доступ к атрибутам protobuf-объектов
+- Каждая секция read_device_config() обёрнута в try/except — ошибка в одной секции не ломает чтение остальных
+- Добавлены новые секции: MQTT (module) и Serial (module)
+- Добавлена функция `_section_error()` в print_config() — корректный вывод ошибок по секциям
+- Добавлен вывод Network и Security в print_config()
+- Исправлен баг: `my_info` мог быть не определён при ошибке в owner (→ инициализирован заранее)
+- Исправлен баг: `args.port` через `'args' in dir()` → `getattr(args, 'port', '')`
+- Обновлена документация: AI_PROMPT.md, PROJECT_RULES.md, worklog.md
+
+Stage Summary:
+- techo-dump-config.py теперь не падает при чтении конфигурации — все секции защищены try/except
+- HasField() убран — используется простая проверка через truthiness
+- Добавлены секции MQTT и Serial (module configs)
+- techo-bridge.py: тот же фикс в GET /api/device-config

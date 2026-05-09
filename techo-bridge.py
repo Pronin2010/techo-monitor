@@ -783,7 +783,7 @@ class BridgeHTTPHandler(BaseHTTPRequestHandler):
                         "screenOnSecs": disp.screen_on_secs,
                     },
                     "network": {
-                        "wifiSsid": n.wifi_ssid if n.HasField('wifi_ssid') else "",
+                        "wifiSsid": n.wifi_ssid if n.wifi_ssid else "",
                         "wifiEnabled": n.wifi_enabled,
                     },
                     "telemetry": telem,

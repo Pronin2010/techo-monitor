@@ -246,6 +246,7 @@ SyncLog
 19. Фикс применения конфига: задержки между writeConfig() + задержка перед reboot + диагностика после перезагрузки
 20. Фикс ВСЕХ protobuf enum маппингов: ROLE_MAP (ROUTER=2 не 4), MODEM_PRESET_MAP (LONG_MODERATE=7 не 1), REGION_MAP (EU_433=2 не 3)
 21. Скрипт techo-dump-config.py + GET /api/device-config — чтение и выгрузка конфигурации устройства
+22. Фикс protobuf «does not have presence» — HasField() на скалярных полях (wifi_ssid), обёртка секций в try/except, добавлены MQTT/Serial модули
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -273,4 +274,4 @@ ALL, LOCAL_SKIP, SIMPLE
 
 ---
 
-_Последнее обновление: 2026-05-09 (techo-dump-config.py + GET /api/device-config)_
+_Последнее обновление: 2026-05-09 (фикс protobuf HasField + try/except секции)_

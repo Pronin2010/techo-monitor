@@ -72,99 +72,146 @@ REBROADCAST_MODE_REVERSE = {
 
 # ─── Чтение конфигурации из устройства ──────────────────────────────────
 
+def _safe_get(obj, field, default=None):
+    """Безопасно получить атрибут protobuf-объекта.
+    
+    В protobuf3 скалярные поля (string, int32, bool) без 'optional'
+    не имеют presence tracking — HasField() на них падает.
+    Эта функция просто читает значение через getattr с fallback.
+    """
+    try:
+        val = getattr(obj, field, default)
+        return val if val is not None else default
+    except Exception:
+        return default
+
+
 def read_device_config(interface):
     """Прочитать ВСЮ конфигурацию из устройства и вернуть dict.
 
     Возвращает dict в формате, совместимом с пресетами дашборда.
+    Каждая секция обёрнута в try/except — ошибка в одной секции
+    не ломает чтение остальных.
     """
     node = interface.localNode
     config = {}
+    my_info = None  # Инициализируем заранее для _meta в конце
 
     # ── Информация об узле ──
-    my_info = interface.getMyNodeInfo()
-    user = my_info.get("user", {}) if my_info else {}
-    config['owner'] = {
-        'longName': user.get("longName", ""),
-        'shortName': user.get("shortName", ""),
-        'nodeNum': my_info.get("num", 0) if my_info else 0,
-        'nodeId': f"!{my_info['num']:08x}" if my_info and 'num' in my_info else "",
-        'hwModel': user.get("hwModel", ""),
-    }
+    try:
+        my_info = interface.getMyNodeInfo()
+        user = my_info.get("user", {}) if my_info else {}
+        config['owner'] = {
+            'longName': user.get("longName", ""),
+            'shortName': user.get("shortName", ""),
+            'nodeNum': my_info.get("num", 0) if my_info else 0,
+            'nodeId': f"!{my_info['num']:08x}" if my_info and 'num' in my_info else "",
+            'hwModel': user.get("hwModel", ""),
+        }
+    except Exception as e:
+        config['owner'] = {'error': str(e)}
 
     # ── Device ──
-    d = node.localConfig.device
-    config['device'] = {
-        'role': ROLE_REVERSE.get(d.role, f'UNKNOWN({d.role})'),
-        'roleValue': d.role,
-        'nodeInfoBroadcastSecs': d.node_info_broadcast_secs,
-        'rebroadcastMode': REBROADCAST_MODE_REVERSE.get(d.rebroadcast_mode, f'UNKNOWN({d.rebroadcast_mode})'),
-        'rebroadcastModeValue': d.rebroadcast_mode,
-        'ledHeartbeatDisabled': d.led_heartbeat_disabled,
-    }
+    try:
+        d = node.localConfig.device
+        config['device'] = {
+            'role': ROLE_REVERSE.get(d.role, f'UNKNOWN({d.role})'),
+            'roleValue': d.role,
+            'nodeInfoBroadcastSecs': d.node_info_broadcast_secs,
+            'rebroadcastMode': REBROADCAST_MODE_REVERSE.get(d.rebroadcast_mode, f'UNKNOWN({d.rebroadcast_mode})'),
+            'rebroadcastModeValue': d.rebroadcast_mode,
+            'ledHeartbeatDisabled': d.led_heartbeat_disabled,
+        }
+    except Exception as e:
+        config['device'] = {'error': str(e)}
 
     # ── Position ──
-    p = node.localConfig.position
-    config['position'] = {
-        'gpsMode': GPS_MODE_REVERSE.get(p.gps_mode, f'UNKNOWN({p.gps_mode})'),
-        'gpsModeValue': p.gps_mode,
-        'positionBroadcastSecs': p.position_broadcast_secs,
-        'positionFlags': p.position_flags,
-        'gpsUpdateInterval': p.gps_update_interval,
-        'gpsAttemptTime': p.gps_attempt_time,
-        'smartBroadcastEnabled': p.position_broadcast_smart_enabled,
-        'smartBroadcastMinDist': p.broadcast_smart_minimum_distance if p.position_broadcast_smart_enabled else None,
-        'smartBroadcastMinInterval': p.broadcast_smart_minimum_interval_secs if p.position_broadcast_smart_enabled else None,
-    }
+    try:
+        p = node.localConfig.position
+        config['position'] = {
+            'gpsMode': GPS_MODE_REVERSE.get(p.gps_mode, f'UNKNOWN({p.gps_mode})'),
+            'gpsModeValue': p.gps_mode,
+            'positionBroadcastSecs': p.position_broadcast_secs,
+            'positionFlags': p.position_flags,
+            'gpsUpdateInterval': p.gps_update_interval,
+            'gpsAttemptTime': p.gps_attempt_time,
+            'smartBroadcastEnabled': p.position_broadcast_smart_enabled,
+            'smartBroadcastMinDist': p.broadcast_smart_minimum_distance if p.position_broadcast_smart_enabled else None,
+            'smartBroadcastMinInterval': p.broadcast_smart_minimum_interval_secs if p.position_broadcast_smart_enabled else None,
+        }
+    except Exception as e:
+        config['position'] = {'error': str(e)}
 
     # ── Power ──
-    pw = node.localConfig.power
-    config['power'] = {
-        'powerSaving': pw.is_power_saving,
-        'lsSecs': pw.ls_secs,
-        'minWakeSecs': pw.min_wake_secs,
-    }
+    try:
+        pw = node.localConfig.power
+        config['power'] = {
+            'powerSaving': pw.is_power_saving,
+            'lsSecs': pw.ls_secs,
+            'minWakeSecs': pw.min_wake_secs,
+        }
+    except Exception as e:
+        config['power'] = {'error': str(e)}
 
     # ── LoRa ──
-    l = node.localConfig.lora
-    config['lora'] = {
-        'region': REGION_REVERSE.get(l.region, f'UNKNOWN({l.region})'),
-        'regionValue': l.region,
-        'modemPreset': MODEM_PRESET_REVERSE.get(l.modem_preset, f'UNKNOWN({l.modem_preset})'),
-        'modemPresetValue': l.modem_preset,
-        'hopLimit': l.hop_limit,
-        'txPower': l.tx_power,
-        'channelNum': l.channel_num,
-    }
+    try:
+        l = node.localConfig.lora
+        config['lora'] = {
+            'region': REGION_REVERSE.get(l.region, f'UNKNOWN({l.region})'),
+            'regionValue': l.region,
+            'modemPreset': MODEM_PRESET_REVERSE.get(l.modem_preset, f'UNKNOWN({l.modem_preset})'),
+            'modemPresetValue': l.modem_preset,
+            'hopLimit': l.hop_limit,
+            'txPower': l.tx_power,
+            'channelNum': l.channel_num,
+        }
+    except Exception as e:
+        config['lora'] = {'error': str(e)}
 
     # ── Bluetooth ──
-    bt = node.localConfig.bluetooth
-    config['bluetooth'] = {
-        'enabled': bt.enabled,
-        'fixedPin': bt.fixed_pin if bt.fixed_pin else None,
-        'mode': bt.mode,
-    }
+    try:
+        bt = node.localConfig.bluetooth
+        config['bluetooth'] = {
+            'enabled': bt.enabled,
+            'fixedPin': bt.fixed_pin if bt.fixed_pin else None,
+            'mode': bt.mode,
+        }
+    except Exception as e:
+        config['bluetooth'] = {'error': str(e)}
 
     # ── Display ──
-    disp = node.localConfig.display
-    config['display'] = {
-        'screenOnSecs': disp.screen_on_secs,
-        'autoScreenCarouselSecs': disp.auto_screen_carousel_secs,
-    }
+    try:
+        disp = node.localConfig.display
+        config['display'] = {
+            'screenOnSecs': disp.screen_on_secs,
+            'autoScreenCarouselSecs': disp.auto_screen_carousel_secs,
+        }
+    except Exception as e:
+        config['display'] = {'error': str(e)}
 
     # ── Network (WiFi) ──
-    n = node.localConfig.network
-    config['network'] = {
-        'wifiSsid': n.wifi_ssid if n.HasField('wifi_ssid') else "",
-        'wifiPsk': '***' if n.wifi_psk else "",  # Не показываем пароль
-        'wifiEnabled': n.wifi_enabled,
-    }
+    # В protobuf3 скалярные поля (string) без 'optional' не поддерживают HasField().
+    # Нельзя использовать n.HasField('wifi_ssid') — будет ошибка
+    # "does not have presence". Проверяем просто через truthiness.
+    try:
+        n = node.localConfig.network
+        config['network'] = {
+            'wifiSsid': n.wifi_ssid if n.wifi_ssid else "",
+            'wifiPsk': '***' if n.wifi_psk else "",  # Не показываем пароль
+            'wifiEnabled': n.wifi_enabled,
+        }
+    except Exception as e:
+        config['network'] = {'error': str(e)}
 
     # ── Security ──
-    s = node.localConfig.security
-    config['security'] = {
-        'adminKeySet': len(s.admin_key) > 0 if hasattr(s, 'admin_key') else False,
-        'publicKeySet': len(s.public_key) > 0 if hasattr(s, 'public_key') else False,
-    }
+    try:
+        s = node.localConfig.security
+        config['security'] = {
+            'adminKeySet': len(s.admin_key) > 0 if hasattr(s, 'admin_key') else False,
+            'publicKeySet': len(s.public_key) > 0 if hasattr(s, 'public_key') else False,
+        }
+    except Exception as e:
+        config['security'] = {'error': str(e)}
 
     # ── Telemetry (module) ──
     try:
@@ -172,30 +219,56 @@ def read_device_config(interface):
         config['telemetry'] = {
             'deviceUpdateInterval': t.device_update_interval,
             'environmentMeasurementEnabled': t.environment_measurement_enabled,
-            'environmentScreenEnabled': t.environment_screen_enabled if hasattr(t, 'environment_screen_enabled') else None,
+            'environmentScreenEnabled': _safe_get(t, 'environment_screen_enabled'),
         }
-    except Exception:
-        config['telemetry'] = {'error': 'Не удалось прочитать moduleConfig.telemetry'}
+    except Exception as e:
+        config['telemetry'] = {'error': f'Не удалось прочитать moduleConfig.telemetry: {e}'}
+
+    # ── MQTT (module) ──
+    try:
+        m = node.moduleConfig.mqtt
+        config['mqtt'] = {
+            'enabled': m.enabled,
+            'address': m.address if m.address else "",
+            'username': m.username if m.username else "",
+            'passwordSet': bool(m.password) if m.password else False,
+        }
+    except Exception as e:
+        config['mqtt'] = {'error': str(e)}
+
+    # ── Serial (module) ──
+    try:
+        ser = node.moduleConfig.serial
+        config['serial'] = {
+            'enabled': ser.enabled,
+            'echo': ser.echo,
+            'baudRate': _safe_get(ser, 'baud'),
+        }
+    except Exception as e:
+        config['serial'] = {'error': str(e)}
 
     # ── Каналы ──
     channels = []
-    for i, ch in enumerate(node.channels):
-        if ch is None:
-            continue
-        ch_settings = ch.settings if hasattr(ch, 'settings') else None
-        if ch_settings is None:
-            continue
-        ch_info = {
-            'index': i,
-            'name': ch_settings.name if ch_settings.name else "",
-            'uplinkEnabled': ch_settings.uplink_enabled,
-            'downlinkEnabled': ch_settings.downlink_enabled,
-        }
-        # PSK — показываем только наличие/длину
-        psk_bytes = ch_settings.psk if ch_settings.psk else b''
-        ch_info['pskLength'] = len(psk_bytes)
-        ch_info['pskSet'] = len(psk_bytes) > 0
-        channels.append(ch_info)
+    try:
+        for i, ch in enumerate(node.channels):
+            if ch is None:
+                continue
+            ch_settings = ch.settings if hasattr(ch, 'settings') else None
+            if ch_settings is None:
+                continue
+            ch_info = {
+                'index': i,
+                'name': ch_settings.name if ch_settings.name else "",
+                'uplinkEnabled': ch_settings.uplink_enabled,
+                'downlinkEnabled': ch_settings.downlink_enabled,
+            }
+            # PSK — показываем только наличие/длину
+            psk_bytes = ch_settings.psk if ch_settings.psk else b''
+            ch_info['pskLength'] = len(psk_bytes)
+            ch_info['pskSet'] = len(psk_bytes) > 0
+            channels.append(ch_info)
+    except Exception as e:
+        print(f"\033[33m[WARN] Ошибка чтения каналов: {e}\033[0m")
     config['channels'] = channels
 
     # ── Список узлов в сети ──
@@ -222,61 +295,100 @@ def read_device_config(interface):
     config['_meta'] = {
         'timestamp': datetime.now(timezone.utc).isoformat(),
         'firmwareVersion': my_info.get("firmwareVersion", "") if my_info else "",
-        'devicePort': args.port if 'args' in dir() else "",
+        'devicePort': getattr(args, 'port', ''),
     }
 
     return config
 
 
+def _section_error(label, section):
+    """Вывести ошибку секции, если она есть."""
+    if 'error' in section:
+        print(f"\033[33m[{label}]\033[0m \033[31mОШИБКА: {section['error']}\033[0m")
+        return True
+    return False
+
+
 def print_config(config, compact=False):
     """Вывести конфигурацию в консоль с цветами."""
     # Информация об узле
-    o = config['owner']
-    print(f"\033[1;36m═══ {o['longName']}/{o['shortName']} ({o['nodeId']}) ═══\033[0m")
+    o = config.get('owner', {})
+    if _section_error('OWNER', o):
+        pass
+    else:
+        print(f"\033[1;36m═══ {o.get('longName','?')}/{o.get('shortName','?')} ({o.get('nodeId','?')}) ═══\033[0m")
     if config.get('_meta', {}).get('firmwareVersion'):
         print(f"  Прошивка: {config['_meta']['firmwareVersion']}")
 
     # Device
-    d = config['device']
-    print(f"\033[33m[DEVICE]\033[0m role=\033[1m{d['role']}\033[0m ({d['roleValue']}), "
-          f"node_info={d['nodeInfoBroadcastSecs']}s, "
-          f"rebroadcast={d['rebroadcastMode']}, "
-          f"led={'OFF' if d['ledHeartbeatDisabled'] else 'ON'}")
+    d = config.get('device', {})
+    if not _section_error('DEVICE', d):
+        print(f"\033[33m[DEVICE]\033[0m role=\033[1m{d['role']}\033[0m ({d['roleValue']}), "
+              f"node_info={d['nodeInfoBroadcastSecs']}s, "
+              f"rebroadcast={d['rebroadcastMode']}, "
+              f"led={'OFF' if d['ledHeartbeatDisabled'] else 'ON'}")
 
     # Position
-    p = config['position']
-    smart = f", smart={p['smartBroadcastEnabled']}" if p['smartBroadcastEnabled'] else ""
-    print(f"\033[33m[POSITION]\033[0m gps={p['gpsMode']}, flags={p['positionFlags']}, "
-          f"broadcast={p['positionBroadcastSecs']}s, "
-          f"gps_interval={p['gpsUpdateInterval']}s, "
-          f"gps_attempt={p['gpsAttemptTime']}s{smart}")
+    p = config.get('position', {})
+    if not _section_error('POSITION', p):
+        smart = f", smart={p['smartBroadcastEnabled']}" if p.get('smartBroadcastEnabled') else ""
+        print(f"\033[33m[POSITION]\033[0m gps={p['gpsMode']}, flags={p['positionFlags']}, "
+              f"broadcast={p['positionBroadcastSecs']}s, "
+              f"gps_interval={p['gpsUpdateInterval']}s, "
+              f"gps_attempt={p['gpsAttemptTime']}s{smart}")
 
     # Power
-    pw = config['power']
-    print(f"\033[33m[POWER]\033[0m saving={pw['powerSaving']}, "
-          f"ls={pw['lsSecs']}s, min_wake={pw['minWakeSecs']}s")
+    pw = config.get('power', {})
+    if not _section_error('POWER', pw):
+        print(f"\033[33m[POWER]\033[0m saving={pw['powerSaving']}, "
+              f"ls={pw['lsSecs']}s, min_wake={pw['minWakeSecs']}s")
 
     # LoRa
-    l = config['lora']
-    print(f"\033[33m[LORA]\033[0m region=\033[1m{l['region']}\033[0m ({l['regionValue']}), "
-          f"modem=\033[1m{l['modemPreset']}\033[0m ({l['modemPresetValue']}), "
-          f"hop={l['hopLimit']}, tx={l['txPower']}dBm, ch={l['channelNum']}")
+    l = config.get('lora', {})
+    if not _section_error('LORA', l):
+        print(f"\033[33m[LORA]\033[0m region=\033[1m{l['region']}\033[0m ({l['regionValue']}), "
+              f"modem=\033[1m{l['modemPreset']}\033[0m ({l['modemPresetValue']}), "
+              f"hop={l['hopLimit']}, tx={l['txPower']}dBm, ch={l['channelNum']}")
 
     # Bluetooth
-    bt = config['bluetooth']
-    print(f"\033[33m[BT]\033[0m enabled={bt['enabled']}, pin={'*' + str(bt['fixedPin']) if bt['fixedPin'] else 'none'}")
+    bt = config.get('bluetooth', {})
+    if not _section_error('BT', bt):
+        print(f"\033[33m[BT]\033[0m enabled={bt['enabled']}, pin={'*' + str(bt['fixedPin']) if bt.get('fixedPin') else 'none'}")
 
     # Display
-    disp = config['display']
-    print(f"\033[33m[DISPLAY]\033[0m screen_on={disp['screenOnSecs']}s")
+    disp = config.get('display', {})
+    if not _section_error('DISPLAY', disp):
+        print(f"\033[33m[DISPLAY]\033[0m screen_on={disp['screenOnSecs']}s")
+
+    # Network
+    n = config.get('network', {})
+    if not _section_error('NETWORK', n):
+        print(f"\033[33m[NETWORK]\033[0m wifi={'ON' if n.get('wifiEnabled') else 'OFF'}, "
+              f"ssid={n.get('wifiSsid', '') or '(none)'}")
+
+    # Security
+    s = config.get('security', {})
+    if not _section_error('SECURITY', s):
+        print(f"\033[33m[SECURITY]\033[0m admin_key={'YES' if s.get('adminKeySet') else 'NO'}, "
+              f"public_key={'YES' if s.get('publicKeySet') else 'NO'}")
 
     # Telemetry
     t = config.get('telemetry', {})
-    if 'error' not in t:
+    if not _section_error('TELEMETRY', t):
         print(f"\033[33m[TELEMETRY]\033[0m interval={t['deviceUpdateInterval']}s, "
               f"env_sensor={t.get('environmentMeasurementEnabled', '?')}")
-    else:
-        print(f"\033[33m[TELEMETRY]\033[0m {t['error']}")
+
+    # MQTT
+    m = config.get('mqtt', {})
+    if not _section_error('MQTT', m):
+        print(f"\033[33m[MQTT]\033[0m enabled={m['enabled']}, "
+              f"address={m.get('address', '') or '(none)'}")
+
+    # Serial
+    ser = config.get('serial', {})
+    if not _section_error('SERIAL', ser):
+        print(f"\033[33m[SERIAL]\033[0m enabled={ser['enabled']}, "
+              f"echo={ser.get('echo', '?')}, baud={ser.get('baudRate', '?')}")
 
     # Channels
     for ch in config.get('channels', []):
