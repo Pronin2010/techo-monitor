@@ -485,6 +485,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
   const [bridgeOnline, setBridgeOnline] = useState(false)
   const [pushDeviceName, setPushDeviceName] = useState('')
   const [pushDeviceShortName, setPushDeviceShortName] = useState('')
+  const [pushFactoryReset, setPushFactoryReset] = useState(false)
 
   /** Открыть диалог пуша и проверить мост */
   const handlePushToDevice = useCallback(async (preset: PresetData) => {
@@ -492,6 +493,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     setPushTarget('_local')
     setPushDeviceName('')
     setPushDeviceShortName('')
+    setPushFactoryReset(false)
     setPushDialogOpen(true)
     // Проверяем статус моста
     try {
@@ -552,6 +554,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
           rebootSecs: 5,
           deviceName: pushDeviceName || undefined,
           deviceShortName: pushDeviceShortName || undefined,
+          factoryReset: pushFactoryReset,
         }),
       })
       const result = await resp.json()
@@ -2179,6 +2182,26 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                 Имя отображается в сети. Короткое — макс. 5 символов, показывается на экране устройства.
                 Оставьте пустым, чтобы не менять текущее имя.
               </p>
+
+              {/* Сброс до заводских */}
+              <div className="flex items-start gap-2 rounded-md border border-destructive/30 p-2.5">
+                <Checkbox
+                  id="factoryReset"
+                  checked={pushFactoryReset}
+                  onCheckedChange={c => setPushFactoryReset(c === true)}
+                  className="mt-0.5"
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="factoryReset" className="text-xs font-medium cursor-pointer">
+                    Сбросить до заводских настроек
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Удалить все текущие настройки перед применением пресета.
+                    Устройство перезагрузится, затем применится новый конфиг.
+                    Рекомендуется для новых устройств или при проблемах.
+                  </p>
+                </div>
+              </div>
 
               {/* Предупреждение для удалённого узла */}
               {pushTarget !== '_local' && (

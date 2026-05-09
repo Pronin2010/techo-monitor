@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server'
  *   rebootSecs?: number       — задержка перезагрузки (по умолчанию 5 сек, 0 = без перезагрузки)
  *   deviceName?: string       — длинное имя устройства (например, 'Tracker 01')
  *   deviceShortName?: string  — короткое имя (макс. 5 символов, например, 'TR01')
+ *   factoryReset?: boolean    — сбросить до заводских перед применением пресета
  *
  * Логика:
  *   1. Загрузить пресет из БД
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { presetId, nodeId = '', rebootSecs = 5,
-            deviceName, deviceShortName } = body
+            deviceName, deviceShortName, factoryReset = false } = body
 
     if (!presetId) {
       return NextResponse.json(
@@ -82,6 +83,7 @@ export async function POST(request: Request) {
       presetName: preset.name,
       deviceName: deviceName || undefined,
       deviceShortName: deviceShortName || undefined,
+      factoryReset,
     }
 
     let bridgeResult: { success: boolean; message: string; sections?: string[] }
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bridgePayload),
-        signal: AbortSignal.timeout(30_000), // 30 сек таймаут
+        signal: AbortSignal.timeout(60_000), // 60 сек таймаут (factory reset + apply)
       })
       bridgeResult = await resp.json()
     } catch (err) {
@@ -115,6 +117,7 @@ export async function POST(request: Request) {
           nodeId: nodeId || 'local',
           deviceName: deviceName || null,
           deviceShortName: deviceShortName || null,
+          factoryReset,
           sections: bridgeResult.sections,
           message: bridgeResult.message,
         }),

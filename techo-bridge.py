@@ -253,7 +253,8 @@ REBROADCAST_MODE_MAP = {
 
 
 def apply_config_to_node(interface, node_id, config, reboot_secs=5,
-                          device_name=None, device_short_name=None):
+                          device_name=None, device_short_name=None,
+                          factory_reset=False):
     """Применить конфигурацию пресета к узлу (локальному или удалённому).
 
     Args:
@@ -263,6 +264,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
         reboot_secs: секунд до перезагрузки (0 = без перезагрузки)
         device_name: длинное имя устройства (например, 'Tracker 01')
         device_short_name: короткое имя (макс. 5 символов, например, 'TR01')
+        factory_reset: если True — сначала сбросить до заводских, затем применить пресет
 
     Returns:
         dict {success: bool, message: str, sections: [str]}
@@ -281,6 +283,25 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             node = interface.localNode
 
         sections_written = []
+
+        # ── Factory Reset ──
+        if factory_reset:
+            print("\033[1;31m[CFG] ⚠ СБРОС ДО ЗАВОДСКИХ НАСТРОЕК...\033[0m")
+            node.factoryReset()
+            sections_written.append("factory_reset")
+            # После factoryReset устройство перезагружается — ждём повторного подключения
+            print("\033[33m[CFG] Ожидание перезагрузки (10 сек)...\033[0m")
+            time.sleep(10)
+            # Переподключаемся к узлу
+            try:
+                if node_id and node_id.strip():
+                    node = interface.getNode(node_id, timeout=120)
+                else:
+                    node = interface.localNode
+                print("\033[32m[CFG] Повторное подключение после сброса — ОК\033[0m")
+            except Exception as e:
+                print(f"\033[31m[CFG] Не удалось переподключиться после сброса: {e}\033[0m")
+                return {'success': False, 'message': f'Сброс выполнен, но не удалось переподключиться: {e}', 'sections': sections_written}
 
         # ── Имя устройства ──
         if device_name or device_short_name:
@@ -494,14 +515,17 @@ class BridgeHTTPHandler(BaseHTTPRequestHandler):
             preset_name = body.get('presetName', 'неизвестный')
             device_name = body.get('deviceName') or None      # длинное имя
             device_short_name = body.get('deviceShortName') or None  # короткое имя (макс. 5 символов)
+            factory_reset = body.get('factoryReset', False)    # сброс до заводских перед конфигурацией
 
             target_label = node_id or 'BASE (локальный)'
             name_label = f" → {device_name}" if device_name else ""
-            print(f"\033[1;33m═══ КОНФИГУРАЦИЯ: «{preset_name}» → {target_label}{name_label} ═══\033[0m")
+            reset_label = " [СБРОС]" if factory_reset else ""
+            print(f"\033[1;33m═══ КОНФИГУРАЦИЯ{reset_label}: «{preset_name}» → {target_label}{name_label} ═══\033[0m")
 
             result = apply_config_to_node(
                 iface, node_id, config, reboot_secs,
                 device_name=device_name, device_short_name=device_short_name,
+                factory_reset=factory_reset,
             )
             result['presetName'] = preset_name
 

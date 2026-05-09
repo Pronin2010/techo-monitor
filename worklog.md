@@ -224,3 +224,24 @@ Stage Summary:
 - Имя автозаполняется из текущего устройства при открытии диалога и смене устройства
 - setOwner() вызывается до beginSettingsTransaction(), чтобы отделить имя от конфигурации
 - Если имя не заполнено — не отправляется, текущее имя устройства не меняется
+
+---
+Task ID: 3
+Agent: main
+Task: Добавить опцию «Сбросить до заводских» в диалог отправки конфигурации
+
+Work Log:
+- Расширен apply_config_to_node() в techo-bridge.py: параметр factory_reset
+- Если factory_reset=True: node.factoryReset() → sleep(10) → переподключение → применение пресета
+- Обновлён POST /api/apply-config handler моста: читает factoryReset из тела запроса
+- Обновлён POST /api/meshtastic/config route: передаёт factoryReset в payload моста и SyncLog
+- Таймаут увеличен с 30 до 60 сек (factory reset + apply)
+- Добавлен state pushFactoryReset в settings-presets-tab.tsx
+- В диалог добавлен чекбокс «Сбросить до заводских настроек» с описанием и красной рамкой
+- Чекбокс сбрасывается при открытии диалога
+- Обновлена документация: STARTUP.md, PROJECT_RULES.md
+
+Stage Summary:
+- Опция factory reset в диалоге отправки конфигурации (по умолчанию выключена)
+- Порядок: factoryReset → перезагрузка → переподключение → setOwner → beginTransaction → writeConfig → commit → reboot
+- UI: чекбокс с предупреждающей рамкой (border-destructive/30)
