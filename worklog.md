@@ -104,3 +104,51 @@ Stage Summary:
 - Filters for node, event type, source, and action
 - Position history now stored in Telemetry table (was lost before)
 - SyncLog entries are granular (one per node per sync) instead of one per batch
+
+---
+Task ID: 5
+Agent: main
+Task: Fix preset duplication and redesign system presets UI
+
+Work Log:
+- Added @unique constraint on builtinId in Prisma schema
+- Rewrote GET /api/presets to use upsert (atomic, prevents race condition)
+- Fixed .env DATABASE_URL to point to actual DB (file:../db/custom.db)
+- Cleaned up duplicate presets in the database
+- Redesigned system presets as compact device-like cards in responsive grid
+- Updated seed route to use upsert
+
+Stage Summary:
+- Preset duplication fixed (upsert + unique constraint)
+- System presets now display as cards instead of rows
+- DB connection fixed
+
+---
+Task ID: 6
+Agent: main
+Task: Remove Журнал tab and demo data functionality
+
+Work Log:
+- Removed EventLogTab component (event-log-tab.tsx)
+- Removed seed API route (api/seed/route.ts)
+- Removed demo data buttons from header and empty status
+- Removed seedDatabase/handleSeed functions
+- Kept sync-log API (still used by ConnectionTab)
+- Dashboard: 8 tabs → 7 tabs
+
+Stage Summary:
+- Журнал tab completely removed
+- Demo data functionality removed
+- sync-log API preserved for Connection tab
+
+---
+Task ID: 7
+Agent: main
+Task: Add documentation update rule to PROJECT_RULES.md
+
+Work Log:
+- Added section 9 "Документация проекта" with 6 bullet points
+- Updated footer date in PROJECT_RULES.md
+
+Stage Summary:
+- New rule: always update all project documentation on changes
