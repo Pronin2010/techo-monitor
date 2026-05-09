@@ -101,7 +101,7 @@ export async function POST(request: Request) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bridgePayload),
-        signal: AbortSignal.timeout(60_000), // 60 сек таймаут (factory reset + apply)
+        signal: AbortSignal.timeout(120_000), // 120 сек таймаут (reboot + reconnect + factory reset)
       })
       bridgeResult = await resp.json()
     } catch (err) {

@@ -213,6 +213,7 @@ SyncLog
   - Порядок: factoryReset → device reboot → _reconnect_interface() → setOwner → beginTransaction → writeConfig × N → commit → reboot
   - При ошибке записи — перезагрузка для отката (вместо commit частичных данных)
   - При factory reset — автоматическое пересоздание SerialInterface с повторными попытками
+  - После перезагрузки устройства (reboot) — мост автоматически переподключается для продолжения мониторинга
 - **GET /api/status** — статус моста и список узлов (nodeId в hex-формате `!a1b2c3d4`)
 - Транзакционное применение: все настройки в одной транзакции
 - Fallback: writeModuleConfig() для старых версий meshtastic-библиотеки

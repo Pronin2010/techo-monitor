@@ -496,7 +496,20 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
         # ── Перезагрузка ──
         if reboot_secs > 0:
             print(f"\033[33m[CFG] Перезагрузка через {reboot_secs} сек...\033[0m")
-            node.reboot(secs=reboot_secs)
+            try:
+                node.reboot(secs=reboot_secs)
+            except Exception:
+                pass  # reboot может вызвать отключение — это нормально
+            
+            # После перезагрузки серийное соединение разрывается.
+            # Пересоздаём интерфейс для продолжения мониторинга.
+            print(f"\033[33m[CFG] Ожидание перезагрузки ({reboot_secs + 5} сек)...\033[0m")
+            time.sleep(reboot_secs + 5)
+            new_iface = _reconnect_interface(max_retries=5, retry_delay=5)
+            if new_iface:
+                print("\033[32m[CFG] Мост переподключён после перезагрузки устройства\033[0m")
+            else:
+                print("\033[33m[CFG] Не удалось переподключить мост после перезагрузки. Мониторинг приостановлен.\033[0m")
 
         return {
             'success': True,
