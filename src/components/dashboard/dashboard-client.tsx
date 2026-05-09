@@ -16,6 +16,7 @@ import ChannelSettings from '@/components/dashboard/channel-settings'
 import ConnectionTab from '@/components/dashboard/connection-tab'
 import DeviceSetupTab from '@/components/dashboard/device-setup-tab'
 import EventLogTab from '@/components/dashboard/event-log-tab'
+import PacketStreamTab from '@/components/dashboard/packet-stream-tab'
 import {
   Radio,
   Map,
@@ -26,6 +27,7 @@ import {
   Search,
   Cpu,
   FileText,
+  Zap,
 } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -326,6 +328,10 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
                 <Cpu className="h-4 w-4" />
                 Настройка
               </TabsTrigger>
+              <TabsTrigger value="packets" className="gap-1.5">
+                <Zap className="h-4 w-4" />
+                Пакеты
+              </TabsTrigger>
               <TabsTrigger value="log" className="gap-1.5">
                 <FileText className="h-4 w-4" />
                 Журнал
@@ -437,6 +443,11 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
             {/* ── Device Setup Tab ── */}
             <TabsContent value="setup">
               <DeviceSetupTab channels={channels} />
+            </TabsContent>
+
+            {/* ── Packet Stream Tab ── */}
+            <TabsContent value="packets">
+              <PacketStreamTab nodes={nodes.map(n => ({ id: n.id, name: n.name, nodeId: n.nodeId }))} />
             </TabsContent>
 
             {/* ── Event Log Tab ── */}

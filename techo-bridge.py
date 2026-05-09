@@ -4,13 +4,16 @@ T-Echo Meshtastic Bridge Script
 Подключает физические T-Echo устройства к веб-дашборду.
 
 Установка:
-  pip install meshtastic
+  pip install meshtastic PyPubSub
 
-Запуск (USB):
-  python techo-bridge.py --mode serial --port /dev/ttyUSB0 --dashboard http://YOUR_SERVER:3000
+Запуск (USB) — реалтайм-мониторинг пакетов:
+  python techo-bridge.py --mode serial --port COM5 --dashboard http://localhost:3000
+
+Запуск (USB) — только периодический опрос:
+  python techo-bridge.py --mode serial --port COM5 --dashboard http://localhost:3000 --no-realtime
 
 Запуск (MQTT):
-  python techo-bridge.py --mode mqtt --broker mqtt://broker.hivemq.com:1883 --dashboard http://YOUR_SERVER:3000
+  python techo-bridge.py --mode mqtt --broker mqtt://broker.hivemq.com:1883 --dashboard http://localhost:3000
 """
 
 import argparse
@@ -20,6 +23,7 @@ import time
 import signal
 import threading
 from datetime import datetime, timezone
+from collections import OrderedDict
 
 # Serial mode imports (required for --mode serial)
 try:
@@ -57,7 +61,7 @@ except ImportError:
 def http_post(url, data):
     """Send data to the dashboard API."""
     headers = {'Content-Type': 'application/json'}
-    payload = json.dumps(data).encode('utf-8')
+    payload = json.dumps(data, default=str).encode('utf-8')
     try:
         if HAS_REQUESTS:
             resp = requests.post(url, json=data, timeout=10)
@@ -70,10 +74,67 @@ def http_post(url, data):
         return False, str(e)
 
 
+# ─── Packet type names ────────────────────────────────────────────────────
+
+PORTNUM_NAMES = {
+    0: 'UNKNOWN',
+    1: 'TEXT_MESSAGE',
+    2: 'REMOTE_HARDWARE',
+    3: 'POSITION',
+    4: 'NODEINFO',
+    5: 'ROUTING',
+    6: 'ADMIN',
+    7: 'TELEMETRY',
+    8: 'SPANSION',
+    9: 'PRIVATE',
+    10: 'ATAK_FORWARDER',
+    11: 'SIMULATOR',
+    12: 'TRACEROUTE',
+    13: 'NEIGHBORINFO',
+    14: 'ATAK_PLUGIN',
+    15: 'MAP_REPORT',
+    16: 'POWERSTRESS',
+    32: 'STORE_FORWARD',
+    33: 'RANGE_TEST',
+    34: 'TELEMETRY_DEVICE',
+    35: 'TELEMETRY_ENVIRONMENT',
+    36: 'TELEMETRY_AIR_QUALITY',
+    64: 'PAXCOUNTER',
+    65: 'SERIAL',
+    66: 'STORE_FORWARD_APP',
+    67: 'MAX',
+}
+
+def portnum_name(num):
+    """Человекочитаемое имя типа пакета."""
+    return PORTNUM_NAMES.get(num, f'PORT_{num}')
+
+
+# ─── Node name cache ─────────────────────────────────────────────────────
+
+_node_names = {}   # {from_int: shortName}
+_node_lock = threading.Lock()
+
+
+def _update_node_name(from_int, short_name, long_name=None):
+    """Обновить кэш имён узлов."""
+    with _node_lock:
+        if short_name:
+            _node_names[from_int] = short_name
+        elif long_name and from_int not in _node_names:
+            _node_names[from_int] = long_name[:4].upper()
+
+
+def _get_node_name(from_int):
+    """Получить короткое имя узла."""
+    with _node_lock:
+        return _node_names.get(from_int, f'!{from_int:08x}')
+
+
 # ─── Serial Mode ───────────────────────────────────────────────────────────
 
-def serial_mode(port, dashboard_url, interval, debug=False):
-    """Connect to T-Echo via USB serial and poll node info."""
+def serial_mode(port, dashboard_url, interval, debug=False, realtime=True):
+    """Connect to T-Echo via USB serial and monitor packets in real-time."""
     if not HAS_MESHTASTIC:
         print("ОШИБКА: Установите meshtastic: pip install meshtastic")
         sys.exit(1)
@@ -101,79 +162,198 @@ def serial_mode(port, dashboard_url, interval, debug=False):
     
     signal.signal(signal.SIGINT, signal_handler)
 
-    # ── RSSI + Position: PyPubSub — стандартный способ в meshtastic ──
-    # interface.nodes обновляет позицию только из NodeInfo (~15 мин).
-    # Position-пакеты от трекеров приходят чаще (~30с-5мин), но НЕ попадают
-    # в interface.nodes[node].position — ловим их отдельно.
+    # ── Shared state ──
     node_rssi = {}
-    node_position = {}  # {from_int: {lat, lon, alt}}
-    node_last_heard = {}  # {from_int: ISO-8601 timestamp} — реальное время последнего пакета
+    node_position = {}       # {from_int: {lat, lon, alt, receivedAt}}
+    node_last_heard = {}     # {from_int: ISO-8601 timestamp}
     my_node_num_ref = [None]
-    _first_position_logged = [False]
+    
+    # ── Packet counter & rate tracking ──
+    packet_count = [0]
+    packet_rate = [0]        # packets per minute
+    rate_window = []         # timestamps of recent packets for rate calc
 
+    # ── Recent packets ring buffer for display ──
+    MAX_RECENT = 50
+    recent_packets = []
+    recent_lock = threading.Lock()
+
+    def _add_recent(entry):
+        with recent_lock:
+            recent_packets.append(entry)
+            if len(recent_packets) > MAX_RECENT:
+                recent_packets.pop(0)
+
+    # ── PyPubSub — real-time packet handler ──
     try:
         from pubsub import pub
 
-        def on_receive(packet, interface):
-            """Вызывается через pubsub для ВСЕХ полученных пакетов."""
+        def on_receive(packet, interface_inst):
+            """Вызывается для КАЖДОГО полученного пакета — реалтайм."""
             try:
                 from_num = packet.get("from", 0)
+                to_num = packet.get("to", 0)
                 rx_rssi = packet.get("rxRssi")
                 rx_snr = packet.get("rxSnr")
+                hop_limit = packet.get("hopLimit", 0)
+                channel = packet.get("channel", 0)
                 my_num = my_node_num_ref[0]
-                if debug:
-                    print(f"[DEBUG] pubsub: from={from_num} my_num={my_num} rxRssi={rx_rssi} rxSnr={rx_snr}")
+
                 if not from_num:
                     return
+
                 from_int = int(from_num) if not isinstance(from_num, int) else from_num
-                # Пропускаем собственные пакеты (если знаем свой номер)
+
+                # Пропускаем собственные пакеты
                 if my_num and int(from_num) == int(my_num):
-                    if debug:
-                        print(f"[DEBUG] pubsub: SKIP own packet from={from_int}")
                     return
-                # Запоминаем реальное время приёма пакета
+
+                # Время приёма
                 now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                now_local = datetime.now().strftime("%H:%M:%S")
                 node_last_heard[from_int] = now_iso
-                if debug:
-                    print(f"[DEBUG] pubsub: from={from_int} heard_at={now_iso}")
+
                 # RSSI
                 if rx_rssi is not None and int(rx_rssi) != 0:
                     node_rssi[from_int] = int(rx_rssi)
-                    if debug:
-                        print(f"[DEBUG] pubsub: SAVED from={from_int} rssi={rx_rssi}")
-                # Position — проверяем decoded.position (camelCase)
-                decoded = packet.get("decoded")
+
+                # ── Decode packet type & payload ──
+                decoded = packet.get("decoded", {})
+                portnum = 0
+                pkt_type = "UNKNOWN"
+                pkt_details = {}
+
                 if isinstance(decoded, dict):
+                    portnum = decoded.get("portnum", decoded.get("portNum", 0))
+                    pkt_type = portnum_name(portnum)
+
+                    # --- POSITION ---
                     pos = decoded.get("position")
                     if isinstance(pos, dict):
                         lat_i = pos.get("latitudeI")
                         lon_i = pos.get("longitudeI")
                         if isinstance(lat_i, int) and lat_i != 0 and isinstance(lon_i, int) and lon_i != 0:
+                            lat = lat_i / 1e7
+                            lon = lon_i / 1e7
+                            alt = pos.get("altitude", 0)
                             node_position[from_int] = {
-                                "latitude": lat_i / 1e7,
-                                "longitude": lon_i / 1e7,
-                                "altitude": pos.get("altitude", 0),
+                                "latitude": lat,
+                                "longitude": lon,
+                                "altitude": alt,
                                 "receivedAt": now_iso,
                             }
-                            if debug and not _first_position_logged[0]:
-                                print(f"[DEBUG] pubsub: POSITION from={from_int} lat={lat_i/1e7:.6f} lon={lon_i/1e7:.6f} alt={pos.get('altitude',0)}")
-                                _first_position_logged[0] = True
-                    # Логируем структуру decoded при первом пакете (для отладки)
-                    elif debug and not _first_position_logged[0]:
-                        print(f"[DEBUG] pubsub: decoded keys={list(decoded.keys())} (no position key)")
-                        _first_position_logged[0] = True
+                            pkt_details = {"lat": lat, "lon": lon, "alt": alt}
+
+                    # --- NODEINFO (имена узлов) ---
+                    user_info = decoded.get("user")
+                    if isinstance(user_info, dict):
+                        sn = user_info.get("shortName", "")
+                        ln = user_info.get("longName", "")
+                        _update_node_name(from_int, sn, ln)
+                        pkt_details = {"shortName": sn, "longName": ln, "hwModel": user_info.get("hwModel", "")}
+
+                    # --- TELEMETRY ---
+                    telem = decoded.get("telemetry")
+                    if isinstance(telem, dict):
+                        dev_metrics = telem.get("deviceMetrics", {})
+                        env_metrics = telem.get("environmentMetrics", {})
+                        if dev_metrics:
+                            pkt_details = {
+                                "battery": dev_metrics.get("batteryLevel"),
+                                "voltage": dev_metrics.get("voltage"),
+                                "usbPower": dev_metrics.get("usbPower"),
+                                "channelUtilization": dev_metrics.get("channelUtilization"),
+                                "airUtilTx": dev_metrics.get("airUtilTx"),
+                            }
+                        if env_metrics:
+                            pkt_details.update({
+                                "temperature": env_metrics.get("temperature"),
+                                "humidity": env_metrics.get("humidity"),
+                                "pressure": env_metrics.get("barometricPressure"),
+                            })
+
+                    # --- TEXT_MESSAGE ---
+                    text = decoded.get("text")
+                    if isinstance(text, str) and text:
+                        pkt_details = {"text": text[:100]}
+
+                # ── Update packet counter & rate ──
+                packet_count[0] += 1
+                now_ts = time.time()
+                rate_window.append(now_ts)
+                # Keep only last 60 seconds
+                while rate_window and rate_window[0] < now_ts - 60:
+                    rate_window.pop(0)
+                packet_rate[0] = len(rate_window)
+
+                # ── Short name for display ──
+                sn = _get_node_name(from_int)
+
+                # ── Real-time console output ──
+                if realtime:
+                    rssi_str = f"rssi={int(rx_rssi):4d}" if rx_rssi is not None else "rssi=   -"
+                    snr_str = f"snr={float(rx_snr):5.1f}" if rx_snr is not None else "snr=    -"
+                    
+                    # Compact detail line
+                    detail_parts = []
+                    if "lat" in pkt_details:
+                        detail_parts.append(f"GPS={pkt_details['lat']:.5f},{pkt_details['lon']:.5f}")
+                    if "battery" in pkt_details and pkt_details["battery"] is not None:
+                        detail_parts.append(f"bat={pkt_details['battery']}%")
+                        if pkt_details.get("voltage"):
+                            detail_parts.append(f"{pkt_details['voltage']:.2f}V")
+                    if "temperature" in pkt_details and pkt_details["temperature"] is not None:
+                        detail_parts.append(f"T={pkt_details['temperature']:.1f}C")
+                    if "text" in pkt_details:
+                        detail_parts.append(f'"{pkt_details["text"]}"')
+                    if "shortName" in pkt_details:
+                        detail_parts.append(f"-> {pkt_details['shortName']}")
+
+                    detail_str = " ".join(detail_parts) if detail_parts else ""
+                    ch_str = f"ch={channel}" if channel else ""
+                    
+                    print(f"  \033[90m[{now_local}]\033[0m "
+                          f"\033[1m{sn:4s}\033[0m "
+                          f"\033[36m{pkt_type:20s}\033[0m "
+                          f"{rssi_str} {snr_str} {ch_str} {detail_str}")
+
+                # ── Build packet entry for dashboard ──
+                pkt_entry = {
+                    "receivedAt": now_iso,
+                    "fromId": from_int,
+                    "fromName": sn,
+                    "toId": int(to_num) if to_num else None,
+                    "portnum": portnum,
+                    "packetType": pkt_type,
+                    "channel": channel,
+                    "rssi": int(rx_rssi) if rx_rssi is not None else None,
+                    "snr": float(rx_snr) if rx_snr is not None else None,
+                    "hopLimit": hop_limit,
+                    "details": pkt_details if pkt_details else None,
+                }
+                _add_recent(pkt_entry)
+
+                # ── Immediately send to dashboard (real-time) ──
+                if realtime:
+                    try:
+                        pkt_url = f"{dashboard_url}/api/packets"
+                        http_post(pkt_url, {"packet": pkt_entry})
+                    except Exception:
+                        pass  # Non-blocking — don't block packet processing
+
             except Exception as e:
                 if debug:
-                    print(f"[DEBUG] pubsub handler ERROR: {e}")
+                    print(f"\033[31m[ERR] pubsub handler: {e}\033[0m")
 
         pub.subscribe(on_receive, 'meshtastic.receive')
-        if debug:
-            print("[DEBUG] pubsub subscribed to 'meshtastic.receive'")
+        if realtime:
+            print("  \033[32mРежим реалтайм-мониторинга пакетов включён\033[0m")
     except ImportError:
-        print("[WARN] pubsub не установлен! RSSI не будет отслеживаться.")
+        print("[WARN] pubsub не установлен! Реалтайм-мониторинг недоступен.")
         print("[WARN] Установите: pip install PyPubSub")
+        realtime = False
 
-    # Получаем my_node_num ДО сна — чтобы pubsub callback мог фильтровать self-пакеты
+    # Получаем my_node_num
     try:
         early_myInfo = interface.getMyNodeInfo()
         my_node_num_ref[0] = early_myInfo.get("num") or early_myInfo.get("myNodeNum")
@@ -186,6 +366,9 @@ def serial_mode(port, dashboard_url, interval, debug=False):
     print("Ожидание 15 сек для приёма пакетов...")
     time.sleep(15)
 
+    # ── Main loop: periodic sync + rate display ──
+    last_rate_print = time.time()
+    
     while running:
         try:
             nodes_data = []
@@ -201,16 +384,15 @@ def serial_mode(port, dashboard_url, interval, debug=False):
                 if node is None:
                     continue
                 
-                # Meshtastic nodeId может быть hex-строкой ("!d4b597d0") или int
                 node_id_int = node_num
                 if isinstance(node_num, str):
                     node_id_int = int(node_num.lstrip("!"), 16) if node_num.startswith("!") else int(node_num)
                 else:
                     node_id_int = int(node_num)
 
-                # ── Battery, Voltage, USB ──
+                # Battery, Voltage, USB
                 dm = node.get("deviceMetrics", {})
-                usb_power = dm.get("usbPower")  # Прямое поле из Meshtastic
+                usb_power = dm.get("usbPower")
                 if dm and dm.get("batteryLevel") is not None:
                     batteryLevel = min(dm.get("batteryLevel"), 100)
                     voltage = dm.get("voltage")
@@ -228,8 +410,6 @@ def serial_mode(port, dashboard_url, interval, debug=False):
                         batteryLevel = None
                         voltage = None
 
-                # USB: только для локального узла (my_node), подключённого к COM-порту.
-                # Удалённые ноды питаются неизвестно — нет надёжного способа определить.
                 if usb_power is None:
                     usb_power = (node_num == my_node_num)
 
@@ -238,14 +418,14 @@ def serial_mode(port, dashboard_url, interval, debug=False):
                     sn_debug = user_tmp.get('shortName', '?')
                     print(f"[DEBUG] {sn_debug} deviceMetrics: {dm}")
 
-                # ── SNR ──
+                # SNR
                 snr = node.get("snr", 0.0)
 
-                # ── RSSI ──
+                # RSSI
                 node_num_int = int(node_num.lstrip("!"), 16) if isinstance(node_num, str) and node_num.startswith("!") else int(node_num) if isinstance(node_num, str) else node_num
                 rssi = node_rssi.get(node_num_int, 0)
 
-                # ── Role ──
+                # Role
                 user = node.get("user", {})
                 is_router = user.get("isRouter", False)
                 role_str = user.get("role", "")
@@ -255,6 +435,11 @@ def serial_mode(port, dashboard_url, interval, debug=False):
                     role = "ROUTER"
                 else:
                     role = "CLIENT"
+
+                # Update name cache
+                sn = user.get("shortName", "")
+                ln = user.get("longName", "")
+                _update_node_name(node_id_int, sn, ln)
 
                 node_entry = {
                     "nodeId": node_id_int,
@@ -269,22 +454,12 @@ def serial_mode(port, dashboard_url, interval, debug=False):
                     "rssi": rssi,
                 }
 
-                # lastHeard — приоритет:
-                # 1. pubsub callback (реальное время приёма любого пакета)
-                # 2. position.receivedAt (время приёма position-пакета)
-                # 3. lastHeard из Meshtastic NodeInfo (когда нода последний раз себя видела)
-                # 4. fallback: текущее время (уже нет данных)
-                heard_time = None
-                if node_id_int in node_last_heard:
-                    heard_time = node_last_heard[node_id_int]
-                # Position — приоритет: pubsub (Position-пакеты, свежие)
-                # затем fallback: interface.nodes (NodeInfo, до 15 мин)
+                # Position
                 pubsub_pos = node_position.get(node_id_int)
                 if pubsub_pos:
                     node_entry["latitude"] = pubsub_pos["latitude"]
                     node_entry["longitude"] = pubsub_pos["longitude"]
                     node_entry["altitude"] = pubsub_pos.get("altitude", 0)
-                    # Если позиция имеет receivedAt — используем его как lastHeard для позиции
                     if pubsub_pos.get("receivedAt"):
                         node_entry.setdefault("lastHeard", pubsub_pos["receivedAt"])
                 else:
@@ -309,11 +484,13 @@ def serial_mode(port, dashboard_url, interval, debug=False):
                     node_entry["temperature"] = env.get("temperature")
                     node_entry["humidity"] = env.get("humidity")
 
-                # lastHeard: используем лучший доступный timestamp
+                # lastHeard
+                heard_time = None
+                if node_id_int in node_last_heard:
+                    heard_time = node_last_heard[node_id_int]
                 if not heard_time and pubsub_pos and pubsub_pos.get("receivedAt"):
                     heard_time = pubsub_pos["receivedAt"]
                 if not heard_time:
-                    # Meshtastic NodeInfo иногда имеет lastHeard (UNIX timestamp в секундах)
                     meshtastic_lh = node.get("lastHeard")
                     if meshtastic_lh and isinstance(meshtastic_lh, (int, float)) and meshtastic_lh > 0:
                         heard_time = datetime.fromtimestamp(meshtastic_lh, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -321,20 +498,20 @@ def serial_mode(port, dashboard_url, interval, debug=False):
                     node_entry["lastHeard"] = heard_time
 
                 nodes_data.append(node_entry)
+
+            # Periodic summary
+            if not realtime:
+                # Old-style: print each node on each cycle
                 timestamp_debug = datetime.now().strftime("%H:%M:%S")
-                gps = f"gps={node_entry['latitude']:.4f},{node_entry['longitude']:.4f}" if node_entry.get("latitude") else "gps=no"
-                bat_str = f"bat={batteryLevel:3d}%" if batteryLevel is not None else "bat=  ?%"
-                volt_str = f"({round(voltage, 2):.2f}V)" if voltage else "(  ?V)"
-                usb_str = " [USB]" if usb_power else ""
-                heard = f"heard={node_entry.get('lastHeard', '?')}"
-                print(f"  [{timestamp_debug}] {node_entry['shortName']:4s} {bat_str} {volt_str}{usb_str} snr={snr:.1f} rssi={rssi} {gps} {heard}")
+                for ne in nodes_data:
+                    gps = f"gps={ne['latitude']:.4f},{ne['longitude']:.4f}" if ne.get("latitude") else "gps=no"
+                    bat_str = f"bat={ne['batteryLevel']:3d}%" if ne['batteryLevel'] is not None else "bat=  ?%"
+                    volt_str = f"({ne['voltage']:.2f}V)" if ne.get('voltage') else "(  ?V)"
+                    usb_str = " [USB]" if ne.get('usbPower') else ""
+                    heard = f"heard={ne.get('lastHeard', '?')}"
+                    print(f"  [{timestamp_debug}] {ne['shortName']:4s} {bat_str} {volt_str}{usb_str} snr={ne.get('snr',0):.1f} rssi={ne.get('rssi',0)} {gps} {heard}")
 
-            if debug:
-                print(f"[DEBUG] node_rssi: {node_rssi}")
-                pos_dbg = {str(k): v.get('receivedAt', '?') for k, v in node_position.items()}
-                print(f"[DEBUG] node_position timestamps: {pos_dbg}")
-                print(f"[DEBUG] node_last_heard: {node_last_heard}")
-
+            # Send periodic sync to dashboard
             if nodes_data:
                 sync_url = f"{dashboard_url}/api/meshtastic/sync"
                 success, response = http_post(sync_url, {
@@ -344,11 +521,23 @@ def serial_mode(port, dashboard_url, interval, debug=False):
                 
                 timestamp = datetime.now().strftime("%H:%M:%S")
                 if success:
-                    print(f"[{timestamp}] Отправлено {len(nodes_data)} узлов -> дашборд")
+                    if not realtime:
+                        print(f"[{timestamp}] Отправлено {len(nodes_data)} узлов -> дашборд")
                 else:
                     print(f"[{timestamp}] Ошибка отправки: {response}")
-            else:
-                print("Узлы не найдены. Устройства включены и в одной сети?")
+
+            # Print rate info (every ~interval)
+            if realtime:
+                timestamp = datetime.now().strftime("%H:%M:%S")
+                print(f"\033[90m[{timestamp}] Пакетов: {packet_count[0]} | "
+                      f"Скорость: {packet_rate[0]}/мин | "
+                      f"Узлов: {len(nodes_data)}\033[0m")
+
+            if debug:
+                print(f"[DEBUG] node_rssi: {node_rssi}")
+                pos_dbg = {str(k): v.get('receivedAt', '?') for k, v in node_position.items()}
+                print(f"[DEBUG] node_position timestamps: {pos_dbg}")
+                print(f"[DEBUG] node_last_heard: {node_last_heard}")
 
         except Exception as e:
             print(f"Ошибка чтения: {e}")
@@ -401,6 +590,15 @@ def mqtt_mode(broker, topic, dashboard_url, username=None, password=None):
                     packet.ParseFromString(payload)
 
                     from_id = getattr(packet, 'from', 0)
+                    now_local = datetime.now().strftime("%H:%M:%S")
+                    pkt_type = portnum_name(getattr(packet, 'portnum', 0))
+                    sn = _get_node_name(int(from_id))
+                    
+                    print(f"  \033[90m[{now_local}]\033[0m "
+                          f"\033[1m{sn:4s}\033[0m "
+                          f"\033[36m{pkt_type:20s}\033[0m "
+                          f"rssi={packet.rxRssi} snr={packet.rxSnr:.1f}")
+
                     node_data = {
                         "nodeId": from_id,
                         "snr": packet.rxSnr,
@@ -412,6 +610,17 @@ def mqtt_mode(broker, topic, dashboard_url, username=None, password=None):
                         "source": "mqtt",
                         "nodes": [node_data],
                     })
+
+                    # Send raw packet too
+                    pkt_entry = {
+                        "receivedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "fromId": int(from_id),
+                        "fromName": sn,
+                        "packetType": pkt_type,
+                        "rssi": packet.rxRssi,
+                        "snr": packet.rxSnr,
+                    }
+                    http_post(f"{dashboard_url}/api/packets", {"packet": pkt_entry})
 
                 except Exception:
                     timestamp = datetime.now().strftime("%H:%M:%S")
@@ -463,7 +672,9 @@ def main():
     parser.add_argument("--dashboard", default="http://localhost:3000",
                        help="URL дашборда (по умолчанию: http://localhost:3000)")
     parser.add_argument("--interval", type=int, default=30,
-                       help="Интервал опроса в секундах (только serial, по умолчанию: 30)")
+                       help="Интервал синхронизации в секундах (по умолчанию: 30)")
+    parser.add_argument("--no-realtime", action="store_true",
+                       help="Отключить реалтайм-мониторинг (только периодический опрос)")
     parser.add_argument("--debug", action="store_true",
                        help="Включить debug-вывод (pubsub, RSSI, структура пакетов)")
 
@@ -475,7 +686,8 @@ def main():
     print("=" * 60)
 
     if args.mode == "serial":
-        serial_mode(args.port, args.dashboard, args.interval, debug=args.debug)
+        serial_mode(args.port, args.dashboard, args.interval, 
+                   debug=args.debug, realtime=not args.no_realtime)
     elif args.mode == "mqtt":
         mqtt_mode(args.broker, args.topic, args.dashboard, 
                  args.mqtt_user, args.mqtt_pass)
