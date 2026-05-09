@@ -1,0 +1,65 @@
+[
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/position",
+    "name": "Position Configuration - Meshtastic",
+    "snippet": "GPS position configuration settings for your Meshtastic device including update intervals, broadcast settings, and GPIO.",
+    "host_name": "meshtastic.org",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.rs/meshtastic_protobufs/latest/meshtastic_protobufs/meshtastic/config/position_config/enum.PositionFlags.html",
+    "name": "PositionFlags in meshtastic_protobufs::meshtastic::config",
+    "snippet": "String value of the enum field names used in the ProtoBuf definition. The values are not transformed in any way and thus are considered stable (if the ProtoBuf definition does not change) and safe for programmatic use.",
+    "host_name": "docs.rs",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/protobufs",
+    "name": "GitHub - meshtastic/protobufs: Protobuf definitions for the",
+    "snippet": "Protobuf definitions for the Meshtastic project. Contribute to meshtastic/protobufs development by creating an account on GitHub.",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "http://jsr.io/@meshtastic/protobufs/doc/~/Config.Config_PositionConfig",
+    "name": "Config.Config_PositionConfig - @meshtastic/protobufs - JSR",
+    "snippet": "•JSR Score70%• License • Downloads260/wk • Publisheda week ago (2.7.18) Protobuf definitions for the Meshtastic project OverviewDocsFilesVersions13Dependencies1Dependents2Score @meshtastic/protobufs default all symbols Config . Config_PositionConfig type aliasConfig.Config_PositionConfig View code Position Config",
+    "host_name": "jsr.io",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.bitsnbytes.dev/posts/2025-08/meshtastic-configuration-settings.html",
+    "name": "Useful Meshtastic Config Options",
+    "snippet": "Precision allows you to specify how accurate of a location fix to broadcast. Since some Meshtastic device have GPS included they have the ability to obtain your precise location down to a few meters.",
+    "host_name": "www.bitsnbytes.dev",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://deepwiki.com/meshtastic/firmware/8.2-position-and-administrative-modules",
+    "name": "Position and Administrative Modules | meshtastic/firmware",
+    "snippet": "The PositionModule broadcasts GPS positions to the mesh network and processes incoming position updates, while the AdminModule provides secure remote configuration and control of device settings. For information about other modules such as telemetry and sensors, see Telemetry and Sensor Modules.",
+    "host_name": "deepwiki.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://pole1.co.uk/blog/6",
+    "name": "How Meshtastic Data works Protocol Buffers (protobufs)",
+    "snippet": "Meshtastic uses Protobufs to define and serialize structured data exchanged between devices in the mesh network. These messages are organized into different modules, each handling specific types of data.",
+    "host_name": "pole1.co.uk",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  }
+]

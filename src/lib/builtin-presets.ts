@@ -55,7 +55,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     gpsUpdateInterval: 1,
     agpsEnabled: false,
     gpsAttemptTime: 90,
-    positionPrecision: 32,
+    positionPrecision: 943, // Максимальная точность: ALT+MSL+GEO+DOP+HVDOP+SAT+SEQ+TS+HEADING+SPEED
     positionBroadcastSecs: 60,
     smartBroadcastEnabled: true,
     smartBroadcastMinDist: 20,
@@ -88,7 +88,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     gpsUpdateInterval: 30,
     agpsEnabled: false,
     gpsAttemptTime: 90,
-    positionPrecision: 32,
+    positionPrecision: 943, // Максимальная точность: ALT+MSL+GEO+DOP+HVDOP+SAT+SEQ+TS+HEADING+SPEED
     positionBroadcastSecs: 300,
     smartBroadcastEnabled: true,
     smartBroadcastMinDist: 50,
@@ -154,7 +154,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     gpsUpdateInterval: 30,
     agpsEnabled: true,
     gpsAttemptTime: 30,
-    positionPrecision: 13,
+    positionPrecision: 175, // Точная позиция: ALT+MSL+GEO+DOP+SAT+TS (без HEADING/SPEED)
     positionBroadcastSecs: 300,
     smartBroadcastEnabled: true,
     smartBroadcastMinDist: 100,

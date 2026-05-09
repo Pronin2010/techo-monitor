@@ -420,16 +420,33 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             if gps_str in GPS_MODE_MAP:
                 node.localConfig.position.gps_mode = GPS_MODE_MAP[gps_str]
             node.localConfig.position.position_broadcast_secs = config.get('positionBroadcastSecs', 300)
-            # position_precision → position_flags (битовая маска, прошивка 2.7.x)
-            # 0 = не отправлять позицию, 3 = высота + координаты (сокращённая),
-            # 35 = полный набор (ALT + GEO + SPEED + HEADING + SATINFO)
-            precision = config.get('positionPrecision', 35)
+            # position_flags — битовая маска PositionFlags (protobuf config.proto)
+            # Значения из прошивки 2.7.15:
+            #   ALTITUDE=1, ALTITUDE_MSL=2, GEOIDAL_SEPARATION=4, DOP=8,
+            #   HVDOP=16, SATINVIEW=32, SEQ_NO=64, TIMESTAMP=128,
+            #   HEADING=256, SPEED=512
+            # Максимальная точность = 1023 (все флаги)
+            # Типичные наборы:
+            #   3   = ALTITUDE + ALTITUDE_MSL (минимальная)
+            #   175 = ALT+MSL+GEO+DOP+SAT+TS (точная позиция без движения)
+            #   943 = +HEADING+SPEED (полная с движением)
+            #   1023 = все флаги (максимальная)
+            #
+            # positionPrecision из UI может быть:
+            #   0     → не отправлять позицию
+            #   1-13  → устаревший порог, конвертируем в базовый набор (3)
+            #   14+   → устаревший порог, конвертируем в полный набор
+            #   Любое число > 13 → напрямую как position_flags
+            #   Для максимальной точности UI передаёт 1023 или 943
+            precision = config.get('positionPrecision', 943)
             if precision == 0:
                 node.localConfig.position.position_flags = 0   # Не отправлять позицию
             elif precision <= 13:
-                node.localConfig.position.position_flags = 3   # ALT + GEO (сокращённая)
+                # Обратная совместимость: старые пресеты с precision<=13
+                node.localConfig.position.position_flags = 3   # ALTITUDE + ALTITUDE_MSL
             else:
-                node.localConfig.position.position_flags = 35  # Полный набор
+                # Новые пресеты передают точное значение position_flags
+                node.localConfig.position.position_flags = precision
             node.localConfig.position.gps_update_interval = config.get('gpsUpdateInterval', 30)
             node.localConfig.position.gps_attempt_time = config.get('gpsAttemptTime', 90)
             # Smart broadcast
@@ -441,7 +458,8 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             node.writeConfig("position")
             time.sleep(0.5)
             sections_written.append("position")
-            print(f"\033[32m[CFG] position: gps={gps_str}, flags={35 if precision > 13 else 3}, smart={smart_enabled}\033[0m")
+            flags_val = 0 if precision == 0 else (3 if precision <= 13 else precision)
+            print(f"\033[32m[CFG] position: gps={gps_str}, flags={flags_val}, smart={smart_enabled}\033[0m")
 
             # ── Power ──
             node.localConfig.power.is_power_saving = config.get('powerSaving', False)
