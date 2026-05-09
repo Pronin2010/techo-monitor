@@ -180,3 +180,25 @@ Stage Summary:
 - Build passes cleanly
 - Project significantly cleaned up: -27 unused packages, -8 dead UI components
 - Security: mass assignment vulnerability patched
+---
+Task ID: 1
+Agent: main
+Task: Добавить удалённую отправку конфигурации на устройства через мост
+
+Work Log:
+- Исследовал meshtastic Python library (v2.7.8): Node.writeConfig(), beginSettingsTransaction(), commitSettingsTransaction(), reboot()
+- Расширил techo-bridge.py: добавлен HTTP API сервер (порт 8420) с endpoints POST /api/apply-config и GET /api/status
+- Добавлена функция apply_config_to_node() — атомарное применение конфигурации через транзакции: device, position, power, lora, network, bluetooth, display, telemetry
+- Маппинги строковых значений → protobuf enum: ROLE_MAP, GPS_MODE_MAP, MODEM_PRESET_MAP, REGION_MAP, REBROADCAST_MODE_MAP
+- Создан API маршрут POST /api/meshtastic/config — проксирует запросы от дашборда к HTTP API моста
+- Создан API маршрут GET /api/meshtastic/bridge — статус моста и список узлов
+- Добавлена кнопка "Отправить на устройство" (зелёная иконка Upload) на карточках системных пресетов
+- Добавлен диалог Push-to-Device: выбор устройства (BASE локальный или удалённый через mesh), предупреждения, превью пресета
+- Обновлена документация: README.md, STARTUP.md, PROJECT_RULES.md
+
+Stage Summary:
+- Реализован полный цикл отправки конфигурации: UI → API → мост → устройство
+- Поддержка локального (USB) и удалённого (mesh) применения конфигурации
+- HTTP API моста работает на порту 8420 (--api-port для изменения)
+- Транзакционное применение: begin → writeConfig × 8 секций → commit → reboot
+- Новые файлы: src/app/api/meshtastic/config/route.ts, src/app/api/meshtastic/bridge/route.ts

@@ -20,7 +20,7 @@ import {
   Plus, Copy, Download, Pencil, Trash2, CopyPlus, Terminal, FileText,
   Cpu, Radio, MapPin, Zap, Battery, Bluetooth, Monitor, Network,
   Link, Info, Shield, ChevronDown, ChevronRight, Sun, Moon,
-  Globe, Lightbulb, Repeat,
+  Globe, Lightbulb, Repeat, Upload, Loader2,
 } from 'lucide-react'
 
 // ============================================================================
@@ -475,6 +475,79 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
   }, [toast])
 
   // ===========================================================================
+  // Пуш конфигурации на устройство через мост
+  // ===========================================================================
+
+  const [pushDialogOpen, setPushDialogOpen] = useState(false)
+  const [pushTarget, setPushTarget] = useState<string>('_local')  // '_local' = BASE, или nodeId
+  const [pushing, setPushing] = useState(false)
+  const [bridgeNodes, setBridgeNodes] = useState<{ nodeId: string; name: string; shortName: string; isLocal: boolean }[]>([])
+  const [bridgeOnline, setBridgeOnline] = useState(false)
+
+  /** Открыть диалог пуша и проверить мост */
+  const handlePushToDevice = useCallback(async (preset: PresetData) => {
+    setSelectedPreset(preset)
+    setPushDialogOpen(true)
+    // Проверяем статус моста
+    try {
+      const resp = await fetch('/api/meshtastic/bridge')
+      const data = await resp.json()
+      setBridgeOnline(data.connected === true)
+      if (data.nodes) {
+        setBridgeNodes(data.nodes.map((n: { nodeId: string; name: string; shortName: string; isLocal: boolean }) => ({
+          nodeId: String(n.nodeId),
+          name: n.name || 'Неизвестный',
+          shortName: n.shortName || '???',
+          isLocal: n.isLocal,
+        })))
+      }
+    } catch {
+      setBridgeOnline(false)
+      setBridgeNodes([])
+    }
+  }, [])
+
+  /** Отправить конфиг на устройство */
+  const handleConfirmPush = useCallback(async () => {
+    if (!selectedPreset) return
+    setPushing(true)
+    try {
+      const targetNodeId = pushTarget === '_local' ? '' : pushTarget
+      const resp = await fetch('/api/meshtastic/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          presetId: selectedPreset.id,
+          nodeId: targetNodeId,
+          rebootSecs: 5,
+        }),
+      })
+      const result = await resp.json()
+      if (result.success) {
+        toast({
+          title: 'Конфигурация применена',
+          description: result.message,
+        })
+        setPushDialogOpen(false)
+      } else {
+        toast({
+          title: 'Ошибка применения',
+          description: result.message,
+          variant: 'destructive',
+        })
+      }
+    } catch (err) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось отправить конфигурацию на мост',
+        variant: 'destructive',
+      })
+    } finally {
+      setPushing(false)
+    }
+  }, [selectedPreset, pushTarget, toast])
+
+  // ===========================================================================
   // Генерация команд (аналог device-setup-tab.tsx)
   // ===========================================================================
 
@@ -864,7 +937,20 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                               <Terminal className="size-3.5" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Применить</TooltipContent>
+                          <TooltipContent>Применить (команды)</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
+                              onClick={() => handlePushToDevice(preset)}
+                            >
+                              <Upload className="size-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Отправить на устройство</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1977,6 +2063,107 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
             </Button>
             <Button onClick={handleSave} disabled={saving || !form.name.trim()}>
               {saving ? 'Сохранение...' : editingPreset ? 'Сохранить' : 'Создать'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ================================================================= */}
+      {/* Диалог отправки конфига на устройство                              */}
+      {/* ================================================================= */}
+      <Dialog open={pushDialogOpen} onOpenChange={setPushDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="size-5 text-green-600" />
+              Отправить на устройство
+            </DialogTitle>
+            <DialogDescription>
+              {selectedPreset
+                ? `Пресет «${selectedPreset.name}» будет применён к выбранному устройству. Устройство перезагрузится.`
+                : 'Выберите устройство для применения конфигурации.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!bridgeOnline ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Мост не подключён. Запустите <code className="bg-muted px-1 rounded">python techo-bridge.py --mode serial --port /dev/ttyUSB0</code>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="space-y-4">
+              {/* Выбор устройства */}
+              <div className="space-y-2">
+                <Label>Целевое устройство</Label>
+                <Select value={pushTarget} onValueChange={setPushTarget}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите устройство" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Локальный узел (BASE) */}
+                    <SelectItem value="_local">
+                      <span className="flex items-center gap-2">
+                        <Radio className="size-3.5 text-green-600" />
+                        BASE (локальный, через USB)
+                      </span>
+                    </SelectItem>
+                    {/* Удалённые узлы */}
+                    {bridgeNodes.filter(n => !n.isLocal).map(node => (
+                      <SelectItem key={node.nodeId} value={node.nodeId}>
+                        <span className="flex items-center gap-2">
+                          <Radio className="size-3.5 text-blue-500" />
+                          {node.shortName} — {node.name} (через mesh)
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Предупреждение для удалённого узла */}
+              {pushTarget !== '_local' && (
+                <Alert>
+                  <AlertDescription className="text-xs">
+                    Удалённая настройка отправляется через mesh и может занять 1-2 минуты.
+                    Требуется admin-ключ (PKI). Убедитесь, что устройство доступно.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Преворот пресета */}
+              {selectedPreset && (
+                <div className="rounded-md border p-3 bg-muted/30 space-y-1 text-sm">
+                  <div className="font-medium">{selectedPreset.icon} {selectedPreset.name}</div>
+                  <div className="text-muted-foreground text-xs">
+                    {selectedPreset.role} • GPS: {selectedPreset.gpsMode} • {selectedPreset.modemPreset}
+                    {selectedPreset.powerSaving ? ' • Экономия' : ' • Без сна'}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPushDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button
+              onClick={handleConfirmPush}
+              disabled={!bridgeOnline || pushing}
+              className="gap-2"
+            >
+              {pushing ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Применяется...
+                </>
+              ) : (
+                <>
+                  <Upload className="size-4" />
+                  Применить
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

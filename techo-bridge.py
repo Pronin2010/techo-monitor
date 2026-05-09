@@ -14,6 +14,10 @@ T-Echo Meshtastic Bridge Script
 
 Запуск (MQTT):
   python techo-bridge.py --mode mqtt --broker mqtt://broker.hivemq.com:1883 --dashboard http://localhost:3000
+
+Управление конфигурацией (через HTTP API моста):
+  POST /api/apply-config — применить пресет к локальному или удалённому узлу
+  GET  /api/status       — статус подключения и список узлов
 """
 
 import argparse
@@ -25,6 +29,7 @@ import signal
 import threading
 from datetime import datetime, timezone
 from collections import OrderedDict
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Включить ANSI-цвета в Windows cmd/PowerShell
 if sys.platform == 'win32':
@@ -211,9 +216,296 @@ def _get_node_name(from_int):
         return _node_names.get(from_int, f'!{from_int:08x}')
 
 
+# ─── Config Apply — маппинг строковых значений в protobuf enum ────────────
+
+# Роли: строка → числовое значение enum Config.DeviceConfig.Role
+ROLE_MAP = {
+    'CLIENT': 1, 'CLIENT_MUTE': 2, 'CLIENT_HIDDEN': 3,
+    'ROUTER': 4, 'ROUTER_CLIENT': 5, 'TRACKER': 6,
+    'REPEATER': 7, 'SENSOR': 8, 'LOST_AND_FOUND': 9,
+    'TAK_TRACKER': 10, 'ROUTER_LATE': 11, 'CLIENT_BASE': 12,
+}
+
+# GPS режимы: строка → числовое значение enum Config.PositionConfig.GpsMode
+GPS_MODE_MAP = {
+    'DISABLED': 0, 'ENABLED': 1, 'NOT_PRESENT': 2,
+}
+
+# Модем-пресеты: строка → числовое значение enum Config.LoRaConfig.ModemPreset
+MODEM_PRESET_MAP = {
+    'LONG_FAST': 0, 'LONG_MODERATE': 1, 'LONG_TURBO': 9,
+    'MEDIUM_FAST': 2, 'MEDIUM_SLOW': 3,
+    'SHORT_FAST': 4, 'SHORT_SLOW': 5, 'SHORT_TURBO': 10,
+    'LITE_FAST': 11, 'LITE_SLOW': 12,
+    'NARROW_FAST': 13, 'NARROW_SLOW': 14,
+}
+
+# Регионы: строка → числовое значение enum Config.LoRaConfig.RegionCode
+REGION_MAP = {
+    'EU_433': 3, 'ANZ_433': 4, 'UA_433': 5,
+    'KZ_433': 6, 'PH_433': 7, 'MY_433': 8,
+}
+
+# Режимы ретрансляции: строка → числовое значение
+REBROADCAST_MODE_MAP = {
+    'ALL': 0, 'LOCAL_SKIP': 1, 'SIMPLE': 2,
+}
+
+
+def apply_config_to_node(interface, node_id, config, reboot_secs=5):
+    """Применить конфигурацию пресета к узлу (локальному или удалённому).
+
+    Args:
+        interface: meshtastic SerialInterface
+        node_id: '!hexid' или None/пустая строка для локального узла
+        config: dict с полями пресета (как из API дашборда)
+        reboot_secs: секунд до перезагрузки (0 = без перезагрузки)
+
+    Returns:
+        dict {success: bool, message: str, sections: [str]}
+    """
+    if not HAS_MESHTASTIC:
+        return {'success': False, 'message': 'meshtastic не установлен', 'sections': []}
+
+    try:
+        # Определяем целевой узел
+        if node_id and node_id.strip():
+            # Удалённый узел — getNode запрашивает конфиг по mesh
+            print(f"\033[33m[CFG] Подключение к удалённому узлу {node_id}...\033[0m")
+            node = interface.getNode(node_id, timeout=120)
+        else:
+            # Локальный узел (BASE)
+            node = interface.localNode
+
+        sections_written = []
+
+        # ── Транзакция ──
+        node.beginSettingsTransaction()
+        print("\033[33m[CFG] Транзакция открыта\033[0m")
+
+        try:
+            # ── Device ──
+            role_str = config.get('role', 'CLIENT')
+            if role_str in ROLE_MAP:
+                node.localConfig.device.role = ROLE_MAP[role_str]
+            node.localConfig.device.node_info_broadcast_secs = config.get('nodeInfoBroadcastSecs', 900)
+            # LED (led.disabled = true → led_heartbeat_disabled)
+            if config.get('ledDisabled'):
+                node.localConfig.device.led_heartbeat_disabled = True
+            else:
+                node.localConfig.device.led_heartbeat_disabled = False
+            node.writeConfig("device")
+            sections_written.append("device")
+            print(f"\033[32m[CFG] device: role={role_str}, node_info={config.get('nodeInfoBroadcastSecs', 900)}s\033[0m")
+
+            # ── Position ──
+            gps_str = config.get('gpsMode', 'ENABLED')
+            if gps_str in GPS_MODE_MAP:
+                node.localConfig.position.gps_mode = GPS_MODE_MAP[gps_str]
+            node.localConfig.position.position_broadcast_secs = config.get('positionBroadcastSecs', 300)
+            node.localConfig.position.position_precision = config.get('positionPrecision', 32)
+            node.localConfig.position.gps_update_interval = config.get('gpsUpdateInterval', 30)
+            node.localConfig.position.gps_attempt_time = config.get('gpsAttemptTime', 90)
+            # Smart broadcast
+            if config.get('smartBroadcastEnabled', True):
+                node.localConfig.position.broadcast_smart_minimum_distance = config.get('smartBroadcastMinDist', 20)
+                node.localConfig.position.broadcast_smart_minimum_interval_secs = config.get('smartBroadcastMinInterval', 60)
+            node.writeConfig("position")
+            sections_written.append("position")
+            print(f"\033[32m[CFG] position: gps={gps_str}, precision={config.get('positionPrecision', 32)}\033[0m")
+
+            # ── Power ──
+            node.localConfig.power.is_power_saving = config.get('powerSaving', False)
+            # ls_secs и min_wake_secs только для спящих ролей
+            sleep_roles = {'TRACKER', 'SENSOR', 'TAK_TRACKER'}
+            if config.get('powerSaving') and config.get('role', '') in sleep_roles:
+                node.localConfig.power.ls_secs = config.get('lsSecs', 300)
+                node.localConfig.power.min_wake_secs = config.get('minWakeSecs', 10)
+            node.writeConfig("power")
+            sections_written.append("power")
+            print(f"\033[32m[CFG] power: saving={config.get('powerSaving', False)}\033[0m")
+
+            # ── LoRa ──
+            region_str = config.get('region', 'EU_433')
+            if region_str in REGION_MAP:
+                node.localConfig.lora.region = REGION_MAP[region_str]
+            modem_str = config.get('modemPreset', 'LONG_MODERATE')
+            if modem_str in MODEM_PRESET_MAP:
+                node.localConfig.lora.modem_preset = MODEM_PRESET_MAP[modem_str]
+            node.localConfig.lora.hop_limit = config.get('hopLimit', 5)
+            node.localConfig.lora.tx_power = config.get('txPower', 0)
+            node.localConfig.lora.use_preamble = config.get('usePreamble', False)
+            node.writeConfig("lora")
+            sections_written.append("lora")
+            print(f"\033[32m[CFG] lora: region={region_str}, modem={modem_str}, hop={config.get('hopLimit', 5)}\033[0m")
+
+            # ── Network ──
+            rb_str = config.get('rebroadcastMode', 'ALL')
+            if rb_str in REBROADCAST_MODE_MAP:
+                node.localConfig.network.rebroadcast_mode = REBROADCAST_MODE_MAP[rb_str]
+            node.writeConfig("network")
+            sections_written.append("network")
+            print(f"\033[32m[CFG] network: rebroadcast={rb_str}\033[0m")
+
+            # ── Bluetooth ──
+            node.localConfig.bluetooth.enabled = config.get('bluetoothEnabled', True)
+            if config.get('bluetoothEnabled') and config.get('bluetoothFixedPin'):
+                try:
+                    node.localConfig.bluetooth.fixed_pin = int(config['bluetoothFixedPin'])
+                except (ValueError, TypeError):
+                    pass
+            node.writeConfig("bluetooth")
+            sections_written.append("bluetooth")
+            print(f"\033[32m[CFG] bluetooth: enabled={config.get('bluetoothEnabled', True)}\033[0m")
+
+            # ── Display ──
+            node.localConfig.display.screen_on_secs = config.get('screenOnSecs', 60)
+            node.writeConfig("display")
+            sections_written.append("display")
+            print(f"\033[32m[CFG] display: screen_on={config.get('screenOnSecs', 60)}s\033[0m")
+
+            # ── Telemetry (module) ──
+            node.moduleConfig.telemetry.device_update_interval = config.get('telemetryInterval', 300)
+            node.writeConfig("telemetry")
+            sections_written.append("telemetry")
+            print(f"\033[32m[CFG] telemetry: interval={config.get('telemetryInterval', 300)}s\033[0m")
+
+        except Exception as e:
+            # При ошибке — откатить транзакцию
+            print(f"\033[31m[CFG] Ошибка записи секции: {e}\033[0m")
+            try:
+                node.commitSettingsTransaction()
+            except Exception:
+                pass
+            return {'success': False, 'message': f'Ошибка записи: {e}', 'sections': sections_written}
+
+        # ── Коммит транзакции ──
+        node.commitSettingsTransaction()
+        print("\033[33m[CFG] Транзакция зафиксирована\033[0m")
+
+        # ── Перезагрузка ──
+        if reboot_secs > 0:
+            print(f"\033[33m[CFG] Перезагрузка через {reboot_secs} сек...\033[0m")
+            node.reboot(secs=reboot_secs)
+
+        return {
+            'success': True,
+            'message': f'Конфигурация применена ({len(sections_written)} секций). Перезагрузка через {reboot_secs}с.',
+            'sections': sections_written,
+        }
+
+    except Exception as e:
+        return {'success': False, 'message': f'Ошибка: {e}', 'sections': []}
+
+
+# ─── HTTP API Server (внутри моста) ───────────────────────────────────────
+
+# Глобальная ссылка на interface для HTTP-обработчика
+_bridge_interface = [None]   # [interface] — mutable для замыкания
+_bridge_running = [False]
+_bridge_nodes_info = [{}]    # Последний snapshot узлов
+
+
+class BridgeHTTPHandler(BaseHTTPRequestHandler):
+    """HTTP-обработчик для API моста — приём команд от дашборда."""
+
+    def log_message(self, format, *args):
+        """Тихий лог — не spam'ить в консоль."""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"\033[90m[{timestamp}] [HTTP] {args[0]}\033[0m")
+
+    def _send_json(self, data, status=200):
+        body = json.dumps(data, default=str, ensure_ascii=False).encode('utf-8')
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', len(body))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _read_body(self):
+        length = int(self.headers.get('Content-Length', 0))
+        if length > 0:
+            return json.loads(self.rfile.read(length).decode('utf-8'))
+        return {}
+
+    def do_GET(self):
+        """GET /api/status — статус моста и список узлов."""
+        if self.path == '/api/status':
+            iface = _bridge_interface[0]
+            nodes_list = []
+            if iface:
+                try:
+                    for node_num, node in iface.nodes.items():
+                        if node is None:
+                            continue
+                        user = node.get("user", {})
+                        dm = node.get("deviceMetrics", {})
+                        nodes_list.append({
+                            "nodeId": node_num,
+                            "name": user.get("longName", ""),
+                            "shortName": user.get("shortName", ""),
+                            "role": user.get("role", "CLIENT"),
+                            "batteryLevel": dm.get("batteryLevel"),
+                            "isLocal": str(node_num) == str(iface.getMyNodeInfo().get("num", "")),
+                        })
+                except Exception:
+                    pass
+
+            self._send_json({
+                "connected": iface is not None,
+                "mode": "serial",
+                "nodes": nodes_list,
+                "uptime": time.time() - _bridge_nodes_info.get("start_time", time.time()),
+            })
+        else:
+            self._send_json({"error": "Неизвестный маршрут"}, 404)
+
+    def do_POST(self):
+        """POST /api/apply-config — применить пресет к устройству."""
+        if self.path == '/api/apply-config':
+            iface = _bridge_interface[0]
+            if not iface:
+                self._send_json({"success": False, "message": "Мост не подключён к устройству"}, 503)
+                return
+
+            try:
+                body = self._read_body()
+            except Exception as e:
+                self._send_json({"success": False, "message": f"Ошибка JSON: {e}"}, 400)
+                return
+
+            config = body.get('config', {})
+            node_id = body.get('nodeId', '')  # пустая строка = локальный
+            reboot_secs = body.get('rebootSecs', 5)
+            preset_name = body.get('presetName', 'неизвестный')
+
+            print(f"\033[1;33m═══ КОНФИГУРАЦИЯ: «{preset_name}» → {node_id or 'BASE (локальный)'} ═══\033[0m")
+
+            result = apply_config_to_node(iface, node_id, config, reboot_secs)
+            result['presetName'] = preset_name
+
+            if result['success']:
+                print(f"\033[1;32m[CFG] Успешно: {result['message']}\033[0m")
+            else:
+                print(f"\033[1;31m[CFG] Ошибка: {result['message']}\033[0m")
+
+            self._send_json(result)
+        else:
+            self._send_json({"error": "Неизвестный маршрут"}, 404)
+
+
+def start_http_server(port=8420):
+    """Запустить HTTP API сервер моста в фоновом потоке."""
+    server = HTTPServer(('0.0.0.0', port), BridgeHTTPHandler)
+    server.timeout = 1  # Для корректного shutdown
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return server
+
+
 # ─── Serial Mode ───────────────────────────────────────────────────────────
 
-def serial_mode(port, dashboard_url, interval, debug=False, realtime=True):
+def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_port=8420):
     """Connect to T-Echo via USB serial and monitor packets in real-time."""
     if not HAS_MESHTASTIC:
         print("ОШИБКА: Установите meshtastic: pip install meshtastic")
@@ -232,6 +524,17 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True):
         sys.exit(1)
 
     print("Подключено! Чтение данных из сети...")
+
+    # Сохраняем interface глобально для HTTP API
+    _bridge_interface[0] = interface
+    _bridge_running[0] = True
+    _bridge_nodes_info['start_time'] = time.time()
+
+    # Запускаем HTTP API сервер для приёма команд от дашборда
+    http_server = start_http_server(api_port)
+    print(f"  \033[32mHTTP API запущен на порту {api_port}\033[0m")
+    print(f"  POST http://localhost:{api_port}/api/apply-config — применить конфиг")
+    print(f"  GET  http://localhost:{api_port}/api/status — статус моста")
 
     running = True
 
@@ -640,6 +943,9 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True):
                 break
             time.sleep(1)
 
+    _bridge_interface[0] = None
+    _bridge_running[0] = False
+    http_server.shutdown()
     interface.close()
     print("Отключено от устройства")
 
@@ -776,6 +1082,8 @@ def main():
                        help="Отключить реалтайм-мониторинг (только периодический опрос)")
     parser.add_argument("--debug", action="store_true",
                        help="Включить debug-вывод (pubsub, RSSI, структура пакетов)")
+    parser.add_argument("--api-port", type=int, default=8420,
+                       help="Порт HTTP API моста для приёма команд (по умолчанию: 8420)")
 
     args = parser.parse_args()
 
@@ -786,7 +1094,7 @@ def main():
 
     if args.mode == "serial":
         serial_mode(args.port, args.dashboard, args.interval, 
-                   debug=args.debug, realtime=not args.no_realtime)
+                   debug=args.debug, realtime=not args.no_realtime, api_port=args.api_port)
     elif args.mode == "mqtt":
         mqtt_mode(args.broker, args.topic, args.dashboard, 
                  args.mqtt_user, args.mqtt_pass)
