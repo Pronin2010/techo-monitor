@@ -417,7 +417,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
 # Глобальная ссылка на interface для HTTP-обработчика
 _bridge_interface = [None]   # [interface] — mutable для замыкания
 _bridge_running = [False]
-_bridge_nodes_info = [{}]    # Последний snapshot узлов
+_bridge_nodes_info = {}    # Последний snapshot узлов
 
 
 class BridgeHTTPHandler(BaseHTTPRequestHandler):
