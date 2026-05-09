@@ -209,7 +209,7 @@ SyncLog
 - **POST /api/apply-config** — применение конфигурации на устройство
   - Параметры: role, region, modemPreset, lsSecs, minWakeSecs, gpsMode, agpsEnabled, и т.д.
   - deviceName, deviceShortName — установка имени через setOwner()
-  - factoryReset — сброс до заводских перед применением (с session_passkey, ensureSessionKey)
+  - factoryReset — сброс до заводских перед применением (ensureSessionKey + factory_reset_config=1, баг библиотеки: True→TypeError)
   - Порядок: factoryReset → device reboot → _reconnect_interface() → setOwner → beginTransaction → writeConfig × N → commit → reboot
   - При ошибке записи — перезагрузка для отката (вместо commit частичных данных)
   - При factory reset — автоматическое пересоздание SerialInterface с повторными попытками
@@ -240,7 +240,7 @@ SyncLog
 15. Фикс factory reset: пересоздание SerialInterface при потере соединения
 16. Фикс перезагрузки: мост автоматически переподключается после ЛЮБОЙ перезагрузки
 17. Фикс 3 багов: stale closure (factoryReset не отправлялся), время ожидания перезагрузки 20с, сообщение об успехе
-18. Фикс factory reset: используем node.factoryReset() с session_passkey (устройство игнорировало admin-команды без ключа)
+18. Фикс factory reset: ensureSessionKey() + factory_reset_config=1 (node.factoryReset() багует с True→TypeError)
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -268,4 +268,4 @@ ALL, LOCAL_SKIP, SIMPLE
 
 ---
 
-_Последнее обновление: 2026-05-09 (фикс factory reset: session_passkey)_
+_Последнее обновление: 2026-05-09 (фикс factory reset: ensureSessionKey + int вместо bool)_

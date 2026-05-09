@@ -378,3 +378,21 @@ Stage Summary:
 - Factory reset теперь отправляется с session_passkey через node.factoryReset()
 - Устройство больше не игнорирует команду сброса
 - Добавлена диагностика конфигурации после factory reset
+
+---
+Task ID: 19
+Agent: main
+Task: Фикс factory reset — node.factoryReset() багует с True вместо int32
+
+Work Log:
+- Проблема: node.factoryReset() делает p.factory_reset_config = True, но protobuf ожидает int32 → TypeError
+- Это баг meshtastic Python library (устанавливает bool вместо int в protobuf поле)
+- Исправлено: не используем node.factoryReset() — вместо этого:
+  1. Явно вызываем node.ensureSessionKey() для получения session_passkey
+  2. Создаём AdminMessage вручную: p.factory_reset_config = 1 (int, не bool)
+  3. Отправляем через node._sendAdmin(p, wantResponse=True) — добавит session_passkey автоматически
+- Обновлена документация: AI_PROMPT.md, STARTUP.md, PROJECT_RULES.md, worklog.md
+
+Stage Summary:
+- Factory reset: ensureSessionKey() → AdminMessage(factory_reset_config=1) → _sendAdmin()
+- Обойдён баг библиотеки (bool vs int32) при сохранении session_passkey

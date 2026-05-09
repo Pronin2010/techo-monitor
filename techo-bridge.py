@@ -287,26 +287,27 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
         # ── Factory Reset ──
         if factory_reset:
             print("\033[1;31m[CFG] ⚠ СБРОС ДО ЗАВОДСКИХ НАСТРОЕК...\033[0m")
-            # Используем официальный метод node.factoryReset() — он:
-            # 1. Вызывает ensureSessionKey() — запрашивает adminSessionPassKey у устройства
-            # 2. Устанавливает factory_reset_config = True (int32=1 в protobuf)
-            # 3. _sendAdmin автоматически добавляет session_passkey в сообщение
-            # Без session_passkey устройство МОЛЧА ИГНОРИРУЕТ admin-команды!
+            # Порядок действий:
+            # 1. ensureSessionKey() — запрашивает adminSessionPassKey у устройства
+            #    Без session_passkey Meshtastic 2.7.x МОЛЧА ИГНОРИРУЕТ admin-команды!
+            # 2. Отправляем AdminMessage.factory_reset_config = 1 (int32, не bool!)
+            #    node.factoryReset() багует: ставит True вместо int → TypeError
+            # 3. _sendAdmin автоматически добавляет session_passkey из nodesByNum
             try:
-                node.factoryReset()
-                print("\033[32m[CFG] factoryReset() отправлен (с session_passkey)\033[0m")
+                # Сначала запрашиваем session key
+                node.ensureSessionKey()
+                print("\033[32m[CFG] session_passkey получен\033[0m")
             except Exception as e:
-                # Фоллбэк — ручная отправка с session_passkey
-                print(f"\033[33m[CFG] factoryReset() не удался: {e}, пробуем ручную отправку...\033[0m")
-                try:
-                    from meshtastic.protobuf import admin_pb2
-                    p = admin_pb2.AdminMessage()
-                    p.factory_reset_config = 1
-                    # Важно: _sendAdmin автоматически добавит session_passkey из iface.nodesByNum
-                    node._sendAdmin(p, wantResponse=True)
-                    print("\033[32m[CFG] AdminMessage.factory_reset_config=1 отправлен (ручной режим)\033[0m")
-                except Exception as e2:
-                    return {'success': False, 'message': f'Ошибка factory reset: {e2}', 'sections': sections_written}
+                print(f"\033[33m[CFG] ensureSessionKey() не удался: {e} (продолжаем без него)\033[0m")
+
+            try:
+                from meshtastic.protobuf import admin_pb2
+                p = admin_pb2.AdminMessage()
+                p.factory_reset_config = 1  # int32, НЕ bool (иначе TypeError)
+                node._sendAdmin(p, wantResponse=True)
+                print("\033[32m[CFG] factory_reset_config=1 отправлен (с session_passkey)\033[0m")
+            except Exception as e:
+                return {'success': False, 'message': f'Ошибка factory reset: {e}', 'sections': sections_written}
             sections_written.append("factory_reset")
             # После factoryReset устройство перезагружается — серийное соединение разрывается.
             # Нельзя использовать старый interface — нужно пересоздать SerialInterface.

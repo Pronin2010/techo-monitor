@@ -102,4 +102,4 @@ _Прочитай этот файл в начале каждого чата и �
 
 ---
 
-_Последнее обновление: 2026-05-09 (фикс factory reset: session_passkey, node.factoryReset())_
+_Последнее обновление: 2026-05-09 (фикс factory reset: ensureSessionKey + factory_reset_config=1)_
