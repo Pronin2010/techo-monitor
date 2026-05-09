@@ -202,6 +202,9 @@ export async function POST(request: Request) {
             latitude: incoming.latitude ?? null,
             longitude: incoming.longitude ?? null,
             altitude: incoming.altitude ?? null,
+            createdAt: incoming.lastHeard
+              ? new Date(incoming.lastHeard as string)
+              : new Date(),
           },
         })
 
@@ -279,6 +282,9 @@ export async function POST(request: Request) {
             latitude: incoming.latitude,
             longitude: incoming.longitude,
             altitude: incoming.altitude,
+            createdAt: incoming.lastHeard
+              ? new Date(incoming.lastHeard as string)
+              : new Date(),
           },
         })
 

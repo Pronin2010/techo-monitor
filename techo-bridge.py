@@ -61,6 +61,38 @@ except ImportError:
     HAS_REQUESTS = False
 
 
+# ─── Timestamp helpers ────────────────────────────────────────────────────
+
+def format_timestamp(epoch_or_dt=None):
+    """Форматировать timestamp с миллисекундами для лучшей гранулярности."""
+    if epoch_or_dt is None:
+        dt = datetime.now(timezone.utc)
+    elif isinstance(epoch_or_dt, (int, float)):
+        dt = datetime.fromtimestamp(epoch_or_dt, tz=timezone.utc)
+    else:
+        dt = epoch_or_dt
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.") + f"{dt.microsecond // 1000:03d}Z"
+
+
+def extract_rx_time(packet):
+    """Извлечь rx_time из пакета Meshtastic (protobuf или dict).
+    Возвращает epoch seconds (int/float) или None, если rx_time отсутствует/некорректен.
+    """
+    rx_time = None
+    # Пробуем как объект с атрибутом (protobuf)
+    try:
+        rx_time = getattr(packet, 'rx_time', None)
+    except Exception:
+        pass
+    # Пробуем как dict
+    if rx_time is None and isinstance(packet, dict):
+        rx_time = packet.get('rx_time')
+    # Проверяем корректность
+    if rx_time is not None and isinstance(rx_time, (int, float)) and rx_time > 0:
+        return rx_time
+    return None
+
+
 # ─── HTTP helper ───────────────────────────────────────────────────────────
 
 def http_post(url, data):
@@ -265,8 +297,12 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True):
                         print(f"  [DBG] SKIP own packet from={from_int} my={my_num}")
                     return
 
-                # Время приёма
-                now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                # Используем время пакета (rx_time) если есть, иначе текущее время
+                rx_time = extract_rx_time(packet)
+                if rx_time:
+                    now_iso = format_timestamp(rx_time)
+                else:
+                    now_iso = format_timestamp()
                 now_local = datetime.now().strftime("%H:%M:%S")
                 node_last_heard[from_int] = now_iso
 
@@ -549,7 +585,7 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True):
                 if not heard_time:
                     meshtastic_lh = node.get("lastHeard")
                     if meshtastic_lh and isinstance(meshtastic_lh, (int, float)) and meshtastic_lh > 0:
-                        heard_time = datetime.fromtimestamp(meshtastic_lh, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                        heard_time = format_timestamp(meshtastic_lh)
                 if heard_time:
                     node_entry["lastHeard"] = heard_time
 
@@ -667,9 +703,16 @@ def mqtt_mode(broker, topic, dashboard_url, username=None, password=None):
                         "nodes": [node_data],
                     })
 
+                    # Используем время пакета (rx_time) если есть, иначе текущее время
+                    rx_time = extract_rx_time(packet)
+                    if rx_time:
+                        pkt_received_at = format_timestamp(rx_time)
+                    else:
+                        pkt_received_at = format_timestamp()
+
                     # Send raw packet too
                     pkt_entry = {
-                        "receivedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "receivedAt": pkt_received_at,
                         "fromId": int(from_id),
                         "fromName": sn,
                         "packetType": pkt_type,
