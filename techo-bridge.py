@@ -381,7 +381,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                 node.localConfig.lora.modem_preset = MODEM_PRESET_MAP[modem_str]
             node.localConfig.lora.hop_limit = config.get('hopLimit', 5)
             node.localConfig.lora.tx_power = config.get('txPower', 0)
-            node.localConfig.lora.use_preamble = config.get('usePreamble', False)
+            # use_preamble удалён — не существует в LoRaConfig прошивки 2.7.15
             node.writeConfig("lora")
             sections_written.append("lora")
             print(f"\033[32m[CFG] lora: region={region_str}, modem={modem_str}, hop={config.get('hopLimit', 5)}\033[0m")
