@@ -236,9 +236,12 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True):
     try:
         from pubsub import pub
 
+        _callback_count = [0]  # Для диагностики
+
         def on_receive(packet, interface=None):
             """Вызывается для КАЖДОГО полученного пакета — реалтайм."""
             try:
+                _callback_count[0] += 1
                 from_num = packet.get("from", 0)
                 to_num = packet.get("to", 0)
                 rx_rssi = packet.get("rxRssi")
@@ -247,6 +250,10 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True):
                 channel = packet.get("channel", 0)
                 my_num = my_node_num_ref[0]
 
+                # Диагностика первых пакетов
+                if _callback_count[0] <= 3:
+                    print(f"  [DBG] callback #{_callback_count[0]}: from={from_num} my={my_num} rssi={rx_rssi} snr={rx_snr}")
+
                 if not from_num:
                     return
 
@@ -254,6 +261,8 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True):
 
                 # Пропускаем собственные пакеты
                 if my_num and int(from_num) == int(my_num):
+                    if _callback_count[0] <= 3:
+                        print(f"  [DBG] SKIP own packet from={from_int} my={my_num}")
                     return
 
                 # Время приёма
@@ -390,8 +399,7 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True):
                         pass  # Non-blocking — don't block packet processing
 
             except Exception as e:
-                if debug:
-                    print(f"\033[31m[ERR] pubsub handler: {e}\033[0m")
+                print(f"\033[31m[ERR] pubsub handler: {e}\033[0m")
 
         pub.subscribe(on_receive, 'meshtastic.receive')
         if realtime:
