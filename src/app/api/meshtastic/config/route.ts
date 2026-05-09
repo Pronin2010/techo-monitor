@@ -5,9 +5,11 @@ import { NextResponse } from 'next/server'
  * POST /api/meshtastic/config — применить пресет к устройству через мост.
  *
  * Тело запроса:
- *   presetId: string        — ID пресета из БД
- *   nodeId: string          — nodeId устройства ('!hexid' или '' для локального BASE)
- *   rebootSecs?: number     — задержка перезагрузки (по умолчанию 5 сек, 0 = без перезагрузки)
+ *   presetId: string          — ID пресета из БД
+ *   nodeId: string            — nodeId устройства ('!hexid' или '' для локального BASE)
+ *   rebootSecs?: number       — задержка перезагрузки (по умолчанию 5 сек, 0 = без перезагрузки)
+ *   deviceName?: string       — длинное имя устройства (например, 'Tracker 01')
+ *   deviceShortName?: string  — короткое имя (макс. 5 символов, например, 'TR01')
  *
  * Логика:
  *   1. Загрузить пресет из БД
@@ -18,7 +20,8 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { presetId, nodeId = '', rebootSecs = 5 } = body
+    const { presetId, nodeId = '', rebootSecs = 5,
+            deviceName, deviceShortName } = body
 
     if (!presetId) {
       return NextResponse.json(
@@ -77,6 +80,8 @@ export async function POST(request: Request) {
       nodeId,
       rebootSecs,
       presetName: preset.name,
+      deviceName: deviceName || undefined,
+      deviceShortName: deviceShortName || undefined,
     }
 
     let bridgeResult: { success: boolean; message: string; sections?: string[] }
@@ -108,6 +113,8 @@ export async function POST(request: Request) {
           presetId: preset.id,
           presetName: preset.name,
           nodeId: nodeId || 'local',
+          deviceName: deviceName || null,
+          deviceShortName: deviceShortName || null,
           sections: bridgeResult.sections,
           message: bridgeResult.message,
         }),

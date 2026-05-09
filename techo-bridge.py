@@ -252,7 +252,8 @@ REBROADCAST_MODE_MAP = {
 }
 
 
-def apply_config_to_node(interface, node_id, config, reboot_secs=5):
+def apply_config_to_node(interface, node_id, config, reboot_secs=5,
+                          device_name=None, device_short_name=None):
     """Применить конфигурацию пресета к узлу (локальному или удалённому).
 
     Args:
@@ -260,6 +261,8 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5):
         node_id: '!hexid' или None/пустая строка для локального узла
         config: dict с полями пресета (как из API дашборда)
         reboot_secs: секунд до перезагрузки (0 = без перезагрузки)
+        device_name: длинное имя устройства (например, 'Tracker 01')
+        device_short_name: короткое имя (макс. 5 символов, например, 'TR01')
 
     Returns:
         dict {success: bool, message: str, sections: [str]}
@@ -278,6 +281,17 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5):
             node = interface.localNode
 
         sections_written = []
+
+        # ── Имя устройства ──
+        if device_name or device_short_name:
+            try:
+                node.setOwner(long_name=device_name, short_name=device_short_name)
+                name_info = f"{device_name or ''}/{device_short_name or ''}"
+                sections_written.append(f"owner={name_info}")
+                print(f"\033[32m[CFG] owner: {name_info}\033[0m")
+            except Exception as e:
+                print(f"\033[31m[CFG] Ошибка установки имени: {e}\033[0m")
+                # Не прерываем — имя не критично, конфиг важнее
 
         # ── Транзакция ──
         node.beginSettingsTransaction()
@@ -478,10 +492,17 @@ class BridgeHTTPHandler(BaseHTTPRequestHandler):
             node_id = body.get('nodeId', '')  # пустая строка = локальный
             reboot_secs = body.get('rebootSecs', 5)
             preset_name = body.get('presetName', 'неизвестный')
+            device_name = body.get('deviceName') or None      # длинное имя
+            device_short_name = body.get('deviceShortName') or None  # короткое имя (макс. 5 символов)
 
-            print(f"\033[1;33m═══ КОНФИГУРАЦИЯ: «{preset_name}» → {node_id or 'BASE (локальный)'} ═══\033[0m")
+            target_label = node_id or 'BASE (локальный)'
+            name_label = f" → {device_name}" if device_name else ""
+            print(f"\033[1;33m═══ КОНФИГУРАЦИЯ: «{preset_name}» → {target_label}{name_label} ═══\033[0m")
 
-            result = apply_config_to_node(iface, node_id, config, reboot_secs)
+            result = apply_config_to_node(
+                iface, node_id, config, reboot_secs,
+                device_name=device_name, device_short_name=device_short_name,
+            )
             result['presetName'] = preset_name
 
             if result['success']:

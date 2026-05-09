@@ -483,10 +483,15 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
   const [pushing, setPushing] = useState(false)
   const [bridgeNodes, setBridgeNodes] = useState<{ nodeId: string; name: string; shortName: string; isLocal: boolean }[]>([])
   const [bridgeOnline, setBridgeOnline] = useState(false)
+  const [pushDeviceName, setPushDeviceName] = useState('')
+  const [pushDeviceShortName, setPushDeviceShortName] = useState('')
 
   /** Открыть диалог пуша и проверить мост */
   const handlePushToDevice = useCallback(async (preset: PresetData) => {
     setSelectedPreset(preset)
+    setPushTarget('_local')
+    setPushDeviceName('')
+    setPushDeviceShortName('')
     setPushDialogOpen(true)
     // Проверяем статус моста
     try {
@@ -494,18 +499,43 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       const data = await resp.json()
       setBridgeOnline(data.connected === true)
       if (data.nodes) {
-        setBridgeNodes(data.nodes.map((n: { nodeId: string; name: string; shortName: string; isLocal: boolean }) => ({
+        const nodes = data.nodes.map((n: { nodeId: string; name: string; shortName: string; isLocal: boolean }) => ({
           nodeId: String(n.nodeId),
           name: n.name || 'Неизвестный',
           shortName: n.shortName || '???',
           isLocal: n.isLocal,
-        })))
+        }))
+        setBridgeNodes(nodes)
+        // Предзаполняем имя из локального узла (BASE)
+        const localNode = nodes.find((n: { isLocal: boolean }) => n.isLocal)
+        if (localNode) {
+          setPushDeviceName(localNode.name !== 'Неизвестный' ? localNode.name : '')
+          setPushDeviceShortName(localNode.shortName !== '???' ? localNode.shortName : '')
+        }
       }
     } catch {
       setBridgeOnline(false)
       setBridgeNodes([])
     }
   }, [])
+
+  /** Обработчик смены целевого устройства — обновить имя */
+  const handlePushTargetChange = useCallback((value: string) => {
+    setPushTarget(value)
+    if (value === '_local') {
+      const localNode = bridgeNodes.find(n => n.isLocal)
+      if (localNode) {
+        setPushDeviceName(localNode.name !== 'Неизвестный' ? localNode.name : '')
+        setPushDeviceShortName(localNode.shortName !== '???' ? localNode.shortName : '')
+      }
+    } else {
+      const remoteNode = bridgeNodes.find(n => n.nodeId === value)
+      if (remoteNode) {
+        setPushDeviceName(remoteNode.name !== 'Неизвестный' ? remoteNode.name : '')
+        setPushDeviceShortName(remoteNode.shortName !== '???' ? remoteNode.shortName : '')
+      }
+    }
+  }, [bridgeNodes])
 
   /** Отправить конфиг на устройство */
   const handleConfirmPush = useCallback(async () => {
@@ -520,6 +550,8 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
           presetId: selectedPreset.id,
           nodeId: targetNodeId,
           rebootSecs: 5,
+          deviceName: pushDeviceName || undefined,
+          deviceShortName: pushDeviceShortName || undefined,
         }),
       })
       const result = await resp.json()
@@ -545,7 +577,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     } finally {
       setPushing(false)
     }
-  }, [selectedPreset, pushTarget, toast])
+  }, [selectedPreset, pushTarget, pushDeviceName, pushDeviceShortName, toast])
 
   // ===========================================================================
   // Генерация команд (аналог device-setup-tab.tsx)
@@ -2096,7 +2128,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
               {/* Выбор устройства */}
               <div className="space-y-2">
                 <Label>Целевое устройство</Label>
-                <Select value={pushTarget} onValueChange={setPushTarget}>
+                <Select value={pushTarget} onValueChange={handlePushTargetChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Выберите устройство" />
                   </SelectTrigger>
@@ -2121,6 +2153,33 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                 </Select>
               </div>
 
+              {/* Имя устройства */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2 space-y-1.5">
+                  <Label className="text-xs">Имя устройства</Label>
+                  <Input
+                    value={pushDeviceName}
+                    onChange={e => setPushDeviceName(e.target.value)}
+                    placeholder="Tracker 01"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Короткое</Label>
+                  <Input
+                    value={pushDeviceShortName}
+                    onChange={e => setPushDeviceShortName(e.target.value.slice(0, 5))}
+                    placeholder="TR01"
+                    maxLength={5}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Имя отображается в сети. Короткое — макс. 5 символов, показывается на экране устройства.
+                Оставьте пустым, чтобы не менять текущее имя.
+              </p>
+
               {/* Предупреждение для удалённого узла */}
               {pushTarget !== '_local' && (
                 <Alert>
@@ -2131,7 +2190,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                 </Alert>
               )}
 
-              {/* Преворот пресета */}
+              {/* Превью пресета */}
               {selectedPreset && (
                 <div className="rounded-md border p-3 bg-muted/30 space-y-1 text-sm">
                   <div className="font-medium">{selectedPreset.icon} {selectedPreset.name}</div>

@@ -202,3 +202,25 @@ Stage Summary:
 - HTTP API моста работает на порту 8420 (--api-port для изменения)
 - Транзакционное применение: begin → writeConfig × 8 секций → commit → reboot
 - Новые файлы: src/app/api/meshtastic/config/route.ts, src/app/api/meshtastic/bridge/route.ts
+
+---
+Task ID: 2
+Agent: main
+Task: Добавить установку имени устройства (deviceName/deviceShortName) при отправке конфигурации
+
+Work Log:
+- Расширен apply_config_to_node() в techo-bridge.py: добавлены параметры device_name, device_short_name
+- Перед транзакцией вызывается node.setOwner(long_name, short_name) если имя задано
+- Обновлён POST /api/apply-config handler моста: читает deviceName/deviceShortName из тела запроса
+- Обновлён POST /api/meshtastic/config route: передаёт deviceName/deviceShortName в payload моста и SyncLog
+- Добавлены state-переменные pushDeviceName/pushDeviceShortName в settings-presets-tab.tsx
+- Добавлен обработчик handlePushTargetChange — при смене устройства автозаполняет имя из текущего
+- В диалог добавлены поля: «Имя устройства» (Input) + «Короткое» (Input, maxLength=5)
+- Подсказка: «Оставьте пустым, чтобы не менять текущее имя»
+- Обновлена документация: README.md, STARTUP.md, PROJECT_RULES.md
+
+Stage Summary:
+- При отправке пресета на устройство можно задать имя (long name) и короткое имя (short name, макс. 5 символов)
+- Имя автозаполняется из текущего устройства при открытии диалога и смене устройства
+- setOwner() вызывается до beginSettingsTransaction(), чтобы отделить имя от конфигурации
+- Если имя не заполнено — не отправляется, текущее имя устройства не меняется
