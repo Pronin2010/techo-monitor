@@ -367,6 +367,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             if rb_str in REBROADCAST_MODE_MAP:
                 node.localConfig.device.rebroadcast_mode = REBROADCAST_MODE_MAP[rb_str]
             node.writeConfig("device")
+            time.sleep(0.5)  # Даём устройству время обработать
             sections_written.append("device")
             print(f"\033[32m[CFG] device: role={role_str}, node_info={config.get('nodeInfoBroadcastSecs', 900)}s, rebroadcast={rb_str}\033[0m")
 
@@ -394,6 +395,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                 node.localConfig.position.broadcast_smart_minimum_distance = config.get('smartBroadcastMinDist', 20)
                 node.localConfig.position.broadcast_smart_minimum_interval_secs = config.get('smartBroadcastMinInterval', 60)
             node.writeConfig("position")
+            time.sleep(0.5)
             sections_written.append("position")
             print(f"\033[32m[CFG] position: gps={gps_str}, flags={35 if precision > 13 else 3}, smart={smart_enabled}\033[0m")
 
@@ -405,6 +407,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                 node.localConfig.power.ls_secs = config.get('lsSecs', 300)
                 node.localConfig.power.min_wake_secs = config.get('minWakeSecs', 10)
             node.writeConfig("power")
+            time.sleep(0.5)
             sections_written.append("power")
             print(f"\033[32m[CFG] power: saving={config.get('powerSaving', False)}\033[0m")
 
@@ -419,6 +422,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             node.localConfig.lora.tx_power = config.get('txPower', 0)
             # use_preamble удалён — не существует в LoRaConfig прошивки 2.7.15
             node.writeConfig("lora")
+            time.sleep(0.5)
             sections_written.append("lora")
             print(f"\033[32m[CFG] lora: region={region_str}, modem={modem_str}, hop={config.get('hopLimit', 5)}\033[0m")
 
@@ -430,12 +434,14 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                 except (ValueError, TypeError):
                     pass
             node.writeConfig("bluetooth")
+            time.sleep(0.5)
             sections_written.append("bluetooth")
             print(f"\033[32m[CFG] bluetooth: enabled={config.get('bluetoothEnabled', True)}\033[0m")
 
             # ── Display ──
             node.localConfig.display.screen_on_secs = config.get('screenOnSecs', 60)
             node.writeConfig("display")
+            time.sleep(0.5)
             sections_written.append("display")
             print(f"\033[32m[CFG] display: screen_on={config.get('screenOnSecs', 60)}s\033[0m")
 
@@ -448,6 +454,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                 # записываются через writeModuleConfig()
                 print("\033[33m[CFG] writeConfig(telemetry) не удался, пробуем writeModuleConfig...\033[0m")
                 node.writeModuleConfig("telemetry")
+            time.sleep(0.5)
             sections_written.append("telemetry")
             print(f"\033[32m[CFG] telemetry: interval={config.get('telemetryInterval', 300)}s\033[0m")
 
@@ -505,6 +512,8 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
         # ── Коммит транзакции ──
         node.commitSettingsTransaction()
         print("\033[33m[CFG] Транзакция зафиксирована\033[0m")
+        # Даём устройству время сохранить настройки во flash
+        time.sleep(3)
 
         # ── Перезагрузка ──
         if reboot_secs > 0:
@@ -521,6 +530,15 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             new_iface = _reconnect_interface(max_retries=5, retry_delay=5)
             if new_iface:
                 print("\033[32m[CFG] Мост переподключён после перезагрузки устройства\033[0m")
+                # Диагностика: проверить, что настройки реально применились
+                try:
+                    fresh_node = new_iface.localNode
+                    d = fresh_node.localConfig.device
+                    l = fresh_node.localConfig.lora
+                    p = fresh_node.localConfig.position
+                    print(f"\033[36m[DIAG] После применения: role={d.role}, region={l.region}, modem={l.modem_preset}, gps_mode={p.gps_mode}, flags={p.position_flags}\033[0m")
+                except Exception as diag_err:
+                    print(f"\033[36m[DIAG] Не удалось прочитать конфиг после применения: {diag_err}\033[0m")
             else:
                 print("\033[33m[CFG] Не удалось переподключить мост после перезагрузки. Мониторинг приостановлен.\033[0m")
 

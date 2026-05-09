@@ -396,3 +396,24 @@ Work Log:
 Stage Summary:
 - Factory reset: ensureSessionKey() → AdminMessage(factory_reset_config=1) → _sendAdmin()
 - Обойдён баг библиотеки (bool vs int32) при сохранении session_passkey
+
+---
+Task ID: 20
+Agent: main
+Task: Фикс применения конфигурации — настройки не применялись на устройстве
+
+Work Log:
+- Проблема: после factory reset + writeConfig() + commit + reboot — настройки не сохранялись на устройстве
+- Анализ: writeConfig() отправляет admin-команду и сразу возвращается (асинхронно)
+  - _writeBytes добавляет только 0.1 сек задержку
+  - 8 writeConfig + commit + reboot отправляются почти одновременно
+  - Устройство может не успеть обработать все команды до перезагрузки
+- Добавлено: time.sleep(0.5) после КАЖДОГО writeConfig() — даёт устройству время обработать
+- Добавлено: time.sleep(3) после commitSettingsTransaction() — даёт устройству время сохранить во flash
+- Добавлена диагностика: после перезагрузки читается текущая конфигурация и выводится [DIAG] role/region/modem/gps_mode/flags
+- Обновлена документация: AI_PROMPT.md, PROJECT_RULES.md, worklog.md
+
+Stage Summary:
+- Задержки 0.5с между writeConfig() + 3с перед reboot
+- Диагностика после перезагрузки показывает реально применённые настройки
+- Если [DIAG] показывает заводские значения — проблема глубже (session key)
