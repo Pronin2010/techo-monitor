@@ -13,6 +13,7 @@ _Этот файл загружается в контекст AI-ассисте�
 - GitHub: `https://github.com/Pronin2010/techo-monitor.git`
 - Логин: `Pronin2010`, ветка: `main`
 - Лицензия: MIT
+- **Платформа: только десктоп** — проект используется исключительно на компьютере, мобильная адаптация не требуется
 
 ---
 
@@ -102,6 +103,7 @@ techo-bridge.py                   # Python-мост (Serial/MQTT → HTTP API :8
 - DATABASE_URL = `"file:../db/custom.db"` (относительно prisma/)
 - Whitelist-подход в PUT-роутах (только разрешённые поля)
 - API-роуты — не server actions
+- **Только десктоп** — мобильная адаптация не нужна, оптимизировать под большие экраны
 
 ### Файлы
 - Генерируемые файлы → `/home/z/my-project/download/`
@@ -237,7 +239,6 @@ SyncLog
 - parseDetails в Connection tab несовместим с форматом SyncLog
 - Дублирование констант в 3 местах
 - settings-presets-tab.tsx ~1000 строк (монстр)
-- 7 вкладок не влезают на мобильных
 - Нет AlertDialog при удалении канала
 
 ---
