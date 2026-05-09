@@ -490,3 +490,19 @@ Stage Summary:
 - HasField() убран — используется простая проверка через truthiness
 - Добавлены секции MQTT и Serial (module configs)
 - techo-bridge.py: тот же фикс в GET /api/device-config
+
+---
+Task ID: 24
+Agent: main
+Task: Зафиксировать правило: MQTT не используется — подключение только через USB (serial)
+
+Work Log:
+- Добавлено в AI_PROMPT.md: «MQTT не используется» в секции 1 + режим моста `--mode serial` без MQTT
+- Добавлено в PROJECT_RULES.md: правило в секции 3
+- Добавлено в README.md: цитата «MQTT не используется»
+- Добавлено в STARTUP.md: заголовок + «Способ 2: Через MQTT (не используется)»
+- Обновлены даты в AI_PROMPT.md и PROJECT_RULES.md
+
+Stage Summary:
+- MQTT зафиксирован как неиспользуемый во всех 4 документах
+- Способ 2 (MQTT) в STARTUP.md помечен как «не используется»

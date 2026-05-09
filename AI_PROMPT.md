@@ -14,6 +14,7 @@ _Этот файл загружается в контекст AI-ассисте�
 - Логин: `Pronin2010`, ветка: `main`
 - Лицензия: MIT
 - **Платформа: только десктоп** — проект используется исключительно на компьютере, мобильная адаптация не требуется
+- **MQTT не используется** — подключение только через USB (serial), удалённый мониторинг через интернет не нужен
 
 ---
 
@@ -205,7 +206,7 @@ SyncLog
 
 ## 8. Python-мост (techo-bridge.py)
 
-- Режимы: `--mode serial` / `--mode mqtt`
+- Режим: `--mode serial` (MQTT не используется)
 - HTTP API на порту **8420** (`--api-port`)
 - **POST /api/apply-config** — применение конфигурации на устройство
   - Параметры: role, region, modemPreset, lsSecs, minWakeSecs, gpsMode, agpsEnabled, и т.д.
@@ -247,6 +248,7 @@ SyncLog
 20. Фикс ВСЕХ protobuf enum маппингов: ROLE_MAP (ROUTER=2 не 4), MODEM_PRESET_MAP (LONG_MODERATE=7 не 1), REGION_MAP (EU_433=2 не 3)
 21. Скрипт techo-dump-config.py + GET /api/device-config — чтение и выгрузка конфигурации устройства
 22. Фикс protobuf «does not have presence» — HasField() на скалярных полях (wifi_ssid), обёртка секций в try/except, добавлены MQTT/Serial модули
+23. Правило: MQTT не используется — подключение только через USB (serial)
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -274,4 +276,4 @@ ALL, LOCAL_SKIP, SIMPLE
 
 ---
 
-_Последнее обновление: 2026-05-09 (фикс protobuf HasField + try/except секции)_
+_Последнее обновление: 2026-05-09 (правило: MQTT не используется)_
