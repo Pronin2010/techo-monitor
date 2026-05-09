@@ -18,12 +18,17 @@ T-Echo Meshtastic Bridge Script
 
 import argparse
 import json
+import os
 import sys
 import time
 import signal
 import threading
 from datetime import datetime, timezone
 from collections import OrderedDict
+
+# Включить ANSI-цвета в Windows cmd/PowerShell
+if sys.platform == 'win32':
+    os.system('')
 
 # Serial mode imports (required for --mode serial)
 try:
@@ -76,6 +81,7 @@ def http_post(url, data):
 
 # ─── Packet type names ────────────────────────────────────────────────────
 
+# Маппинг числовых portnum → короткие имена
 PORTNUM_NAMES = {
     0: 'UNKNOWN',
     1: 'TEXT_MESSAGE',
@@ -105,9 +111,51 @@ PORTNUM_NAMES = {
     67: 'MAX',
 }
 
-def portnum_name(num):
-    """Человекочитаемое имя типа пакета."""
-    return PORTNUM_NAMES.get(num, f'PORT_{num}')
+# Маппинг строковых имён Meshtastic (PORT_NODEINFO_APP и т.д.) → короткие имена
+PORT_NAME_ALIASES = {
+    'PORT_UNKNOWN_APP': 'UNKNOWN',
+    'PORT_TEXT_MESSAGE_APP': 'TEXT_MESSAGE',
+    'PORT_REMOTE_HARDWARE_APP': 'REMOTE_HARDWARE',
+    'PORT_POSITION_APP': 'POSITION',
+    'PORT_NODEINFO_APP': 'NODEINFO',
+    'PORT_ROUTING_APP': 'ROUTING',
+    'PORT_ADMIN_APP': 'ADMIN',
+    'PORT_TELEMETRY_APP': 'TELEMETRY',
+    'PORT_SPANSION_APP': 'SPANSION',
+    'PORT_PRIVATE_APP': 'PRIVATE',
+    'PORT_ATAK_FORWARDER_APP': 'ATAK_FORWARDER',
+    'PORT_SIMULATOR_APP': 'SIMULATOR',
+    'PORT_TRACEROUTE_APP': 'TRACEROUTE',
+    'PORT_NEIGHBORINFO_APP': 'NEIGHBORINFO',
+    'PORT_ATAK_PLUGIN_APP': 'ATAK_PLUGIN',
+    'PORT_MAP_REPORT_APP': 'MAP_REPORT',
+    'PORT_POWERSTRESS_APP': 'POWERSTRESS',
+    'PORT_STORE_FORWARD_APP': 'STORE_FORWARD',
+    'PORT_RANGE_TEST_APP': 'RANGE_TEST',
+    'PORT_PAXCOUNTER_APP': 'PAXCOUNTER',
+    'PORT_SERIAL_APP': 'SERIAL',
+    'PORT_MAX_APP': 'MAX',
+}
+
+def portnum_name(portnum):
+    """Человекочитаемое имя типа пакета. Поддерживает числовые и строковые portnum."""
+    if isinstance(portnum, int):
+        return PORTNUM_NAMES.get(portnum, f'PORT_{portnum}')
+    if isinstance(portnum, str):
+        # Сначала проверяем алиасы (PORT_NODEINFO_APP → NODEINFO)
+        if portnum in PORT_NAME_ALIASES:
+            return PORT_NAME_ALIASES[portnum]
+        # Уже короткое имя?
+        if portnum in PORTNUM_NAMES.values():
+            return portnum
+        # Убираем префикс PORT_ и суффикс _APP
+        name = portnum
+        if name.startswith('PORT_'):
+            name = name[5:]
+        if name.endswith('_APP'):
+            name = name[:-4]
+        return name
+    return 'UNKNOWN'
 
 
 # ─── Node name cache ─────────────────────────────────────────────────────
