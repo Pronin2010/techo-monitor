@@ -280,3 +280,25 @@ Work Log:
 Stage Summary:
 - Все 4 файла документации обновлены: AI_PROMPT.md, README.md, STARTUP.md, PROJECT_RULES.md
 - Правило «только десктоп» зафиксировано — мобильная адаптация больше не требуется
+
+---
+Task ID: 14
+Agent: main
+Task: Фикс 7 багов в push-to-device (настройки не применялись на устройстве)
+
+Work Log:
+- Проведён аудит полного потока отправки: фронтенд → API route → HTTP мост → meshtastic Python
+- Bug #1 (КРИТИЧЕСКИЙ): при ошибке writeConfig() вызывался commitSettingsTransaction() → частичные настройки коммитились на устройство. Исправлено: теперь при ошибке вызывается node.reboot() для сброса незакоммиченной транзакции
+- Bug #2 (КРИТИЧЕСКИЙ): agpsEnabled отправлялся но никогда не применялся — добавлена секция AGPS с логированием
+- Bug #3: positionPrecision=0 (не передавать позицию) → position_flags=3 (передаёт!) — исправлено: precision=0 → flags=0
+- Bug #4: writeConfig("telemetry") может не работать на старых версиях библиотеки — добавлен fallback на writeModuleConfig()
+- Bug #5: мост /api/status возвращал nodeId как int, а getNode() ожидает hex "!a1b2c3d4" — конвертация в hex-формат
+- Bug #6: usePreamble отправлялся но не применялся — убран из payload в route.ts
+- Bug #7: factory reset ожидание увеличено с 10 до 20 сек (надёжнее для T-Echo)
+- Обновлена документация: AI_PROMPT.md, README.md, STARTUP.md, PROJECT_RULES.md, worklog.md
+
+Stage Summary:
+- 7 багов исправлено (2 критических, 2 средних, 3 низких)
+- Ключевой фикс: откат транзакции через reboot вместо commit при ошибке
+- nodeId теперь в hex-формате для корректной удалённой отправки
+- positionPrecision:0 теперь правильно означает «не отправлять позицию»

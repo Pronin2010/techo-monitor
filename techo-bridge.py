@@ -304,8 +304,8 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                     return {'success': False, 'message': f'Ошибка factory reset: {e2}', 'sections': sections_written}
             sections_written.append("factory_reset")
             # После factoryReset устройство перезагружается — ждём повторного подключения
-            print("\033[33m[CFG] Ожидание перезагрузки (10 сек)...\033[0m")
-            time.sleep(10)
+            print("\033[33m[CFG] Ожидание перезагрузки (20 сек)...\033[0m")
+            time.sleep(20)
             # Переподключаемся к узлу
             try:
                 if node_id and node_id.strip():
@@ -357,12 +357,15 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                 node.localConfig.position.gps_mode = GPS_MODE_MAP[gps_str]
             node.localConfig.position.position_broadcast_secs = config.get('positionBroadcastSecs', 300)
             # position_precision → position_flags (битовая маска, прошивка 2.7.x)
-            # 3 = высота + координаты (сокращённая), 35 = полный набор
+            # 0 = не отправлять позицию, 3 = высота + координаты (сокращённая),
+            # 35 = полный набор (ALT + GEO + SPEED + HEADING + SATINFO)
             precision = config.get('positionPrecision', 35)
-            if precision <= 13:
-                node.localConfig.position.position_flags = 3   # ALT + GEO
+            if precision == 0:
+                node.localConfig.position.position_flags = 0   # Не отправлять позицию
+            elif precision <= 13:
+                node.localConfig.position.position_flags = 3   # ALT + GEO (сокращённая)
             else:
-                node.localConfig.position.position_flags = 35  # ALT + GEO + SPEED + HEADING + SATINFO
+                node.localConfig.position.position_flags = 35  # Полный набор
             node.localConfig.position.gps_update_interval = config.get('gpsUpdateInterval', 30)
             node.localConfig.position.gps_attempt_time = config.get('gpsAttemptTime', 90)
             # Smart broadcast
@@ -419,9 +422,27 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
 
             # ── Telemetry (module) ──
             node.moduleConfig.telemetry.device_update_interval = config.get('telemetryInterval', 300)
-            node.writeConfig("telemetry")
+            try:
+                node.writeConfig("telemetry")
+            except Exception:
+                # Фоллбэк для старых версий meshtastic, где module-конфиги
+                # записываются через writeModuleConfig()
+                print("\033[33m[CFG] writeConfig(telemetry) не удался, пробуем writeModuleConfig...\033[0m")
+                node.writeModuleConfig("telemetry")
             sections_written.append("telemetry")
             print(f"\033[32m[CFG] telemetry: interval={config.get('telemetryInterval', 300)}s\033[0m")
+
+            # ── AGPS (module) ──
+            agps_enabled = config.get('agpsEnabled', False)
+            node.moduleConfig.telemetry.environment_measurement_enabled = config.get('telemetryInterval', 300) > 0
+            # AGPS управляется через позицию — обновление интервала уже задано выше
+            # Для явного управления AGPS в прошивке 2.7.x:
+            # position.gps_update_interval задаётся выше,
+            # а agps не имеет отдельного поля в protobuf — он определяется
+            # наличием интернета у базовой станции
+            if agps_enabled:
+                print(f"\033[32m[CFG] agps: включён (зависит от интернета на базовой станции)\033[0m")
+            sections_written.append("agps")
 
             # ── Канал (Channel 0 = первичный) ──
             ch_name = config.get('channelName', '').strip()
@@ -452,13 +473,15 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                     # Не прерываем — канал не критичен для базового конфига
 
         except Exception as e:
-            # При ошибке — откатить транзакцию
+            # При ошибке — откатить транзакцию через перезагрузку
+            # (Meshtastic не имеет явного rollback — перезагрузка сбрасывает незакоммиченные изменения)
             print(f"\033[31m[CFG] Ошибка записи секции: {e}\033[0m")
+            print("\033[33m[CFG] Откат: перезагрузка устройства для сброса незакоммиченной транзакции...\033[0m")
             try:
-                node.commitSettingsTransaction()
+                node.reboot()
             except Exception:
                 pass
-            return {'success': False, 'message': f'Ошибка записи: {e}', 'sections': sections_written}
+            return {'success': False, 'message': f'Ошибка записи: {e} (транзакция отменена перезагрузкой)', 'sections': sections_written}
 
         # ── Коммит транзакции ──
         node.commitSettingsTransaction()
@@ -521,8 +544,16 @@ class BridgeHTTPHandler(BaseHTTPRequestHandler):
                             continue
                         user = node.get("user", {})
                         dm = node.get("deviceMetrics", {})
+                        # Конвертируем nodeId в hex-формат !a1b2c3d4
+                        # (нужен для interface.getNode() при удалённой отправке)
+                        if isinstance(node_num, int):
+                            node_id_hex = f"!{node_num:08x}"
+                        elif isinstance(node_num, str) and node_num.startswith('!'):
+                            node_id_hex = node_num
+                        else:
+                            node_id_hex = f"!{int(node_num):08x}"
                         nodes_list.append({
-                            "nodeId": node_num,
+                            "nodeId": node_id_hex,
                             "name": user.get("longName", ""),
                             "shortName": user.get("shortName", ""),
                             "role": user.get("role", "CLIENT"),

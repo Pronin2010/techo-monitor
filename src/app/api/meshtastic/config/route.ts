@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       modemPreset: preset.modemPreset,
       txPower: preset.txPower,
       hopLimit: preset.hopLimit,
-      usePreamble: preset.usePreamble,
+      // usePreamble удалён — не существует в LoRaConfig прошивки 2.7.15
       rebroadcastMode: preset.rebroadcastMode,
       bluetoothEnabled: preset.bluetoothEnabled,
       bluetoothFixedPin: preset.bluetoothFixedPin,

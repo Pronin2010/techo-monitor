@@ -207,18 +207,20 @@ SyncLog
 - Режимы: `--mode serial` / `--mode mqtt`
 - HTTP API на порту **8420** (`--api-port`)
 - **POST /api/apply-config** — применение конфигурации на устройство
-  - Параметры: role, region, modemPreset, lsSecs, minWakeSecs, gpsMode, и т.д.
+  - Параметры: role, region, modemPreset, lsSecs, minWakeSecs, gpsMode, agpsEnabled, и т.д.
   - deviceName, deviceShortName — установка имени через setOwner()
-  - factoryReset — сброс до заводских перед применением
+  - factoryReset — сброс до заводских перед применением (ожидание 20 сек)
   - Порядок: factoryReset → reconnect → setOwner → beginTransaction → writeConfig × N → commit → reboot
-- **GET /api/status** — статус моста и список узлов
+  - При ошибке записи — перезагрузка для отката (вместо commit частичных данных)
+- **GET /api/status** — статус моста и список узлов (nodeId в hex-формате `!a1b2c3d4`)
 - Транзакционное применение: все настройки в одной транзакции
+- Fallback: writeModuleConfig() для старых версий meshtastic-библиотеки
 
 ---
 
 ## 9. Текущее состояние (из worklog)
 
-### Выполнено (12 задач):
+### Выполнено (14 задач):
 1. Рефакторинг вкладки Статус — аккордеон-строки, поиск, упрощённый диалог
 2. Визард подключения — 3 шага вместо 1162 строк
 3. Фикс CLI-команд для meshtastic 2.7.8 (проверено по исходникам)
@@ -231,12 +233,12 @@ SyncLog
 10. Установка имени устройства при отправке
 11. Опция factory reset в диалоге отправки
 12. Полный код-ревью + создание AI_PROMPT.md + правило AI-контекста
+13. Правило «только десктоп» в документации
+14. Фикс 7 багов в push-to-device (критические: откат транзакции, positionPrecision, nodeId-формат)
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
 - Python-мост слушает 0.0.0.0 вместо 127.0.0.1
-- LongFast → LONG_FAST в channels POST default
-- parseDetails в Connection tab несовместим с форматом SyncLog
 - Дублирование констант в 3 местах
 - settings-presets-tab.tsx ~1000 строк (монстр)
 - Нет AlertDialog при удалении канала
@@ -260,4 +262,4 @@ ALL, LOCAL_SKIP, SIMPLE
 
 ---
 
-_Последнее обновление: 2026-05-09_
+_Последнее обновление: 2026-05-09 (фикс push-to-device багов)_
