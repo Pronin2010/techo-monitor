@@ -16,18 +16,15 @@ import ChannelSettings from '@/components/dashboard/channel-settings'
 import ConnectionTab from '@/components/dashboard/connection-tab'
 import DeviceSetupTab from '@/components/dashboard/device-setup-tab'
 import SettingsPresetsTab from '@/components/dashboard/settings-presets-tab'
-import EventLogTab from '@/components/dashboard/event-log-tab'
 import PacketStreamTab from '@/components/dashboard/packet-stream-tab'
 import {
   Radio,
   Map,
   Settings,
   RefreshCw,
-  Download,
   Activity,
   Search,
   Cpu,
-  FileText,
   Zap,
 } from 'lucide-react'
 
@@ -45,11 +42,6 @@ async function fetchChannels(): Promise<Channel[]> {
   const res = await fetch('/api/channels')
   if (!res.ok) throw new Error('Failed to fetch channels')
   return res.json()
-}
-
-async function seedDatabase(): Promise<void> {
-  const res = await fetch('/api/seed', { method: 'POST' })
-  if (!res.ok) throw new Error('Failed to seed')
 }
 
 // ---------------------------------------------------------------------------
@@ -140,23 +132,6 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
       })
     } finally {
       setIsRefreshing(false)
-    }
-  }
-
-  const handleSeed = async () => {
-    try {
-      await seedDatabase()
-      await loadData()
-      toast({
-        title: 'Демо-данные',
-        description: 'Демо-данные успешно загружены',
-      })
-    } catch {
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось загрузить демо-данные',
-        variant: 'destructive',
-      })
     }
   }
 
@@ -251,8 +226,6 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
     setChannels(initialChannels)
   }, [initialNodes, initialChannels])
 
-  const hasData = nodes.length > 0
-
   return (
     <TooltipProvider>
       <div className="min-h-screen flex flex-col bg-background">
@@ -284,16 +257,6 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
                   <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                   Обновить
                 </Button>
-                {!hasData && (
-                  <Button
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={handleSeed}
-                  >
-                    <Download className="h-4 w-4" />
-                    Загрузить демо
-                  </Button>
-                )}
               </div>
             </div>
           </div>
@@ -337,10 +300,6 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
                 <Zap className="h-4 w-4" />
                 Пакеты
               </TabsTrigger>
-              <TabsTrigger value="log" className="gap-1.5">
-                <FileText className="h-4 w-4" />
-                Журнал
-              </TabsTrigger>
             </TabsList>
 
             {/* ── Status Tab ── */}
@@ -351,13 +310,9 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
                     <Radio className="h-16 w-16 text-muted-foreground/30 mb-4" />
                     <h3 className="text-lg font-medium mb-2">Нет устройств</h3>
                     <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-                      Устройства T-Echo не найдены. Загрузите демо-данные для
-                      просмотра интерфейса или подключитесь к сети через вкладку «Подключение».
+                      Устройства T-Echo не найдены. Подключитесь к сети
+                      через вкладку «Подключение».
                     </p>
-                    <Button onClick={handleSeed} variant="outline" className="gap-1.5">
-                      <Download className="h-4 w-4" />
-                      Демо-данные
-                    </Button>
                   </CardContent>
                 </Card>
               ) : (
@@ -458,11 +413,6 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
             {/* ── Packet Stream Tab ── */}
             <TabsContent value="packets">
               <PacketStreamTab nodes={nodes.map(n => ({ id: n.id, name: n.name, nodeId: n.nodeId }))} />
-            </TabsContent>
-
-            {/* ── Event Log Tab ── */}
-            <TabsContent value="log">
-              <EventLogTab nodes={nodes.map(n => ({ id: n.id, name: n.name, nodeId: n.nodeId }))} />
             </TabsContent>
           </Tabs>
         </main>
