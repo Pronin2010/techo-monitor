@@ -203,7 +203,9 @@ function estimateBatteryHours(preset: PresetData): number {
   }
 
   if (preset.role === 'ROUTER' || preset.role === 'ROUTER_LATE' || preset.role === 'CLIENT_BASE') {
-    return Math.round((1000 / (baseCurrent + gpsCurrent + 40)) * 10) / 10 // ROUTER ~83мА с GPS
+    // ROUTER всегда бодрствует; +40мА за активную ретрансляцию
+    // GPS NOT_PRESENT → gpsCurrent=0, иначе +29мА
+    return Math.round((1000 / (baseCurrent + gpsCurrent + 40)) * 10) / 10 // ~54мА без GPS, ~83мА с GPS
   }
 
   // Без экономии: GPS включён постоянно
@@ -506,18 +508,17 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     lines.push(`${cmd} --set position.gps_mode ${p.gpsMode}`)
     if (p.gpsMode === 'ENABLED') {
       lines.push(`${cmd} --set position.gps_update_interval ${p.gpsUpdateInterval}`)
+      // GPS attempt time (только если GPS включён и не дефолт)
+      if (p.gpsAttemptTime > 0 && p.gpsAttemptTime !== 90) {
+        lines.push(`${cmd} --set position.gps_attempt_time ${p.gpsAttemptTime}`)
+      }
     }
-    // AGNSS
+    // AGNSS (только для клиентов с телефоном)
     if (p.agpsEnabled) {
       lines.push(`${cmd} --set gps.agps_enabled true`)
     }
-    // GPS attempt time
-    if (p.gpsAttemptTime !== 90) {
-      lines.push(`${cmd} --set position.gps_attempt_time ${p.gpsAttemptTime}`)
-    }
-    if (p.positionPrecision > 0) {
-      lines.push(`${cmd} --set position.position_precision ${p.positionPrecision}`)
-    }
+    // Position precision
+    lines.push(`${cmd} --set position.position_precision ${p.positionPrecision}`)
     lines.push(`${cmd} --set position.position_broadcast_secs ${p.positionBroadcastSecs}`)
     if (p.smartBroadcastEnabled) {
       lines.push(`${cmd} --set position.broadcast_smart_minimum_distance ${p.smartBroadcastMinDist}`)
@@ -591,12 +592,12 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     ylines.push(`    gps_mode: ${p.gpsMode}`)
     if (p.gpsMode === 'ENABLED') {
       ylines.push(`    gps_update_interval: ${p.gpsUpdateInterval}`)
+      if (p.gpsAttemptTime > 0 && p.gpsAttemptTime !== 90) {
+        ylines.push(`    gps_attempt_time: ${p.gpsAttemptTime}`)
+      }
     }
     if (p.agpsEnabled) {
       ylines.push('    agps_enabled: true')
-    }
-    if (p.gpsAttemptTime !== 90) {
-      ylines.push(`    gps_attempt_time: ${p.gpsAttemptTime}`)
     }
     ylines.push(`    position_precision: ${p.positionPrecision}`)
     ylines.push(`    position_broadcast_secs: ${p.positionBroadcastSecs}`)
@@ -680,10 +681,12 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     if (preset.agpsEnabled) {
       lines.push(`${cmd} --set gps.agps_enabled true`)
     }
-    if (preset.positionPrecision > 0) {
-      lines.push(`${cmd} --set position.position_precision ${preset.positionPrecision}`)
-    }
+    lines.push(`${cmd} --set position.position_precision ${preset.positionPrecision}`)
     lines.push(`${cmd} --set position.position_broadcast_secs ${preset.positionBroadcastSecs}`)
+    if (preset.smartBroadcastEnabled) {
+      lines.push(`${cmd} --set position.broadcast_smart_minimum_distance ${preset.smartBroadcastMinDist}`)
+      lines.push(`${cmd} --set position.broadcast_smart_minimum_interval_secs ${preset.smartBroadcastMinInterval}`)
+    }
     lines.push(`${cmd} --set bluetooth.enabled ${preset.bluetoothEnabled}`)
     lines.push(`${cmd} --set display.screen_on_secs ${preset.screenOnSecs}`)
     lines.push(`${cmd} --set telemetry.device_update_interval ${preset.telemetryInterval}`)
