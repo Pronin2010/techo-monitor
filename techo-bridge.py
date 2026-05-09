@@ -305,8 +305,8 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             sections_written.append("factory_reset")
             # После factoryReset устройство перезагружается — серийное соединение разрывается.
             # Нельзя использовать старый interface — нужно пересоздать SerialInterface.
-            print("\033[33m[CFG] Ожидание перезагрузки (10 сек)...\033[0m")
-            time.sleep(10)
+            print("\033[33m[CFG] Ожидание перезагрузки (20 сек)...\033[0m")
+            time.sleep(20)
             # Пересоздаём интерфейс (закрываем старый, открываем новый)
             new_iface = _reconnect_interface(max_retries=5, retry_delay=5)
             if not new_iface:
@@ -503,17 +503,22 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             
             # После перезагрузки серийное соединение разрывается.
             # Пересоздаём интерфейс для продолжения мониторинга.
-            print(f"\033[33m[CFG] Ожидание перезагрузки ({reboot_secs + 5} сек)...\033[0m")
-            time.sleep(reboot_secs + 5)
+            print(f"\033[33m[CFG] Ожидание перезагрузки ({reboot_secs + 15} сек)...\033[0m")
+            time.sleep(reboot_secs + 15)
             new_iface = _reconnect_interface(max_retries=5, retry_delay=5)
             if new_iface:
                 print("\033[32m[CFG] Мост переподключён после перезагрузки устройства\033[0m")
             else:
                 print("\033[33m[CFG] Не удалось переподключить мост после перезагрузки. Мониторинг приостановлен.\033[0m")
 
+        # Формируем сообщение об успехе
+        if reboot_secs > 0:
+            msg = f'Конфигурация применена ({len(sections_written)} секций). Устройство перезагружено.'
+        else:
+            msg = f'Конфигурация применена ({len(sections_written)} секций). Перезагрузка не требуется.'
         return {
             'success': True,
-            'message': f'Конфигурация применена ({len(sections_written)} секций). Перезагрузка через {reboot_secs}с.',
+            'message': msg,
             'sections': sections_written,
         }
 

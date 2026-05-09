@@ -580,7 +580,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     } finally {
       setPushing(false)
     }
-  }, [selectedPreset, pushTarget, pushDeviceName, pushDeviceShortName, toast])
+  }, [selectedPreset, pushTarget, pushDeviceName, pushDeviceShortName, pushFactoryReset, toast])
 
   // ===========================================================================
   // Генерация команд (аналог device-setup-tab.tsx)
