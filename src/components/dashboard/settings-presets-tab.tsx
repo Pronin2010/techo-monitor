@@ -38,6 +38,8 @@ interface PresetData {
   minWakeSecs: number
   gpsMode: string
   gpsUpdateInterval: number
+  agpsEnabled: boolean
+  gpsAttemptTime: number
   positionPrecision: number
   positionBroadcastSecs: number
   smartBroadcastEnabled: boolean
@@ -81,6 +83,8 @@ const DEFAULT_PRESET = {
   minWakeSecs: 10,
   gpsMode: 'ENABLED',
   gpsUpdateInterval: 30,
+  agpsEnabled: false,
+  gpsAttemptTime: 90,
   positionPrecision: 32,
   positionBroadcastSecs: 60,
   smartBroadcastEnabled: true,
@@ -185,28 +189,25 @@ const NODE_INFO_BROADCAST_PRESETS = [
 
 /** Оценка автономного времени работы (часы) для батареи 1000 мАч */
 function estimateBatteryHours(preset: PresetData): number {
-  // Базовое потребление: всегда включён ~80 мА
-  const alwaysOnCurrent = 80 // мА
+  const gpsCurrent = preset.gpsMode === 'ENABLED' ? 29 : 0 // мА
+  const baseCurrent = 14 // мА: nRF52840 (~10) + LoRa средний (~3) + display (~1)
 
-  // Спящий режим: среднее потребление зависит от цикла сна
   if (preset.powerSaving && SLEEP_ROLES.has(preset.role)) {
-    // Время бодрствования за цикл (в часах)
     const wakeHours = preset.minWakeSecs / 3600
-    // Время сна за цикл
     const sleepHours = preset.lsSecs / 3600
-    // Потребление при бодрствовании ~80 мА, при сне ~2 мА
+    const wakeCurrent = baseCurrent + gpsCurrent // ~43 мА с GPS
+    const sleepCurrent = 2 // мА при сне (GPS тоже спит)
     const cycleDuration = wakeHours + sleepHours
-    const avgCurrent = (wakeHours * alwaysOnCurrent + sleepHours * 2) / cycleDuration
+    const avgCurrent = (wakeHours * wakeCurrent + sleepHours * sleepCurrent) / cycleDuration
     return Math.round((1000 / avgCurrent) * 10) / 10
   }
 
-  // ROUTER всегда включён: высокое потребление
   if (preset.role === 'ROUTER' || preset.role === 'ROUTER_LATE' || preset.role === 'CLIENT_BASE') {
-    return Math.round((1000 / 110) * 10) / 10 // ~9.1 ч
+    return Math.round((1000 / (baseCurrent + gpsCurrent + 40)) * 10) / 10 // ROUTER ~83мА с GPS
   }
 
-  // Обычный клиент без экономии: среднее потребление
-  return Math.round((1000 / alwaysOnCurrent) * 10) / 10 // ~12.5 ч
+  // Без экономии: GPS включён постоянно
+  return Math.round((1000 / (baseCurrent + gpsCurrent)) * 10) / 10 // ~43мА с GPS = ~23ч
 }
 
 /** Форматирование часов автономной работы */
@@ -333,6 +334,8 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       minWakeSecs: preset.minWakeSecs,
       gpsMode: preset.gpsMode,
       gpsUpdateInterval: preset.gpsUpdateInterval,
+      agpsEnabled: preset.agpsEnabled,
+      gpsAttemptTime: preset.gpsAttemptTime,
       positionPrecision: preset.positionPrecision,
       positionBroadcastSecs: preset.positionBroadcastSecs,
       smartBroadcastEnabled: preset.smartBroadcastEnabled,
@@ -423,6 +426,8 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
         minWakeSecs: preset.minWakeSecs,
         gpsMode: preset.gpsMode,
         gpsUpdateInterval: preset.gpsUpdateInterval,
+        agpsEnabled: preset.agpsEnabled,
+        gpsAttemptTime: preset.gpsAttemptTime,
         positionPrecision: preset.positionPrecision,
         positionBroadcastSecs: preset.positionBroadcastSecs,
         smartBroadcastEnabled: preset.smartBroadcastEnabled,
@@ -502,6 +507,14 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     if (p.gpsMode === 'ENABLED') {
       lines.push(`${cmd} --set position.gps_update_interval ${p.gpsUpdateInterval}`)
     }
+    // AGNSS
+    if (p.agpsEnabled) {
+      lines.push(`${cmd} --set gps.agps_enabled true`)
+    }
+    // GPS attempt time
+    if (p.gpsAttemptTime !== 90) {
+      lines.push(`${cmd} --set position.gps_attempt_time ${p.gpsAttemptTime}`)
+    }
     if (p.positionPrecision > 0) {
       lines.push(`${cmd} --set position.position_precision ${p.positionPrecision}`)
     }
@@ -578,6 +591,12 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     ylines.push(`    gps_mode: ${p.gpsMode}`)
     if (p.gpsMode === 'ENABLED') {
       ylines.push(`    gps_update_interval: ${p.gpsUpdateInterval}`)
+    }
+    if (p.agpsEnabled) {
+      ylines.push('    agps_enabled: true')
+    }
+    if (p.gpsAttemptTime !== 90) {
+      ylines.push(`    gps_attempt_time: ${p.gpsAttemptTime}`)
     }
     ylines.push(`    position_precision: ${p.positionPrecision}`)
     ylines.push(`    position_broadcast_secs: ${p.positionBroadcastSecs}`)
@@ -657,6 +676,9 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     lines.push(`${cmd} --set position.gps_mode ${preset.gpsMode}`)
     if (preset.gpsMode === 'ENABLED') {
       lines.push(`${cmd} --set position.gps_update_interval ${preset.gpsUpdateInterval}`)
+    }
+    if (preset.agpsEnabled) {
+      lines.push(`${cmd} --set gps.agps_enabled true`)
     }
     if (preset.positionPrecision > 0) {
       lines.push(`${cmd} --set position.position_precision ${preset.positionPrecision}`)
@@ -794,6 +816,11 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                     {preset.powerSaving && (
                       <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 dark:border-green-700 dark:text-green-400">
                         Экономия
+                      </Badge>
+                    )}
+                    {preset.agpsEnabled && (
+                      <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-400">
+                        AGNSS
                       </Badge>
                     )}
                   </div>
@@ -1268,6 +1295,35 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                         onChange={e => updateField('gpsUpdateInterval', Number(e.target.value) || 30)}
                         className="w-32"
                       />
+                    </div>
+                  )}
+
+                  {form.gpsMode === 'ENABLED' && (
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <Label htmlFor="agps-enabled" className="cursor-pointer">AGNSS (требует подключение к телефону/интернету)</Label>
+                        <p className="text-xs text-muted-foreground">Для роли CLIENT с телефоном. Не подходит для автономных трекеров.</p>
+                      </div>
+                      <Checkbox
+                        id="agps-enabled"
+                        checked={form.agpsEnabled}
+                        onCheckedChange={v => updateField('agpsEnabled', !!v)}
+                      />
+                    </div>
+                  )}
+
+                  {form.gpsMode === 'ENABLED' && (
+                    <div className="space-y-2">
+                      <Label>Время ожидания GPS-фикса (сек)</Label>
+                      <Input
+                        type="number"
+                        min={10}
+                        max={300}
+                        value={form.gpsAttemptTime}
+                        onChange={e => updateField('gpsAttemptTime', Number(e.target.value) || 90)}
+                        className="w-32"
+                      />
+                      <p className="text-xs text-muted-foreground">В лесу рекомендуется 90 сек, на открытом месте 30 сек</p>
                     </div>
                   )}
 

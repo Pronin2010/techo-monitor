@@ -103,6 +103,8 @@ model Preset {
   // GPS
   gpsMode     String   @default("ENABLED")
   gpsUpdateInterval Int @default(30)
+  agpsEnabled       Boolean  @default(false)  // AGNSS (требует телефон/интернет)
+  gpsAttemptTime    Int      @default(90)     // Секунд ожидания GPS-фикса (в лесу нужно больше)
   positionPrecision  Int @default(32)
   positionBroadcastSecs Int @default(300)
   smartBroadcastEnabled Boolean @default(true)

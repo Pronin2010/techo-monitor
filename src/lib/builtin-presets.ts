@@ -14,6 +14,8 @@ export interface BuiltinPresetData {
   minWakeSecs: number
   gpsMode: string
   gpsUpdateInterval: number
+  agpsEnabled: boolean
+  gpsAttemptTime: number
   positionPrecision: number
   positionBroadcastSecs: number
   smartBroadcastEnabled: boolean
@@ -36,15 +38,17 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
   {
     name: 'Трекер лес 12ч',
     description:
-      'Максимальное обновление позиции, без сна, полная mesh-участие. Автономность ~12-15 часов на 1000 мАч.',
+      'Автономная работа без телефона. GPS всегда включён, EASY™ прогноз орбит. Автономность ~20 часов на 850 мАч.',
     icon: '🌲',
     role: 'TRACKER',
     nodeInfoBroadcastSecs: 900,
     powerSaving: false,
-    lsSecs: 60,
+    lsSecs: 0,
     minWakeSecs: 10,
     gpsMode: 'ENABLED',
-    gpsUpdateInterval: 15,
+    gpsUpdateInterval: 1,
+    agpsEnabled: false,
+    gpsAttemptTime: 90,
     positionPrecision: 32,
     positionBroadcastSecs: 60,
     smartBroadcastEnabled: true,
@@ -65,7 +69,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
   {
     name: 'Трекер лес 5 дней',
     description:
-      'Экономия батареи с циклом сон/бодрствование. Позиция каждые 5 мин. Автономность ~5 дней на 1000 мАч.',
+      'Экономия батареи с циклом сон/бодрствование. Позиция каждые 5 мин. EASY™ прогноз орбит. Автономность ~5 дней на 1000 мАч.',
     icon: '🔋',
     role: 'TRACKER',
     nodeInfoBroadcastSecs: 900,
@@ -74,6 +78,8 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     minWakeSecs: 10,
     gpsMode: 'ENABLED',
     gpsUpdateInterval: 30,
+    agpsEnabled: false,
+    gpsAttemptTime: 90,
     positionPrecision: 32,
     positionBroadcastSecs: 300,
     smartBroadcastEnabled: true,
@@ -103,6 +109,8 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     minWakeSecs: 0,
     gpsMode: 'ENABLED',
     gpsUpdateInterval: 30,
+    agpsEnabled: false,
+    gpsAttemptTime: 60,
     positionPrecision: 32,
     positionBroadcastSecs: 900,
     smartBroadcastEnabled: false,
@@ -132,6 +140,8 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     minWakeSecs: 0,
     gpsMode: 'ENABLED',
     gpsUpdateInterval: 30,
+    agpsEnabled: true,
+    gpsAttemptTime: 30,
     positionPrecision: 13,
     positionBroadcastSecs: 300,
     smartBroadcastEnabled: true,
