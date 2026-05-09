@@ -34,9 +34,21 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
+
+    const allowedFields = [
+      'name', 'shortName', 'hardwareModel', 'role', 'status',
+      'batteryLevel', 'voltage', 'usbPower', 'snr', 'rssi',
+      'latitude', 'longitude', 'altitude', 'lsSecs', 'minWakeSecs', 'lastSeen'
+    ]
+    const data: Record<string, unknown> = {}
+    for (const key of allowedFields) {
+      if (body[key] !== undefined) data[key] = body[key]
+    }
+
     const node = await db.node.update({
       where: { id },
-      data: body,
+      data,
+      include: { telemetry: true },
     })
     return NextResponse.json(serializeBigInt(node))
   } catch (error) {

@@ -76,7 +76,6 @@ interface SyncLogEntry {
   nodeId?: number
   nodeName?: string
   action: string
-  nodeCount: number
   details?: string
   createdAt: string
 }
@@ -521,7 +520,7 @@ export default function ConnectionTab({ channels, onSyncComplete, preselectedCha
                         {log.source}
                       </Badge>
                       <span className="flex-1 truncate">
-                        {log.nodeCount} узлов
+                        {parseDetails(log.details)?.length ?? 0} узлов
                       </span>
                       <span className="text-muted-foreground shrink-0">
                         {formatDate(log.createdAt)}

@@ -152,3 +152,31 @@ Work Log:
 
 Stage Summary:
 - New rule: always update all project documentation on changes
+
+---
+Task ID: 8
+Agent: main
+Task: Code review — fix all critical, important, and minor issues
+
+Work Log:
+- Fixed mass assignment vulnerability in PUT /api/nodes/[id] and PUT /api/channels (whitelisted fields)
+- Deleted dead code: src/lib/store.ts (unused Zustand store)
+- Removed 27 unused npm packages and 8 unused UI components
+- Created README.md at project root (Russian, with features/stack/quick start)
+- Fixed connection-tab.tsx: removed log.nodeCount reference to non-existent field
+- Changed layout.tsx: html lang="en" → "ru"
+- Fixed db.ts: Prisma query logging only in development
+- Fixed schema.prisma: Channel.modemPreset default "LongFast" → "LONG_FAST"
+- Fixed STARTUP.md: client preset info SHORT_TURBO → LONG_FAST
+- Updated .env.example: DATABASE_URL path to ../db/custom.db
+- Fixed builtin-presets.ts: removed stale /api/seed comment
+- Deleted src/app/api/route.ts (Hello, world! scaffold)
+- Changed Пресеты tab icon from Settings to Cpu
+- Fixed tsconfig.json: removed noImplicitAny:false, jsx → preserve
+- Changed package.json name to techo-monitor
+
+Stage Summary:
+- All 15 review issues fixed (4 critical, 7 important, 4 minor)
+- Build passes cleanly
+- Project significantly cleaned up: -27 unused packages, -8 dead UI components
+- Security: mass assignment vulnerability patched

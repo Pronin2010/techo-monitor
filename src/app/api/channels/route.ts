@@ -39,10 +39,20 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json()
-    const { id, ...data } = body
+    const { id } = body
     if (!id) {
       return NextResponse.json({ error: 'Channel ID is required' }, { status: 400 })
     }
+
+    const allowedFields = [
+      'index', 'name', 'psk', 'uplink', 'downlink',
+      'modemPreset', 'region', 'frequency', 'isDefault'
+    ]
+    const data: Record<string, unknown> = {}
+    for (const key of allowedFields) {
+      if (body[key] !== undefined) data[key] = body[key]
+    }
+
     const channel = await db.channel.update({
       where: { id },
       data,

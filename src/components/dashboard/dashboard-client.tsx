@@ -293,7 +293,7 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
                 Настройка
               </TabsTrigger>
               <TabsTrigger value="presets" className="gap-1.5">
-                <Settings className="h-4 w-4" />
+                <Cpu className="h-4 w-4" />
                 Пресеты
               </TabsTrigger>
               <TabsTrigger value="packets" className="gap-1.5">

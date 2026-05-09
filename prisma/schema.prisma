@@ -39,7 +39,7 @@ model Channel {
   psk         String
   uplink      Boolean  @default(true)
   downlink    Boolean  @default(true)
-  modemPreset String   @default("LongFast")
+  modemPreset String   @default("LONG_FAST")
   region      String   @default("EU_433")
   frequency   Float?   // Переопределение частоты в МГц (null = стандартная для региона)
   isDefault   Boolean  @default(false)
