@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { serializeBigInt } from '@/lib/utils'
+import { BUILTIN_PRESETS } from '@/lib/builtin-presets'
 
-// GET /api/presets — список всех пресетов
+// GET /api/presets — список всех пресетов (автосид встроенных при первом запросе)
 export async function GET() {
   try {
+    // Автосид: если таблица пуста — создаём встроенные пресеты
+    const count = await db.preset.count()
+    if (count === 0) {
+      console.log('[presets] Таблица пуста — автосид встроенных пресетов...')
+      await db.preset.createMany({ data: BUILTIN_PRESETS })
+      console.log(`[presets] Создано ${BUILTIN_PRESETS.length} встроенных пресетов`)
+    }
+
     const presets = await db.preset.findMany({
       include: { channel: true },
       orderBy: [{ isBuiltIn: 'desc' }, { name: 'asc' }],
