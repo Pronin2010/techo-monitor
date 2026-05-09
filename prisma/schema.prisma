@@ -47,6 +47,7 @@ model Channel {
   updatedAt   DateTime @updatedAt
 
   connection  ConnectionConfig?
+  presets     Preset[]
 }
 
 model Telemetry {
@@ -78,6 +79,63 @@ model ConnectionConfig {
   isEnabled   Boolean  @default(false)
   lastSync    DateTime?
   status      String   @default("disconnected") // connected, disconnected, error
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  channel     Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+}
+
+model Preset {
+  id          String   @id @default(cuid())
+  name        String   // Название пресета (например "Трекер лес 12ч")
+  description String?  // Описание
+  icon        String   @default("📡") // Emoji-иконка
+
+  // Device
+  role        String   @default("TRACKER")
+  nodeInfoBroadcastSecs Int @default(900)
+
+  // Power
+  powerSaving Boolean  @default(false)
+  lsSecs      Int      @default(300)
+  minWakeSecs Int      @default(10)
+
+  // GPS
+  gpsMode     String   @default("ENABLED")
+  gpsUpdateInterval Int @default(30)
+  positionPrecision  Int @default(32)
+  positionBroadcastSecs Int @default(300)
+  smartBroadcastEnabled Boolean @default(true)
+  smartBroadcastMinDist Int @default(20)
+  smartBroadcastMinInterval Int @default(60)
+
+  // Telemetry
+  telemetryInterval Int @default(300)
+
+  // LoRa
+  region      String   @default("EU_433")
+  modemPreset String   @default("LONG_MODERATE")
+  txPower     Int      @default(0)
+  hopLimit    Int      @default(5)
+  usePreamble Boolean  @default(false)
+
+  // Bluetooth
+  bluetoothEnabled Boolean @default(true)
+  bluetoothFixedPin String?
+
+  // Display
+  screenOnSecs Int @default(60)
+  ledDisabled  Boolean @default(true)
+
+  // Network
+  rebroadcastMode String @default("ALL")
+
+  // Канал из вкладки Каналы
+  channelId   String?  // Ссылка на канал — подтягивает PSK, имя, uplink/downlink, частоту
+
+  // Системный пресет (нельзя удалить)
+  isBuiltIn   Boolean  @default(false)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

@@ -15,6 +15,7 @@ import MapView from '@/components/dashboard/map-view'
 import ChannelSettings from '@/components/dashboard/channel-settings'
 import ConnectionTab from '@/components/dashboard/connection-tab'
 import DeviceSetupTab from '@/components/dashboard/device-setup-tab'
+import SettingsPresetsTab from '@/components/dashboard/settings-presets-tab'
 import EventLogTab from '@/components/dashboard/event-log-tab'
 import PacketStreamTab from '@/components/dashboard/packet-stream-tab'
 import {
@@ -328,6 +329,10 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
                 <Cpu className="h-4 w-4" />
                 Настройка
               </TabsTrigger>
+              <TabsTrigger value="presets" className="gap-1.5">
+                <Settings className="h-4 w-4" />
+                Пресеты
+              </TabsTrigger>
               <TabsTrigger value="packets" className="gap-1.5">
                 <Zap className="h-4 w-4" />
                 Пакеты
@@ -443,6 +448,11 @@ export default function DashboardClient({ initialNodes, initialChannels }: Dashb
             {/* ── Device Setup Tab ── */}
             <TabsContent value="setup">
               <DeviceSetupTab channels={channels} />
+            </TabsContent>
+
+            {/* ── Presets Tab ── */}
+            <TabsContent value="presets">
+              <SettingsPresetsTab channels={channels} />
             </TabsContent>
 
             {/* ── Packet Stream Tab ── */}
