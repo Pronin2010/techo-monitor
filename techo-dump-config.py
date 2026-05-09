@@ -69,6 +69,8 @@ REBROADCAST_MODE_REVERSE = {
     3: 'KNOWN_ONLY', 4: 'NONE', 5: 'CORE_PORTNUMS_ONLY',
 }
 
+BT_MODE_REVERSE = {0: 'FIXED_PIN', 1: 'RANDOM_PIN', 2: 'NO_PIN'}
+
 
 # ─── Чтение конфигурации из устройства ──────────────────────────────────
 
@@ -173,8 +175,9 @@ def read_device_config(interface):
         bt = node.localConfig.bluetooth
         config['bluetooth'] = {
             'enabled': bt.enabled,
+            'mode': BT_MODE_REVERSE.get(bt.mode, f'UNKNOWN({bt.mode})'),
+            'modeValue': bt.mode,
             'fixedPin': bt.fixed_pin if bt.fixed_pin else None,
-            'mode': bt.mode,
         }
     except Exception as e:
         config['bluetooth'] = {'error': str(e)}
@@ -353,7 +356,9 @@ def print_config(config, compact=False):
     # Bluetooth
     bt = config.get('bluetooth', {})
     if not _section_error('BT', bt):
-        print(f"\033[33m[BT]\033[0m enabled={bt['enabled']}, pin={'*' + str(bt['fixedPin']) if bt.get('fixedPin') else 'none'}")
+        bt_mode = bt.get('mode', '?')
+        pin_info = f', pin=*{bt["fixedPin"]}' if bt.get('fixedPin') else ''
+        print(f"\033[33m[BT]\033[0m enabled={bt['enabled']}, mode={bt_mode}{pin_info}")
 
     # Display
     disp = config.get('display', {})

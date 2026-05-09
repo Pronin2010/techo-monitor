@@ -506,3 +506,24 @@ Work Log:
 Stage Summary:
 - MQTT зафиксирован как неиспользуемый во всех 4 документах
 - Способ 2 (MQTT) в STARTUP.md помечен как «не используется»
+
+---
+Task ID: 25
+Agent: main
+Task: Добавить BT сопряжение с фиксированным PIN во все пресеты и мост
+
+Work Log:
+- Добавлен `bluetoothFixedPin: '113566'` во все 4 встроенных пресета (builtin-presets.ts)
+- Обновлён мост techo-bridge.py: при наличии bluetoothFixedPin устанавливается bluetooth.mode=0 (FIXED_PIN)
+  - Без PIN → mode=1 (RANDOM_PIN), без BT → не трогаем
+  - Добавлен BT_MODE_REVERSE для чтения конфигурации
+  - GET /api/device-config теперь возвращает mode и modeValue для bluetooth
+- Обновлён techo-dump-config.py: BT_MODE_REVERSE + вывод mode в print_config()
+- Prisma schema: bluetoothFixedPin String? → String @default("113566")
+- db:push выполнен успешно
+- Обновлена документация: AI_PROMPT.md, PROJECT_RULES.md, worklog.md
+
+Stage Summary:
+- Все пресеты теперь включают BT с фиксированным PIN 113566
+- Мост корректно устанавливает mode=FIXED_PIN при записи конфигурации
+- Без PIN — автоматически RANDOM_PIN, что безопаснее открытого доступа

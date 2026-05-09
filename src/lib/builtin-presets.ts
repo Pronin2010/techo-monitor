@@ -32,6 +32,7 @@ export interface BuiltinPresetData {
   hopLimit: number
   usePreamble: boolean
   bluetoothEnabled: boolean
+  bluetoothFixedPin: string | null
   screenOnSecs: number
   ledDisabled: boolean
   rebroadcastMode: string
@@ -66,6 +67,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     hopLimit: 5,
     usePreamble: false,
     bluetoothEnabled: true,
+    bluetoothFixedPin: '113566',
     screenOnSecs: 60,
     ledDisabled: true,
     rebroadcastMode: 'ALL',
@@ -98,6 +100,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     hopLimit: 5,
     usePreamble: false,
     bluetoothEnabled: true,
+    bluetoothFixedPin: '113566',
     screenOnSecs: 30,
     ledDisabled: true,
     rebroadcastMode: 'ALL',
@@ -130,6 +133,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     hopLimit: 5,
     usePreamble: false,
     bluetoothEnabled: true,
+    bluetoothFixedPin: '113566',
     screenOnSecs: 300,
     ledDisabled: false,
     rebroadcastMode: 'ALL',
@@ -162,6 +166,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     hopLimit: 3,
     usePreamble: false,
     bluetoothEnabled: true,
+    bluetoothFixedPin: '113566',
     screenOnSecs: 60,
     ledDisabled: false,
     rebroadcastMode: 'ALL',

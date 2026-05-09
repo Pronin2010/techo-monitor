@@ -271,6 +271,7 @@ REGION_REVERSE = {
     25: 'NP_865', 26: 'BR_902',
 }
 REBROADCAST_MODE_REVERSE = {v: k for k, v in REBROADCAST_MODE_MAP.items()}
+BT_MODE_REVERSE = {0: 'FIXED_PIN', 1: 'RANDOM_PIN', 2: 'NO_PIN'}
 
 
 def apply_config_to_node(interface, node_id, config, reboot_secs=5,
@@ -448,16 +449,30 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             print(f"\033[32m[CFG] lora: region={region_str}, modem={modem_str}, hop={config.get('hopLimit', 5)}\033[0m")
 
             # ── Bluetooth ──
-            node.localConfig.bluetooth.enabled = config.get('bluetoothEnabled', True)
-            if config.get('bluetoothEnabled') and config.get('bluetoothFixedPin'):
-                try:
-                    node.localConfig.bluetooth.fixed_pin = int(config['bluetoothFixedPin'])
-                except (ValueError, TypeError):
-                    pass
+            # Protobuf: BluetoothConfig.mode
+            #   0 = FIXED_PIN — сопряжение по фиксированному PIN
+            #   1 = RANDOM_PIN — случайный PIN при каждом подключении
+            #   2 = NO_PIN — без сопряжения (открытый доступ)
+            bt_enabled = config.get('bluetoothEnabled', True)
+            bt_pin = config.get('bluetoothFixedPin')
+            node.localConfig.bluetooth.enabled = bt_enabled
+            if bt_enabled:
+                if bt_pin:
+                    # Фиксированный PIN — режим FIXED_PIN
+                    node.localConfig.bluetooth.mode = 0  # FIXED_PIN
+                    try:
+                        node.localConfig.bluetooth.fixed_pin = int(bt_pin)
+                    except (ValueError, TypeError):
+                        pass
+                else:
+                    # Нет PIN — режим RANDOM_PIN (безопаснее)
+                    node.localConfig.bluetooth.mode = 1  # RANDOM_PIN
             node.writeConfig("bluetooth")
             time.sleep(0.5)
             sections_written.append("bluetooth")
-            print(f"\033[32m[CFG] bluetooth: enabled={config.get('bluetoothEnabled', True)}\033[0m")
+            bt_mode = 'FIXED_PIN' if bt_enabled and bt_pin else ('RANDOM_PIN' if bt_enabled else 'OFF')
+            print(f"\033[32m[CFG] bluetooth: enabled={bt_enabled}, mode={bt_mode}"
+                  f"{f', pin={bt_pin}' if bt_pin else ''}\033[0m")
 
             # ── Display ──
             node.localConfig.display.screen_on_secs = config.get('screenOnSecs', 60)
@@ -777,6 +792,8 @@ class BridgeHTTPHandler(BaseHTTPRequestHandler):
                     },
                     "bluetooth": {
                         "enabled": bt.enabled,
+                        "mode": BT_MODE_REVERSE.get(bt.mode, f'UNKNOWN({bt.mode})'),
+                        "modeValue": bt.mode,
                         "fixedPin": bt.fixed_pin if bt.fixed_pin else None,
                     },
                     "display": {
