@@ -13,6 +13,7 @@ export function cn(...inputs: ClassValue[]) {
 export function serializeBigInt<T>(obj: T): T {
   if (obj === null || obj === undefined) return obj
   if (typeof obj === 'bigint') return String(obj) as unknown as T
+  if (obj instanceof Date) return obj.toISOString() as unknown as T
   if (Array.isArray(obj)) return obj.map(serializeBigInt) as unknown as T
   if (typeof obj === 'object') {
     const result: Record<string, unknown> = {}
