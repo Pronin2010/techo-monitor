@@ -976,19 +976,6 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-7 w-7 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
-                              onClick={() => handlePushToDevice(preset)}
-                            >
-                              <Upload className="size-3.5" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Отправить на устройство</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
                               className="h-7 w-7"
                               onClick={() => handleCopy(generateCommandsForPreset(preset), `Команды «${preset.name}»`)}
                             >
@@ -1123,6 +1110,19 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Копировать команды</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
+                                onClick={() => handlePushToDevice(preset)}
+                              >
+                                <Upload className="size-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Отправить на устройство</TooltipContent>
                           </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>
