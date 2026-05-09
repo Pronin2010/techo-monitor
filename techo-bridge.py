@@ -792,7 +792,7 @@ class BridgeHTTPHandler(BaseHTTPRequestHandler):
                     },
                     "bluetooth": {
                         "enabled": bt.enabled,
-                        "mode": BT_MODE_REVERSE.get(bt.mode, f'UNKNOWN({bt.mode})'),
+                        "mode": BT_MODE_REVERSE.get(bt.mode, 'DEFAULT(probably RANDOM_PIN)') if bt.mode == 0 and not bt.fixed_pin else BT_MODE_REVERSE.get(bt.mode, f'UNKNOWN({bt.mode})'),
                         "modeValue": bt.mode,
                         "fixedPin": bt.fixed_pin if bt.fixed_pin else None,
                     },

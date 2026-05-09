@@ -171,13 +171,24 @@ def read_device_config(interface):
         config['lora'] = {'error': str(e)}
 
     # ── Bluetooth ──
+    # В protobuf3 enum-поля возвращают 0 если не были установлены явно.
+    # mode=0 (FIXED_PIN) может означать как реально установленный FIXED_PIN,
+    # так и «никогда не устанавливался» (прошивка тогда использует RANDOM_PIN).
+    # Эвристика: если mode=0 и fixed_pin=0 → скорее всего не установлен.
     try:
         bt = node.localConfig.bluetooth
+        mode_val = bt.mode
+        fixed_pin = bt.fixed_pin if bt.fixed_pin else 0
+        # Эвристика: mode=0 без fixed_pin → вероятно дефолт (не установлено)
+        if mode_val == 0 and fixed_pin == 0:
+            mode_str = 'DEFAULT(probably RANDOM_PIN)'
+        else:
+            mode_str = BT_MODE_REVERSE.get(mode_val, f'UNKNOWN({mode_val})')
         config['bluetooth'] = {
             'enabled': bt.enabled,
-            'mode': BT_MODE_REVERSE.get(bt.mode, f'UNKNOWN({bt.mode})'),
-            'modeValue': bt.mode,
-            'fixedPin': bt.fixed_pin if bt.fixed_pin else None,
+            'mode': mode_str,
+            'modeValue': mode_val,
+            'fixedPin': fixed_pin if fixed_pin else None,
         }
     except Exception as e:
         config['bluetooth'] = {'error': str(e)}
