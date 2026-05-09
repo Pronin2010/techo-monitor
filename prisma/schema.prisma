@@ -137,6 +137,7 @@ model Preset {
 
   // Системный пресет (нельзя удалить)
   isBuiltIn   Boolean  @default(false)
+  builtinId   String?  // Стабильный ID для миграции встроенных пресетов (null = пользовательский)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

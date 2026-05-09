@@ -57,6 +57,7 @@ interface PresetData {
   ledDisabled: boolean
   rebroadcastMode: string
   channelId: string | null
+  builtinId: string | null
   isBuiltIn: boolean
   channel?: Channel | null
   createdAt: string

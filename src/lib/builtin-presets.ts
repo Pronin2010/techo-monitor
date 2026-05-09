@@ -1,9 +1,13 @@
 /**
  * Встроенные пресеты для T-Echo Meshtastic Monitor
- * Используются при автосоздании (первый GET /api/presets) и в /api/seed
+ * Используются при автосоздании (GET /api/presets) и в /api/seed
+ *
+ * builtinId — стабильный идентификатор для миграции:
+ *   при изменении данных в коде, пресет в БД обновится автоматически
  */
 
 export interface BuiltinPresetData {
+  builtinId: string
   name: string
   description: string
   icon: string
@@ -36,6 +40,7 @@ export interface BuiltinPresetData {
 
 export const BUILTIN_PRESETS: BuiltinPresetData[] = [
   {
+    builtinId: 'tracker-forest-12h',
     name: 'Трекер лес 12ч',
     description:
       'Автономная работа без телефона. GPS всегда включён, EASY™ прогноз орбит. Автономность ~20 часов на 850 мАч.',
@@ -67,6 +72,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     isBuiltIn: true,
   },
   {
+    builtinId: 'tracker-forest-5d',
     name: 'Трекер лес 5 дней',
     description:
       'Экономия батареи с циклом сон/бодрствование. Позиция каждые 5 мин. EASY™ прогноз орбит. Автономность ~5 дней на 1000 мАч.',
@@ -98,6 +104,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     isBuiltIn: true,
   },
   {
+    builtinId: 'base-station',
     name: 'Базовая станция',
     description:
       'ROUTER: всегда бодрствует, ретранслирует все пакеты. Подключена к ПК по USB, передаёт данные в дашборд через Python-мост. GPS не нужен (в помещении), внешнее питание.',
@@ -129,6 +136,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     isBuiltIn: true,
   },
   {
+    builtinId: 'client-default',
     name: 'Клиент по умолчанию',
     description:
       'Стандартный узел с экраном, ретранслирует пакеты. Подходит для ручного использования.',

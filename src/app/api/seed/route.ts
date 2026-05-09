@@ -123,10 +123,11 @@ export async function POST() {
     })
 
     // ── Встроенные пресеты ──
-    // Создаём только если их ещё нет
-    const existingPresets = await db.preset.count()
-    if (existingPresets === 0) {
-      await db.preset.createMany({ data: BUILTIN_PRESETS })
+    // Удаляем старые системные и создаём заново из актуальных данных
+    await db.preset.deleteMany({ where: { isBuiltIn: true } })
+    for (const builtin of BUILTIN_PRESETS) {
+      const { builtinId, ...data } = builtin
+      await db.preset.create({ data: { ...data, builtinId } })
     }
 
     return NextResponse.json({ success: true, message: 'Forest tracker demo data seeded successfully' })
