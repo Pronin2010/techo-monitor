@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast'
 import {
   Plus, Copy, Download, Pencil, Trash2, CopyPlus, Terminal, FileText,
   Cpu, Radio, MapPin, Zap, Battery, Bluetooth, Monitor, Network,
-  Link, Info, Shield,
+  Link, Info, Shield, ChevronDown, ChevronRight, Sun, Moon,
 } from 'lucide-react'
 
 // ============================================================================
@@ -251,6 +251,11 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
   const [loading, setLoading] = useState(true)
   const [selectedPreset, setSelectedPreset] = useState<PresetData | null>(null)
   const [outputMode, setOutputMode] = useState<'commands' | 'yaml'>('commands')
+  const [expandedBuiltin, setExpandedBuiltin] = useState<string | null>(null)
+
+  // Разделение на системные и пользовательские
+  const builtinPresets = useMemo(() => presets.filter(p => p.isBuiltIn), [presets])
+  const customPresets = useMemo(() => presets.filter(p => !p.isBuiltIn), [presets])
 
   // ── Состояние диалога редактора ──
   const [editorOpen, setEditorOpen] = useState(false)
@@ -766,173 +771,314 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {presets.map(preset => {
-            const roleMeta = ROLE_META[preset.role as keyof typeof ROLE_META]
-            const batteryHours = estimateBatteryHours(preset)
-            const linkedChannel = preset.channel ?? (preset.channelId ? channels.find(c => c.id === preset.channelId) : null)
-            const isSelected = selectedPreset?.id === preset.id
+        <>
+          {/* ============================================================= */}
+          {/* Системные пресеты — компактный список как NodeStatusCard       */}
+          {/* ============================================================= */}
+          {builtinPresets.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                <Shield className="size-3.5" />
+                Системные пресеты
+              </h3>
+              <Card className="overflow-hidden">
+                {builtinPresets.map((preset, idx) => {
+                  const roleMeta = ROLE_META[preset.role as keyof typeof ROLE_META]
+                  const batteryHours = estimateBatteryHours(preset)
+                  const isSelected = selectedPreset?.id === preset.id
+                  const isExpanded = expandedBuiltin === preset.id
 
-            return (
-              <Card
-                key={preset.id}
-                className={`transition-all ${isSelected ? 'ring-2 ring-primary border-primary' : 'hover:shadow-md'}`}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{preset.icon}</span>
-                      <CardTitle className="text-base leading-tight">{preset.name}</CardTitle>
-                    </div>
-                    {preset.isBuiltIn && (
-                      <Badge variant="secondary" className="text-[10px] shrink-0">
-                        Системный
-                      </Badge>
-                    )}
-                  </div>
-                  {preset.description && (
-                    <CardDescription className="line-clamp-2 text-xs mt-1">
-                      {preset.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-
-                <CardContent className="pb-2 space-y-3">
-                  {/* Бейджи */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {roleMeta && (
-                      <Badge
-                        className={`text-[10px] ${roleMeta.deprecated ? 'opacity-60' : ''}`}
-                        style={{
-                          backgroundColor: `var(--color-${roleMeta.color}-100, hsl(var(--muted)))`,
-                          color: `var(--color-${roleMeta.color}-800, hsl(var(--foreground)))`,
-                        }}
+                  return (
+                    <div key={preset.id} className={idx < builtinPresets.length - 1 ? 'border-b' : ''}>
+                      {/* Сворачиваемая строка */}
+                      <div
+                        className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer select-none hover:bg-muted/30 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}
+                        onClick={() => { setExpandedBuiltin(isExpanded ? null : preset.id); handleApply(preset) }}
                       >
-                        {roleMeta.label}
-                      </Badge>
-                    )}
-                    <Badge variant="outline" className="text-[10px]">
-                      {getModemLabel(preset.modemPreset)}
-                    </Badge>
-                    <Badge variant="outline" className="text-[10px]">
-                      Hop: {preset.hopLimit}
-                    </Badge>
-                    {preset.powerSaving && (
-                      <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 dark:border-green-700 dark:text-green-400">
-                        Экономия
-                      </Badge>
-                    )}
-                    {preset.agpsEnabled && (
-                      <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-400">
-                        AGNSS
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Привязанный канал */}
-                  {linkedChannel && (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Link className="size-3" />
-                      <span>Канал: <span className="font-medium text-foreground">{linkedChannel.name}</span></span>
-                    </div>
-                  )}
-
-                  {/* Ключевые параметры */}
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <div className="text-[10px] text-muted-foreground">Позиция</div>
-                      <div className="text-xs font-medium">
-                        {preset.positionBroadcastSecs >= 60
-                          ? `${Math.round(preset.positionBroadcastSecs / 60)} мин`
-                          : `${preset.positionBroadcastSecs} сек`}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-muted-foreground">GPS</div>
-                      <div className="text-xs font-medium">{preset.gpsMode === 'ENABLED' ? 'Вкл' : preset.gpsMode === 'DISABLED' ? 'Выкл' : 'Нет'}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-muted-foreground">Автономность</div>
-                      <div className="text-xs font-medium flex items-center justify-center gap-1">
-                        <Battery className="size-3" />
-                        {formatBatteryLife(batteryHours)}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-
-                <CardFooter className="pt-2 gap-1.5 flex-wrap">
-                  <Button
-                    size="sm"
-                    variant={isSelected ? 'default' : 'outline'}
-                    className="text-xs h-7 gap-1"
-                    onClick={() => handleApply(preset)}
-                  >
-                    <Terminal className="size-3" />
-                    Применить
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-xs h-7 gap-1"
-                    onClick={() => handleCopy(generateCommandsForPreset(preset), `Команды «${preset.name}»`)}
-                  >
-                    <Copy className="size-3" />
-                    Копировать команды
-                  </Button>
-                  {!preset.isBuiltIn ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-xs h-7 gap-1"
-                      onClick={() => handleEdit(preset)}
-                    >
-                      <Pencil className="size-3" />
-                      Изменить
-                    </Button>
-                  ) : (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-xs h-7 gap-1 opacity-50 cursor-not-allowed"
-                            disabled
-                          >
-                            <Pencil className="size-3" />
-                            Изменить
-                          </Button>
+                        <span className="text-muted-foreground shrink-0">
+                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </span>
-                      </TooltipTrigger>
-                      <TooltipContent>Системный пресет</TooltipContent>
-                    </Tooltip>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-xs h-7 gap-1"
-                    onClick={() => handleDuplicate(preset)}
-                  >
-                    <CopyPlus className="size-3" />
-                    Дублировать
-                  </Button>
-                  {!preset.isBuiltIn && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-xs h-7 gap-1 text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(preset)}
-                    >
-                      <Trash2 className="size-3" />
-                      Удалить
-                    </Button>
-                  )}
-                </CardFooter>
+
+                        <span className="text-lg shrink-0">{preset.icon}</span>
+
+                        <span className="font-medium text-sm min-w-0 truncate">{preset.name}</span>
+
+                        {roleMeta && (
+                          <Badge
+                            className={`text-[10px] shrink-0 ${roleMeta.deprecated ? 'opacity-60' : ''}`}
+                            style={{
+                              backgroundColor: `var(--color-${roleMeta.color}-100, hsl(var(--muted)))`,
+                              color: `var(--color-${roleMeta.color}-800, hsl(var(--foreground)))`,
+                            }}
+                          >
+                            {roleMeta.label}
+                          </Badge>
+                        )}
+
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                          {getModemLabel(preset.modemPreset)}
+                        </Badge>
+
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                          GPS: {preset.gpsMode === 'ENABLED' ? 'Вкл' : preset.gpsMode === 'DISABLED' ? 'Выкл' : 'Нет'}
+                        </Badge>
+
+                        {preset.powerSaving ? (
+                          <Badge variant="outline" className="text-[10px] shrink-0 border-green-300 text-green-700 dark:border-green-700 dark:text-green-400">
+                            <Moon className="size-2.5 mr-0.5" />Экономия
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] shrink-0 border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400">
+                            <Sun className="size-2.5 mr-0.5" />Без сна
+                          </Badge>
+                        )}
+
+                        <div className="flex-1" />
+
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                          <Battery className="size-3" />
+                          {formatBatteryLife(batteryHours)}
+                        </div>
+
+                        <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className={`h-7 w-7 ${isSelected ? 'text-primary' : ''}`}
+                                onClick={() => handleApply(preset)}
+                              >
+                                <Terminal className="size-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Применить</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7"
+                                onClick={() => handleCopy(generateCommandsForPreset(preset), `Команды «${preset.name}»`)}
+                              >
+                                <Copy className="size-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Копировать команды</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7"
+                                onClick={() => handleDuplicate(preset)}
+                              >
+                                <CopyPlus className="size-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Дублировать</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
+
+                      {/* Развёрнутые детали */}
+                      {isExpanded && (
+                        <div className="px-4 py-3 bg-muted/20 border-t">
+                          <p className="text-xs text-muted-foreground mb-2">{preset.description}</p>
+                          <div className="grid grid-cols-4 gap-x-8 gap-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="size-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-muted-foreground">Позиция:</span>
+                              <span className="font-medium text-xs">
+                                {preset.positionBroadcastSecs >= 60
+                                  ? `${Math.round(preset.positionBroadcastSecs / 60)} мин`
+                                  : `${preset.positionBroadcastSecs} сек`}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Zap className="size-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-muted-foreground">Точность:</span>
+                              <span className="font-medium text-xs">{preset.positionPrecision === 32 ? 'Полная' : preset.positionPrecision === 0 ? 'Нет' : `~${preset.positionPrecision}`}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Radio className="size-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-muted-foreground">Hop:</span>
+                              <span className="font-medium text-xs">{preset.hopLimit}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Monitor className="size-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-muted-foreground">Экран:</span>
+                              <span className="font-medium text-xs">{preset.screenOnSecs} сек</span>
+                            </div>
+                            {preset.smartBroadcastEnabled && (
+                              <div className="flex items-center gap-2">
+                                <Cpu className="size-3.5 text-muted-foreground shrink-0" />
+                                <span className="text-muted-foreground">Smart:</span>
+                                <span className="font-medium text-xs">{preset.smartBroadcastMinDist}м / {preset.smartBroadcastMinInterval}с</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                              <Bluetooth className="size-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-muted-foreground">BT:</span>
+                              <span className="font-medium text-xs">{preset.bluetoothEnabled ? 'Вкл' : 'Выкл'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Battery className="size-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-muted-foreground">Телеметрия:</span>
+                              <span className="font-medium text-xs">{preset.telemetryInterval >= 60 ? `${Math.round(preset.telemetryInterval / 60)} мин` : `${preset.telemetryInterval} сек`}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </Card>
-            )
-          })}
-        </div>
+            </div>
+          )}
+
+          {/* ============================================================= */}
+          {/* Пользовательские пресеты — карточки                           */}
+          {/* ============================================================= */}
+          {customPresets.length > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                <Cpu className="size-3.5" />
+                Пользовательские пресеты
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {customPresets.map(preset => {
+                  const roleMeta = ROLE_META[preset.role as keyof typeof ROLE_META]
+                  const batteryHours = estimateBatteryHours(preset)
+                  const linkedChannel = preset.channel ?? (preset.channelId ? channels.find(c => c.id === preset.channelId) : null)
+                  const isSelected = selectedPreset?.id === preset.id
+
+                  return (
+                    <Card
+                      key={preset.id}
+                      className={`transition-all ${isSelected ? 'ring-2 ring-primary border-primary' : 'hover:shadow-md'}`}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">{preset.icon}</span>
+                            <CardTitle className="text-base leading-tight">{preset.name}</CardTitle>
+                          </div>
+                        </div>
+                        {preset.description && (
+                          <CardDescription className="line-clamp-2 text-xs mt-1">
+                            {preset.description}
+                          </CardDescription>
+                        )}
+                      </CardHeader>
+
+                      <CardContent className="pb-2 space-y-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {roleMeta && (
+                            <Badge
+                              className={`text-[10px] ${roleMeta.deprecated ? 'opacity-60' : ''}`}
+                              style={{
+                                backgroundColor: `var(--color-${roleMeta.color}-100, hsl(var(--muted)))`,
+                                color: `var(--color-${roleMeta.color}-800, hsl(var(--foreground)))`,
+                              }}
+                            >
+                              {roleMeta.label}
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="text-[10px]">
+                            {getModemLabel(preset.modemPreset)}
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px]">
+                            GPS: {preset.gpsMode === 'ENABLED' ? 'Вкл' : preset.gpsMode === 'DISABLED' ? 'Выкл' : 'Нет'}
+                          </Badge>
+                        </div>
+
+                        {linkedChannel && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Link className="size-3" />
+                            <span>Канал: <span className="font-medium text-foreground">{linkedChannel.name}</span></span>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div>
+                            <div className="text-[10px] text-muted-foreground">Позиция</div>
+                            <div className="text-xs font-medium">
+                              {preset.positionBroadcastSecs >= 60
+                                ? `${Math.round(preset.positionBroadcastSecs / 60)} мин`
+                                : `${preset.positionBroadcastSecs} сек`}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] text-muted-foreground">Автономность</div>
+                            <div className="text-xs font-medium flex items-center justify-center gap-1">
+                              <Battery className="size-3" />
+                              {formatBatteryLife(batteryHours)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] text-muted-foreground">Точность</div>
+                            <div className="text-xs font-medium">{preset.positionPrecision === 32 ? 'Полная' : preset.positionPrecision === 0 ? 'Нет' : `~${preset.positionPrecision}`}</div>
+                          </div>
+                        </div>
+                      </CardContent>
+
+                      <CardFooter className="pt-2 gap-1.5 flex-wrap">
+                        <Button
+                          size="sm"
+                          variant={isSelected ? 'default' : 'outline'}
+                          className="text-xs h-7 gap-1"
+                          onClick={() => handleApply(preset)}
+                        >
+                          <Terminal className="size-3" />
+                          Применить
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7 gap-1"
+                          onClick={() => handleCopy(generateCommandsForPreset(preset), `Команды «${preset.name}»`)}
+                        >
+                          <Copy className="size-3" />
+                          Копировать
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs h-7 gap-1"
+                          onClick={() => handleEdit(preset)}
+                        >
+                          <Pencil className="size-3" />
+                          Изменить
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs h-7 gap-1"
+                          onClick={() => handleDuplicate(preset)}
+                        >
+                          <CopyPlus className="size-3" />
+                          Дублировать
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs h-7 gap-1 text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(preset)}
+                        >
+                          <Trash2 className="size-3" />
+                          Удалить
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* ================================================================= */}
