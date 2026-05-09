@@ -31,8 +31,11 @@ export async function POST(request: Request) {
       )
     }
 
-    // Загрузить пресет из БД
-    const preset = await db.preset.findUnique({ where: { id: presetId } })
+    // Загрузить пресет из БД с каналом
+    const preset = await db.preset.findUnique({
+      where: { id: presetId },
+      include: { channel: true },
+    })
     if (!preset) {
       return NextResponse.json(
         { success: false, message: 'Пресет не найден' },
@@ -72,6 +75,11 @@ export async function POST(request: Request) {
       screenOnSecs: preset.screenOnSecs,
       ledDisabled: preset.ledDisabled,
       telemetryInterval: preset.telemetryInterval,
+      // Данные канала (из привязанного Channel)
+      channelName: preset.channel?.name || '',
+      channelPsk: preset.channel?.psk || '',
+      channelUplink: preset.channel?.uplink ?? true,
+      channelDownlink: preset.channel?.downlink ?? true,
     }
 
     // Отправить на HTTP API моста

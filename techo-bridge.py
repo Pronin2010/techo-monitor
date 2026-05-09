@@ -423,6 +423,34 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             sections_written.append("telemetry")
             print(f"\033[32m[CFG] telemetry: interval={config.get('telemetryInterval', 300)}s\033[0m")
 
+            # ── Канал (Channel 0 = первичный) ──
+            ch_name = config.get('channelName', '').strip()
+            ch_psk = config.get('channelPsk', '').strip()
+            ch_uplink = config.get('channelUplink', True)
+            ch_downlink = config.get('channelDownlink', True)
+            if ch_name or ch_psk:
+                try:
+                    import base64
+                    ch = node.channels[0]
+                    if ch_name:
+                        ch.settings.name = ch_name
+                    if ch_psk:
+                        # PSK может быть base64 или hex
+                        try:
+                            ch.settings.psk = base64.b64decode(ch_psk)
+                        except Exception:
+                            # Если не base64 — пробуем как raw bytes
+                            ch.settings.psk = ch_psk.encode('utf-8')
+                    ch.settings.uplink_enabled = ch_uplink
+                    ch.settings.downlink_enabled = ch_downlink
+                    node.writeChannel(0)
+                    sections_written.append("channel")
+                    psk_preview = ch_psk[:8] + '...' if len(ch_psk) > 8 else ch_psk
+                    print(f"\033[32m[CFG] channel[0]: name={ch_name or '(без имени)'}, psk={psk_preview or '(нет)'}, uplink={ch_uplink}, downlink={ch_downlink}\033[0m")
+                except Exception as e:
+                    print(f"\033[31m[CFG] Ошибка записи канала: {e}\033[0m")
+                    # Не прерываем — канал не критичен для базового конфига
+
         except Exception as e:
             # При ошибке — откатить транзакцию
             print(f"\033[31m[CFG] Ошибка записи секции: {e}\033[0m")
