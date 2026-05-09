@@ -1,0 +1,65 @@
+[
+  {
+    "url": "https://forums.quectel.com/t/l76k-cold-start-issues/29858",
+    "name": "L76K cold start issues - GNSS Module - Quectel Forums",
+    "snippet": "I have isues with cold start on L76K module. It does not find enough satelites and no fix. These are the messages I am getting. Any additional document on L76K to help resolving the issue? I see there is AGNSS document asn demo C++ code. That could be helpful. Darko. Did you test in open sky environment?",
+    "host_name": "forums.quectel.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.waveshare.com/wiki/L76K_GPS_Module",
+    "name": "L76K GPS Module - Waveshare Wiki",
+    "snippet": "The first positioning of the module (cold start), under normal circumstances (outdoors, good weather, no large building block), takes 35 seconds to successfully locate, please wait patiently. If the weather conditions are bad, it may take longer to locate, or even fail to locate.",
+    "host_name": "www.waveshare.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.lefixea.com/article/rtk112",
+    "name": "RTK Surveying Under Trees: How to Handle Canopy and Multipath",
+    "snippet": "The fix rate—the proportion of time a Fix solution is maintained—can remain relatively high (about 93%) in comparatively favorable forest conditions, but drops significantly in more obstructed environments.",
+    "host_name": "www.lefixea.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/Surveying/comments/mxhpfz/tips_for_gnss_under_trees_forested_areas",
+    "name": "Tips for GNSS under trees / forested areas? : r/Surveying",
+    "snippet": "The best way to get reliable results from a GPS in poor sky view conditions is taking observations at many different time intervals with satellite constellations that have changed substantially.",
+    "host_name": "www.reddit.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://junipersys.com/support/article/16995",
+    "name": "Optimize Geode for Use Under Forest Canopy | Support",
+    "snippet": "Forest canopy can make it difficult for the Geode or any GNSS (GPS) receiver to locate satellites and provide precise geospatial positioning. This was demonstrated for the original Geode (aka GNS1). Beyond applying our general recommended settings for the Geode, the following suggestions may be helpful in such conditions.",
+    "host_name": "junipersys.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://spotpear.com/wiki/Raspberry-Pi-GPS-GNSS-BDS-GLONASS-QZSS-L76K-GPS-HAT.html",
+    "name": "Raspberry Pi GPS GNSS Expansion Board L76K Beidou (BDS",
+    "snippet": "For the first module positioning (cold start), under normal conditions (outdoors, good weather, no large building obstruction), it takes 35 seconds to successfully locate. Please be patient. If the weather conditions are poor, it may require a longer positioning time, or even fail to position.",
+    "host_name": "spotpear.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://community.emlid.com/t/measuring-in-the-forest/37929",
+    "name": "Measuring in the Forest - RTK / PPK configuration - Emlid",
+    "snippet": "In forested environments, where GNSS signal reception can be challenging due to obstructed tree canopy, the additional time spent on static observation can allow the GNSS receiver to collect and process more satellite data, which in turn improves the quality of the positioning solution.",
+    "host_name": "community.emlid.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  }
+]

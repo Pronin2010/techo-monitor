@@ -1,0 +1,65 @@
+[
+  {
+    "url": "https://wiki.lilygo.cc/get_started/en/Wearable/T-Echo/T-Echo.html",
+    "name": "LILYGO T-Echo - LILYGO Wiki",
+    "snippet": "T-Echo is a multi-functional LoRa communication device based on the nRF52840 chip, integrating an E-Paper screen, GPS positioning, NFC functionality, and multiple sensors.",
+    "host_name": "wiki.lilygo.cc",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://manuals.plus/asin/B097T5TC3P",
+    "name": "LILYGO TTGO T-Echo NRF52840 LoRa Wireless Module User Manual",
+    "snippet": "Comprehensive instruction manual for the LILYGO TTGO T-Echo NRF52840 LoRa SX1262 915MHz Wireless Module with L76K GPS and 1.54 E-Paper display. Includes setup, operation, maintenance, and specifications.",
+    "host_name": "manuals.plus",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://openhardware.directory/devices/lilygo-t-echo",
+    "name": "LILYGO T-Echo | Open Hardware Directory",
+    "snippet": "The L76K GNSS module supports GPS, GLONASS, BeiDou, and QZSS constellations. The T-Echo is the official reference hardware for Meshtastic LoRa mesh networking and also runs SoftRF aircraft tracking firmware. An optional BME280 variant adds barometric pressure, temperature, and humidity sensing.",
+    "host_name": "openhardware.directory",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.manualshelf.com/manual/lilygo/t-echo/user-s-guide-english.html",
+    "name": "LILYGO T-Echo : User's Guide - ManualShelf",
+    "snippet": "Through a simple example, this document illustrates how to use Arduino, including the menu based configuration wizard, compiling the Arduino and firmware download to the NRF52840 module.",
+    "host_name": "www.manualshelf.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/hardware/devices/lilygo/techo",
+    "name": "LILYGO® TTGO T-Echo devices - Meshtastic",
+    "snippet": "The T-Echo by LILYGO® supports a low power consumption micro-controller and an e-ink display. Further information on the LILYGO® T-Echo devices can be found on LILYGO®'s GitHub page.",
+    "host_name": "meshtastic.org",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.amazon.com/LILYGO-Wireless-Meshtastic-Development-NRF52840/dp/B0B658DZ9Z",
+    "name": "LILYGO T-Echo Meshtastic LoRa SX1262 Wireless Module  - Amazon",
+    "snippet": "Compared with a single GPS system, the high-precision positioning multi-satellite system greatly increases the number of visible and usable satellites, improves positioning accuracy, and can achieve stable high-precision positioning even in complex urban environments.",
+    "host_name": "www.amazon.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.manualslib.com/manual/2967031/Lilygo-T-Echo.html",
+    "name": "LILYGO T-ECHO USER MANUAL Pdf Download | ManualsLib",
+    "snippet": "Through a simple example, this document illustrates how to use Arduino, including the menu based conﬁguration wizard, compiling the Arduino and ﬁrmware download to the NRF52840 module.",
+    "host_name": "www.manualslib.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  }
+]

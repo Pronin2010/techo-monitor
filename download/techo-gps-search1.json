@@ -1,0 +1,65 @@
+[
+  {
+    "url": "https://manuals.plus/asin/B0F2976V6G",
+    "name": "LILYGO T-Echo-Lite L76K GPS Expansion Module User Manual",
+    "snippet": "Comprehensive instruction manual for the LILYGO T-Echo-Lite L76K GPS Expansion Module, featuring SX1262 LoRa, NRF52840 MCU, and 1.22-inch E-Paper display. Learn setup, operation, maintenance, and troubleshooting for your Meshtastic-compatible device.",
+    "host_name": "manuals.plus",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.waveshare.com/wiki/L76K_GPS_Module",
+    "name": "L76K GPS Module - Waveshare Wiki",
+    "snippet": "The first positioning of the module (cold start), under normal circumstances (outdoors, good weather, no large building block), takes 35 seconds to successfully locate, please wait patiently.",
+    "host_name": "www.waveshare.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/hardware/devices/lilygo/techo",
+    "name": "LILYGO® TTGO T-Echo devices - Meshtastic",
+    "snippet": "The T-Echo by LILYGO® supports a low power consumption micro-controller and an e-ink display. Further information on the LILYGO® T-Echo devices can be found on LILYGO®'s GitHub page.",
+    "host_name": "meshtastic.org",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://heltec.org/project/l76-gnss-module",
+    "name": "L76K GNSS Module – Heltec Automation",
+    "snippet": "The default packing list without selecting any accessories is as follows:",
+    "host_name": "heltec.org",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/theKorzh/meshtastic_docs/blob/master/docs/hardware/devices/lilygo/techo/index.mdx",
+    "name": "meshtastic_docs/docs/hardware/devices/lilygo/techo  - GitHub",
+    "snippet": "The T-Echo by LILYGO® supports a low power consumption micro-controller and an e-ink display.",
+    "host_name": "github.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.waveshare.net/wiki/L76K_GPS_Module",
+    "name": "L76K GPS Module - Waveshare Wiki",
+    "snippet": "L76K 是一款支持多卫星系统（GPS、BeiDou、GLONASS、QZSS）、可多系统联合定位和单系统独立定位、支持AGNSS 功能、内置低噪声放大器和声表面滤波器、可向用户提供快速、精准、高性能定位体验的 GNSS 模块。 本模块提供树莓派、Arduino、Raspberry Pi Pico、ESP32控制例程。",
+    "host_name": "www.waveshare.net",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://lilygo.cc/products/t-echo-meshtastic",
+    "name": "T-Echo Meshtastic – LILYGO®",
+    "snippet": "Check out GitHub repository for sample code and more detailed information about this board. Visit our GitHub community, post a description of the problem and our engineers will help you directly.",
+    "host_name": "lilygo.cc",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  }
+]

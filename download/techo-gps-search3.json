@@ -1,0 +1,65 @@
+[
+  {
+    "url": "https://forums.quectel.com/t/l76k-cold-and-hot-start-for-low-power-periodic-location-acquisition/49439",
+    "name": "L76K cold and hot start for low-power periodic location",
+    "snippet": "“Normally a hot start means the GNSS modules are powered down less than 2 hours with RTC in operation and the ephemeris is still valid. As there is no need for downloading ephemeris, it is the fastest startup method”",
+    "host_name": "forums.quectel.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://files.waveshare.com/upload/d/dd/Quectel_L76K_GNSS_Protocol_Specification_V1.1.pdf",
+    "name": "L76K GNSS Protocol Specification - Waveshare",
+    "snippet": "This document describes the software commands that are needed to control and modify the module configuration. The software commands are NMEA proprietary commands defined by the chipset supplier (PCAS commands) and CASIC commands.",
+    "host_name": "files.waveshare.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://wiki.seeedstudio.com/get_start_l76k_gnss",
+    "name": "Quectel L76K | Seeed Studio Wiki",
+    "snippet": "Before we start, we can refer to the following pictures to understand the pin design of the L76K GNSS Module for SeeedStudio XIAO to facilitate our understanding of the function of the module.",
+    "host_name": "wiki.seeedstudio.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://hexaspot.com/products/gnss-gps-location-module-quectel-l76k",
+    "name": "RAK12501 GNSS GPS Location Module Quectel L76K – Hexaspot",
+    "snippet": "Track your assets, devices, or outdoor sensors with high-precision GNSS using the cost-effective RAK12501 module. It’s built for Meshtastic GPS tracker projects and other LPWAN-based solutions, offering accurate location data without breaking the bank.",
+    "host_name": "hexaspot.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.rakwireless.com/product-categories/wisblock/rak12501/datasheet",
+    "name": "RAK12501 WisBlock GNSS Location Module Datasheet",
+    "snippet": "Provides comprehensive information about your RAK12501 to help you use it. This information includes technical specifications, characteristics, and requirements, and it also discusses the device components.",
+    "host_name": "docs.rakwireless.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.mouser.com/datasheet/2/1052/Quectel_L76_GNSS_Specification_V1_5-2576981.pdf",
+    "name": "Quectel L76 - Mouser Electronics",
+    "snippet": "L76, the extremely compact GNSS module, is a concurrent GNSS receiver with multiple GNSS systems. It provides simultaneous GPS, GLONASS, BeiDou, Galileo and QZSS open service L1 reception capability.",
+    "host_name": "www.mouser.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.manualslib.com/manual/2300206/Quectel-L76-Series.html",
+    "name": "QUECTEL L76 SERIES USER MANUAL Pdf Download | ManualsLib",
+    "snippet": "Introduction This document provides info on the steps needed to evaluate the Quectel L76 series modules using the Evaluation Board (EVB). The EVB is a reference tool that allows you to become familiar with the L76 series modules. Specifically, the document is divided into several sections: ⚫...",
+    "host_name": "www.manualslib.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  }
+]
