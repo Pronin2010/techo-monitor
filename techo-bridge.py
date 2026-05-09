@@ -188,7 +188,7 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True):
     try:
         from pubsub import pub
 
-        def on_receive(packet, interface_inst):
+        def on_receive(packet, interface=None):
             """Вызывается для КАЖДОГО полученного пакета — реалтайм."""
             try:
                 from_num = packet.get("from", 0)
