@@ -319,7 +319,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
         print("\033[33m[CFG] Транзакция открыта\033[0m")
 
         try:
-            # ── Device ──
+            # ── Device (+ rebroadcast_mode, который в DeviceConfig) ──
             role_str = config.get('role', 'CLIENT')
             if role_str in ROLE_MAP:
                 node.localConfig.device.role = ROLE_MAP[role_str]
@@ -329,25 +329,37 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                 node.localConfig.device.led_heartbeat_disabled = True
             else:
                 node.localConfig.device.led_heartbeat_disabled = False
+            # rebroadcast_mode — поле DeviceConfig, не NetworkConfig (прошивка 2.7.x)
+            rb_str = config.get('rebroadcastMode', 'ALL')
+            if rb_str in REBROADCAST_MODE_MAP:
+                node.localConfig.device.rebroadcast_mode = REBROADCAST_MODE_MAP[rb_str]
             node.writeConfig("device")
             sections_written.append("device")
-            print(f"\033[32m[CFG] device: role={role_str}, node_info={config.get('nodeInfoBroadcastSecs', 900)}s\033[0m")
+            print(f"\033[32m[CFG] device: role={role_str}, node_info={config.get('nodeInfoBroadcastSecs', 900)}s, rebroadcast={rb_str}\033[0m")
 
             # ── Position ──
             gps_str = config.get('gpsMode', 'ENABLED')
             if gps_str in GPS_MODE_MAP:
                 node.localConfig.position.gps_mode = GPS_MODE_MAP[gps_str]
             node.localConfig.position.position_broadcast_secs = config.get('positionBroadcastSecs', 300)
-            node.localConfig.position.position_precision = config.get('positionPrecision', 32)
+            # position_precision → position_flags (битовая маска, прошивка 2.7.x)
+            # 3 = высота + координаты (сокращённая), 35 = полный набор
+            precision = config.get('positionPrecision', 35)
+            if precision <= 13:
+                node.localConfig.position.position_flags = 3   # ALT + GEO
+            else:
+                node.localConfig.position.position_flags = 35  # ALT + GEO + SPEED + HEADING + SATINFO
             node.localConfig.position.gps_update_interval = config.get('gpsUpdateInterval', 30)
             node.localConfig.position.gps_attempt_time = config.get('gpsAttemptTime', 90)
             # Smart broadcast
-            if config.get('smartBroadcastEnabled', True):
+            smart_enabled = config.get('smartBroadcastEnabled', True)
+            node.localConfig.position.position_broadcast_smart_enabled = smart_enabled
+            if smart_enabled:
                 node.localConfig.position.broadcast_smart_minimum_distance = config.get('smartBroadcastMinDist', 20)
                 node.localConfig.position.broadcast_smart_minimum_interval_secs = config.get('smartBroadcastMinInterval', 60)
             node.writeConfig("position")
             sections_written.append("position")
-            print(f"\033[32m[CFG] position: gps={gps_str}, precision={config.get('positionPrecision', 32)}\033[0m")
+            print(f"\033[32m[CFG] position: gps={gps_str}, flags={35 if precision > 13 else 3}, smart={smart_enabled}\033[0m")
 
             # ── Power ──
             node.localConfig.power.is_power_saving = config.get('powerSaving', False)
@@ -373,14 +385,6 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             node.writeConfig("lora")
             sections_written.append("lora")
             print(f"\033[32m[CFG] lora: region={region_str}, modem={modem_str}, hop={config.get('hopLimit', 5)}\033[0m")
-
-            # ── Network ──
-            rb_str = config.get('rebroadcastMode', 'ALL')
-            if rb_str in REBROADCAST_MODE_MAP:
-                node.localConfig.network.rebroadcast_mode = REBROADCAST_MODE_MAP[rb_str]
-            node.writeConfig("network")
-            sections_written.append("network")
-            print(f"\033[32m[CFG] network: rebroadcast={rb_str}\033[0m")
 
             # ── Bluetooth ──
             node.localConfig.bluetooth.enabled = config.get('bluetoothEnabled', True)
