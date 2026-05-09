@@ -356,3 +356,25 @@ Stage Summary:
 - Фабричный сброс теперь реально отправляется при отмеченном чекбоксе (был stale closure)
 - Время ожидания перезагрузки увеличено до 20 сек (было 10 сек)
 - Сообщение об успехе корректно отражает состояние устройства
+
+---
+Task ID: 18
+Agent: main
+Task: Фикс factory reset — устройство игнорировало сброс из-за отсутствия session_passkey
+
+Work Log:
+- Проблема: при отмеченном чекбоксе «Сбросить до заводских» устройство не сбрасывалось, хотя мост сообщал об успехе
+- Исследован исходный код meshtastic Python library (Node.factoryReset, Node._sendAdmin, Node.ensureSessionKey)
+- Найдена корневая причина: ручная отправка AdminMessage.factory_reset_config=1 через node._sendAdmin(p) отправляла сообщение БЕЗ session_passkey
+  - Meshtastic 2.7.x требует adminSessionPassKey для всех admin-команд — без ключа устройство МОЛЧА ИГНОРИРУЕТ команду
+  - Официальный метод node.factoryReset() вызывает ensureSessionKey() перед отправкой, а _sendAdmin автоматически добавляет session_passkey из nodesByNum
+  - Наш ручной подход обходил ensureSessionKey() → ключ не запрашивался → устройство не принимало команду
+- Исправлено: теперь используется официальный node.factoryReset() как основной метод (с ensureSessionKey + session_passkey)
+- Фоллбэк: ручная отправка через _sendAdmin(p, wantResponse=True) — _sendAdmin добавит session_passkey если он есть
+- Добавлена диагностика: после factory reset читается текущая конфигурация и выводится [DIAG] роль/регион/модем
+- Обновлена документация: AI_PROMPT.md, STARTUP.md, PROJECT_RULES.md, worklog.md
+
+Stage Summary:
+- Factory reset теперь отправляется с session_passkey через node.factoryReset()
+- Устройство больше не игнорирует команду сброса
+- Добавлена диагностика конфигурации после factory reset

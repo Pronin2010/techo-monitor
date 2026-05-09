@@ -287,19 +287,24 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
         # ── Factory Reset ──
         if factory_reset:
             print("\033[1;31m[CFG] ⚠ СБРОС ДО ЗАВОДСКИХ НАСТРОЕК...\033[0m")
-            # Прямая отправка AdminMessage — node.factoryReset() не работает
-            # (factory_reset_config ожидает int32, а не bool в прошивке 2.7.15)
+            # Используем официальный метод node.factoryReset() — он:
+            # 1. Вызывает ensureSessionKey() — запрашивает adminSessionPassKey у устройства
+            # 2. Устанавливает factory_reset_config = True (int32=1 в protobuf)
+            # 3. _sendAdmin автоматически добавляет session_passkey в сообщение
+            # Без session_passkey устройство МОЛЧА ИГНОРИРУЕТ admin-команды!
             try:
-                from meshtastic.protobuf import admin_pb2
-                p = admin_pb2.AdminMessage()
-                p.factory_reset_config = 1  # int32, не bool
-                node._sendAdmin(p)
-                print("\033[32m[CFG] AdminMessage.factory_reset_config=1 отправлен\033[0m")
+                node.factoryReset()
+                print("\033[32m[CFG] factoryReset() отправлен (с session_passkey)\033[0m")
             except Exception as e:
-                # Фоллбэк — попробовать стандартный метод
-                print(f"\033[33m[CFG] Прямая отправка не удалась, пробуем node.factoryReset(): {e}\033[0m")
+                # Фоллбэк — ручная отправка с session_passkey
+                print(f"\033[33m[CFG] factoryReset() не удался: {e}, пробуем ручную отправку...\033[0m")
                 try:
-                    node.factoryReset()
+                    from meshtastic.protobuf import admin_pb2
+                    p = admin_pb2.AdminMessage()
+                    p.factory_reset_config = 1
+                    # Важно: _sendAdmin автоматически добавит session_passkey из iface.nodesByNum
+                    node._sendAdmin(p, wantResponse=True)
+                    print("\033[32m[CFG] AdminMessage.factory_reset_config=1 отправлен (ручной режим)\033[0m")
                 except Exception as e2:
                     return {'success': False, 'message': f'Ошибка factory reset: {e2}', 'sections': sections_written}
             sections_written.append("factory_reset")
@@ -319,6 +324,13 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                 else:
                     node = interface.localNode
                 print("\033[32m[CFG] Повторное подключение после сброса — ОК\033[0m")
+                # Диагностика: проверить текущую конфигурацию после factory reset
+                try:
+                    d = node.localConfig.device
+                    l = node.localConfig.lora
+                    print(f"\033[36m[DIAG] После сброса: role={d.role}, region={l.region}, modem={l.modem_preset}\033[0m")
+                except Exception:
+                    print("\033[36m[DIAG] Не удалось прочитать конфиг после сброса\033[0m")
             except Exception as e:
                 print(f"\033[31m[CFG] Не удалось получить узел после переподключения: {e}\033[0m")
                 return {'success': False, 'message': f'Сброс выполнен, мост переподключён, но не удалось получить узел: {e}', 'sections': sections_written}
