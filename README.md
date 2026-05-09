@@ -91,11 +91,20 @@ src/
 │   └── builtin-presets.ts        # Встроенные пресеты
 └── prisma/
     └── schema.prisma             # Схема базы данных
-```
+techo-bridge.py                   # Python-мост (Serial/MQTT → HTTP API)
+AI_PROMPT.md                      # Контекст проекта для AI-ассистента
+PROJECT_RULES.md                  # Правила проекта
+STARTUP.md                        # Инструкция по установке
+worklog.md                        # История разработки
 
 ## Документация
 
-Полная документация по установке, конфигурации и эксплуатации — в [STARTUP.md](./STARTUP.md).
+| Файл | Описание |
+|------|----------|
+| [AI_PROMPT.md](./AI_PROMPT.md) | Полный контекст проекта для AI-ассистента |
+| [STARTUP.md](./STARTUP.md) | Инструкция по установке, настройке и эксплуатации |
+| [PROJECT_RULES.md](./PROJECT_RULES.md) | Правила проекта (Git, язык, архитектура, код) |
+| [worklog.md](./worklog.md) | История разработки (выполненные задачи) |
 
 ## Лицензия
 
