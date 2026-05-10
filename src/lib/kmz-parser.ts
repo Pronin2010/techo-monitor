@@ -95,17 +95,15 @@ async function parseKmz(file: File): Promise<KmzParseResult> {
     throw new Error('Ошибка парсинга KML: некорректный XML')
   }
 
-  // Векторные данные
-  const geojson = kml(xmlDoc)
-
-  // Собираем все изображения из архива (для fallback-поиска)
+  // Растровые данные (GroundOverlay) — извлекаем изображения из архива
+  // ПАЖНО: парсим GroundOverlay ДО вызова kml(), чтобы удалить их из XML
+  // и @tmcw/togeojson не создал полигон-дубликат (синий прямоугольник)
   const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'tif', 'tiff']
   const imageFiles = allFiles.filter(name => {
     const ext = name.toLowerCase().split('.').pop() || ''
     return imageExtensions.includes(ext)
   })
 
-  // Растровые данные (GroundOverlay) — извлекаем изображения из архива
   const groundOverlays = parseGroundOverlays(xmlDoc, (imagePath: string) => {
     // Стратегия 1: Точное совпадение пути (с учётом kmlDir)
     const fullPath = resolveKmzPath(kmlDir, imagePath)
@@ -154,15 +152,14 @@ async function parseKmz(file: File): Promise<KmzParseResult> {
     return null
   })
 
-  // Убираем из GeoJSON полигоны-дубликаты GroundOverlay
-  // @tmcw/togeojson превращает <GroundOverlay> в Polygon — это синий прямоугольник,
-  // который дублирует растровое изображение. Он не нужен.
-  const filteredFeatures = groundOverlays.length > 0
-    ? geojson.features.filter(f => !isGroundOverlayPolygon(f, groundOverlays))
-    : geojson.features
+  // Удаляем <GroundOverlay> из XML, чтобы togeojson не создал полигон-дубликат
+  removeGroundOverlaysFromXml(xmlDoc)
 
-  const finalGeojson: FeatureCollection = filteredFeatures.length > 0
-    ? { type: 'FeatureCollection', features: filteredFeatures }
+  // Векторные данные — теперь без GroundOverlay
+  const geojson = kml(xmlDoc)
+
+  const finalGeojson: FeatureCollection = (geojson.features && geojson.features.length > 0)
+    ? geojson
     : { type: 'FeatureCollection', features: [] }
 
   if (finalGeojson.features.length === 0 && groundOverlays.length === 0) {
@@ -202,9 +199,8 @@ async function parseKml(file: File): Promise<KmzParseResult> {
     throw new Error('Ошибка парсинга KML: некорректный XML')
   }
 
-  const geojson = kml(xmlDoc)
-
   // Для KML без архива — картинки по оригинальным URL
+  // ПАРСИМ GroundOverlay ДО togeojson, потом удалим из XML
   const groundOverlays = parseGroundOverlays(xmlDoc, (imagePath: string) => {
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       return imagePath
@@ -213,13 +209,14 @@ async function parseKml(file: File): Promise<KmzParseResult> {
     return null
   })
 
-  // Убираем из GeoJSON полигоны-дубликаты GroundOverlay
-  const filteredFeatures = groundOverlays.length > 0
-    ? geojson.features.filter(f => !isGroundOverlayPolygon(f, groundOverlays))
-    : geojson.features
+  // Удаляем <GroundOverlay> из XML, чтобы togeojson не создал полигон-дубликат
+  removeGroundOverlaysFromXml(xmlDoc)
 
-  const finalGeojson: FeatureCollection = filteredFeatures.length > 0
-    ? { type: 'FeatureCollection', features: filteredFeatures }
+  // Векторные данные — теперь без GroundOverlay
+  const geojson = kml(xmlDoc)
+
+  const finalGeojson: FeatureCollection = (geojson.features && geojson.features.length > 0)
+    ? geojson
     : { type: 'FeatureCollection', features: [] }
 
   if (finalGeojson.features.length === 0 && groundOverlays.length === 0) {
@@ -236,52 +233,22 @@ async function parseKml(file: File): Promise<KmzParseResult> {
 }
 
 /**
- * Проверяет, является ли GeoJSON-фича полигоном-дубликатом GroundOverlay
- * (прямоугольник с координатами, совпадающими с LatLonBox оверлея)
+ * Удаляет все <GroundOverlay> из KML XML-документа
+ * Вызывается ДО @tmcw/togeojson, чтобы библиотека не создала полигон-дубликат
  */
-function isGroundOverlayPolygon(
-  feature: GeoJSON.Feature,
-  overlays: GroundOverlayData[]
-): boolean {
-  const geom = feature.geometry
-  if (!geom) return false
-  if (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon') return false
-
-  // Получаем bbox фичи
-  const coords = geom.type === 'Polygon'
-    ? geom.coordinates[0] // внешнее кольцо
-    : (geom as GeoJSON.MultiPolygon).coordinates[0][0]
-
-  if (!coords || coords.length < 4) return false
-
-  // Вычисляем bbox полигона [minLon, minLat, maxLon, maxLat]
-  const lons = coords.map((c: number[]) => c[0])
-  const lats = coords.map((c: number[]) => c[1])
-  const featWest = Math.min(...lons)
-  const featEast = Math.max(...lons)
-  const featSouth = Math.min(...lats)
-  const featNorth = Math.max(...lats)
-
-  // Проверяем совпадение с любым GroundOverlay (с допуском ~0.0001°)
-  const EPS = 0.0001
-  for (const go of overlays) {
-    const goWest = go.bounds[0][1]
-    const goSouth = go.bounds[0][0]
-    const goEast = go.bounds[1][1]
-    const goNorth = go.bounds[1][0]
-
-    if (
-      Math.abs(featSouth - goSouth) < EPS &&
-      Math.abs(featNorth - goNorth) < EPS &&
-      Math.abs(featWest - goWest) < EPS &&
-      Math.abs(featEast - goEast) < EPS
-    ) {
-      console.log(`[KMZ] Убран полигон-дубликат GroundOverlay: ${feature.properties?.name || '(без имени)'}`)
-      return true
-    }
+function removeGroundOverlaysFromXml(xmlDoc: Document): void {
+  const groundOverlays = xmlDoc.getElementsByTagName('GroundOverlay')
+  // Собираем в массив, т.к. getElementsByTagName — живая коллекция
+  const toRemove: Element[] = []
+  for (let i = 0; i < groundOverlays.length; i++) {
+    toRemove.push(groundOverlays[i])
   }
-
-  return false
+  for (const el of toRemove) {
+    el.parentNode?.removeChild(el)
+  }
+  if (toRemove.length > 0) {
+    console.log(`[KMZ] Удалено ${toRemove.length} <GroundOverlay> из XML перед togeojson`)
+  }
 }
 
 /**
