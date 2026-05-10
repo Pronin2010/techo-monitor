@@ -163,6 +163,15 @@ techo-dump-config.py              # Скрипт чтения конфигура
 ### GPS Mode (замена gps_enabled)
 - `ENABLED` / `DISABLED` / `NOT_PRESENT`
 
+### Position Precision (точность координат)
+- Настройка **КАНАЛА**, а не позиции! `ChannelSettings.ModuleSettings.position_precision`
+- 0 = не передавать позицию на канале
+- 1-31 = кол-во старших бит 32-битного lat/lon (остальные обнуляются + центрируются)
+- **13 = дефолт прошивки (~2.9км радиус)** — проверено по Channels.cpp v2.7.15
+- **32 = максимальная точность (~1-3м GPS)** — полная точность без обфускации
+- CLI: `meshtastic --ch-index 0 --ch-set module_settings.position_precision 32`
+- ⚠️ НЕ `--set position.position_precision` (устаревший/неверный путь!)
+
 ### Ключевые изменения 2.7.15
 - Телеметрия отключена по умолчанию
 - Прямые сообщения только через PKI
@@ -274,6 +283,7 @@ SyncLog
 24. BT: фиксированный PIN 113566 во всех пресетах + режим FIXED_PIN (mode=1, НЕ 0!) в мосте
 25. Критическое правило: ВСЕГДА ИСКАТЬ В ДОКУМЕНТАЦИИ ПРОШИВКИ 2.7.15 ПЕРЕД написанием кода для устройств
 26. Фикс BT PIN: protobuf-константы (config_pb2) вместо magic numbers + ensureSessionKey() перед транзакцией + диагностика BT после записи/перезагрузки
+27. Фикс positionPrecision: убран try/catch вокруг записи канала (ошибка → откат транзакции), добавлена немедленная диагностика position_precision после writeChannel(0), исправлен дефолт прошивки с 14 на 13 (проверено по Channels.cpp v2.7.15), исправлены скрипты (--set position.position_precision → --ch-index 0 --ch-set module_settings.position_precision), исправлен баг в techo-dump-config.py (positionFlags сравнивался с positionPrecision)
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -301,4 +311,4 @@ ALL, LOCAL_SKIP, SIMPLE
 
 ---
 
-_Последнее обновление: 2026-05-09 (Критическое правило: документация прошивки ПЕРЕД кодом)_
+_Последнее обновление: 2026-05-09 (Фикс positionPrecision: дефолт 13 не 14, настройка канала не позиции, диагностика после writeChannel)_

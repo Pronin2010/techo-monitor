@@ -158,8 +158,8 @@ const POSITION_PRECISION_OPTIONS = [
   { value: 10, label: '10 — ~23 км' },
   { value: 11, label: '11 — ~12 км' },
   { value: 12, label: '12 — ~5.8 км' },
-  { value: 13, label: '13 — ~2.9 км' },
-  { value: 14, label: '14 — ~1.5 км (дефолт прошивки)' },
+  { value: 13, label: '13 — ~2.9 км (ДЕФОЛТ прошивки)' },
+  { value: 14, label: '14 — ~1.5 км' },
   { value: 15, label: '15 — ~730 м' },
   { value: 16, label: '16 — ~365 м' },
   { value: 17, label: '17 — ~182 м' },
@@ -1220,7 +1220,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                               <Zap className="size-3.5 text-muted-foreground shrink-0" />
                               <span className="text-muted-foreground text-xs">Точность:</span>
                               <span className="font-medium text-xs">
-                                {preset.positionPrecision === 32 ? 'Макс. (~1м)' : preset.positionPrecision === 14 ? 'Дефолт (~1.5км)' : preset.positionPrecision === 0 ? 'Нет' : POSITION_PRECISION_OPTIONS.find(o => o.value === preset.positionPrecision)?.label ?? `~${preset.positionPrecision}`}
+                                {preset.positionPrecision === 32 ? 'Макс. (~1м)' : preset.positionPrecision === 13 ? 'Дефолт (~2.9км)' : preset.positionPrecision === 0 ? 'Нет' : POSITION_PRECISION_OPTIONS.find(o => o.value === preset.positionPrecision)?.label ?? `~${preset.positionPrecision}`}
                               </span>
                             </div>
 
@@ -1748,7 +1748,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Радиус/обфускация координат. Настройка канала (module_settings.position_precision). 32 = полная точность (~1м), 14 = дефолт прошивки (~1.5км).
+                      Радиус/обфускация координат. Настройка канала (module_settings.position_precision). 32 = полная точность (~1м), 13 = дефолт прошивки (~2.9км), 0 = не передавать.
                     </p>
                   </div>
 

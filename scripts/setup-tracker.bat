@@ -47,8 +47,8 @@ meshtastic %PORT% --set position.gps_attempt_time 90
 echo [6/12] Position flags: 939 (с меткой времени)
 meshtastic %PORT% --set position.position_flags 939
 
-echo [7/12] Точность позиции: 32 (полная точность)
-meshtastic %PORT% --set position.position_precision 32
+echo [7/12] Точность позиции: 32 (полная точность) — настройка КАНАЛА
+meshtastic %PORT% --ch-index 0 --ch-set module_settings.position_precision 32
 
 echo [8/12] Питание: без экономии (всегда бодрствует)
 meshtastic %PORT% --set power.is_power_saving false
@@ -81,7 +81,7 @@ echo   GPS:          включён, 15 сек обновление
 echo   Позиция:      smart broadcast (20м / 60сек)
 echo   Модем:        LONG_MODERATE
 echo   hop_limit:    5
-echo   Точность:     32 (полная)
+echo   Точность:     32 (полная, channel module_settings)
 echo   Автономность: ~20 часов (850 мАч)
 echo.
 echo   Внимание: GPS всегда включён для горячего старта (2 сек).

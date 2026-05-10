@@ -559,42 +559,50 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             # ── Канал (Channel 0 = первичный) ──
             # ВНИМАНИЕ: Всегда записываем канал 0, потому что нужно установить
             # module_settings.position_precision (точность координат).
-            # Без этого позиция будет с радиусом ~1.5км (дефолт прошивки = 14)!
+            # Без этого позиция будет с радиусом ~2.9км (дефолт прошивки = 13)!
+            # position_precision — это НАСТРОЙКА КАНАЛА (ChannelSettings.ModuleSettings),
+            # а НЕ позиционного конфига! Проверено по protobuf channel.proto прошивки 2.7.15.
             ch_name = config.get('channelName', '').strip()
             ch_psk = config.get('channelPsk', '').strip()
             ch_uplink = config.get('channelUplink', True)
             ch_downlink = config.get('channelDownlink', True)
             # positionPrecision — биты точности координат (0-32).
-            # 32 = максимальная точность (~1м), 14 = ~1.5км (дефолт прошивки)
+            # 0 = не передавать позицию, 32 = макс. точность (~1м)
+            # Дефолт прошивки = 13 (~2.9км) — проверено по Channels.cpp v2.7.15
             # Это поле channel.settings.module_settings.position_precision!
             ch_precision = config.get('positionPrecision', 32)
+            import base64
+            ch = node.channels[0]
+            if ch_name:
+                ch.settings.name = ch_name
+            if ch_psk:
+                # PSK может быть base64 или hex
+                try:
+                    ch.settings.psk = base64.b64decode(ch_psk)
+                except Exception:
+                    # Если не base64 — пробуем как raw bytes
+                    ch.settings.psk = ch_psk.encode('utf-8')
+            ch.settings.uplink_enabled = ch_uplink
+            ch.settings.downlink_enabled = ch_downlink
+            # КРИТИЧЕСКИ ВАЖНО: position_precision для координат!
+            # channel.settings.module_settings.position_precision (0-32)
+            # 0 = не передавать, 32 = полная точность (~1м), 13 = дефолт (~2.9км)
+            # Проверено по protobuf channel.proto + Channels.cpp прошивки 2.7.15
+            ch.settings.module_settings.position_precision = ch_precision
+            node.writeChannel(0)
+            # Диагностика: проверяем, что position_precision реально записался
             try:
-                import base64
-                ch = node.channels[0]
-                if ch_name:
-                    ch.settings.name = ch_name
-                if ch_psk:
-                    # PSK может быть base64 или hex
-                    try:
-                        ch.settings.psk = base64.b64decode(ch_psk)
-                    except Exception:
-                        # Если не base64 — пробуем как raw bytes
-                        ch.settings.psk = ch_psk.encode('utf-8')
-                ch.settings.uplink_enabled = ch_uplink
-                ch.settings.downlink_enabled = ch_downlink
-                # КРИТИЧЕСКИ ВАЖНО: position_precision для координат!
-                # channel.settings.module_settings.position_precision (0-32)
-                # 32 = полная точность (~1м), 14 = ~1.5км (дефолт прошивки)
-                ch.settings.module_settings.position_precision = ch_precision
-                node.writeChannel(0)
-                sections_written.append("channel")
-                psk_preview = ch_psk[:8] + '...' if len(ch_psk) > 8 else ch_psk
-                print(f"\033[32m[CFG] channel[0]: name={ch_name or '(без имени)'}, psk={psk_preview or '(нет)'}, "
-                      f"uplink={ch_uplink}, downlink={ch_downlink}, position_precision={ch_precision}\033[0m")
-            except Exception as e:
-                print(f"\033[31m[CFG] Ошибка записи канала: {e}\033[0m")
-                # Не прерываем — канал не критичен для базового конфига,
-                # но позиция будет неточной!
+                ch_verify = node.channels[0]
+                pp_read = ch_verify.settings.module_settings.position_precision if hasattr(ch_verify.settings, 'module_settings') else 'N/A'
+                print(f"\033[36m[DIAG] channel[0] после записи: position_precision={pp_read} (ожидали {ch_precision})\033[0m")
+                if pp_read != ch_precision:
+                    print(f"\033[31m[DIAG] ⚠⚠⚠ position_precision={pp_read}, ожидали {ch_precision}! НАСТРОЙКА НЕ ПРИМЕНИЛАСЬ!\033[0m")
+            except Exception as diag_err:
+                print(f"\033[33m[DIAG] Не удалось проверить position_precision: {diag_err}\033[0m")
+            sections_written.append("channel")
+            psk_preview = ch_psk[:8] + '...' if len(ch_psk) > 8 else ch_psk
+            print(f"\033[32m[CFG] channel[0]: name={ch_name or '(без имени)'}, psk={psk_preview or '(нет)'}, "
+                  f"uplink={ch_uplink}, downlink={ch_downlink}, position_precision={ch_precision}\033[0m")
 
         except Exception as e:
             # При ошибке — откатить транзакцию через перезагрузку
@@ -641,7 +649,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                     try:
                         ch0 = fresh_node.channels[0]
                         ch_precision_read = ch0.settings.module_settings.position_precision if hasattr(ch0.settings, 'module_settings') else 'N/A'
-                        print(f"\033[36m[DIAG] channel[0] position_precision={ch_precision_read} (32=~1м, 14=~1.5км)\033[0m")
+                        print(f"\033[36m[DIAG] channel[0] position_precision={ch_precision_read} (32=~1м, 13=~2.9км дефолт)\033[0m")
                     except Exception as ch_err:
                         print(f"\033[36m[DIAG] Не удалось прочитать position_precision канала: {ch_err}\033[0m")
                     print(f"\033[36m[DIAG] BT после перезагрузки: mode={bt_fresh.mode} ({bt_mode_fresh}), fixed_pin={bt_fresh.fixed_pin}, enabled={bt_fresh.enabled}\033[0m")

@@ -932,7 +932,7 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
                       <SelectContent>
                         {[
                           { value: 0, label: '0 — не передавать' },
-                          { value: 14, label: '14 — ~1.5 км (дефолт)' },
+                          { value: 13, label: '13 — ~2.9 км (ДЕФОЛТ прошивки)' },
                           { value: 16, label: '16 — ~365 м' },
                           { value: 20, label: '20 — ~23 м' },
                           { value: 24, label: '24 — ~1.4 м' },

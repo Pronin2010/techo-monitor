@@ -31,8 +31,8 @@ meshtastic $PORT --set device.role ROUTER
 echo "[2/10] GPS: NOT_PRESENT (в помещении, не нужен)"
 meshtastic $PORT --set position.gps_mode NOT_PRESENT
 
-echo "[3/10] Точность позиции: 0 (не отправлять координаты)"
-meshtastic $PORT --set position.position_precision 0
+echo "[3/10] Точность позиции: 0 (не отправлять координаты) — настройка КАНАЛА"
+meshtastic $PORT --ch-index 0 --ch-set module_settings.position_precision 0
 meshtastic $PORT --set position.position_broadcast_secs 900
 
 echo "[4/10] Модем-пресет: LONG_MODERATE (должен совпадать с трекерами!)"

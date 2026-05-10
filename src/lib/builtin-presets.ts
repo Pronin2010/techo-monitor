@@ -20,7 +20,7 @@ export interface BuiltinPresetData {
   gpsUpdateInterval: number
   agpsEnabled: boolean
   gpsAttemptTime: number
-  positionPrecision: number   // channel module_settings.position_precision (0-32 бита). 32 = макс. точность (~1м)
+  positionPrecision: number   // channel module_settings.position_precision (0-32 бита). 32 = макс. точность (~1м), 13 = дефолт прошивки (~2.9км), 0 = не передавать
   positionFlags: number      // position.position_flags (битовая маска PositionFlags). 943 = все данные
   positionBroadcastSecs: number
   smartBroadcastEnabled: boolean

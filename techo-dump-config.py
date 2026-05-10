@@ -274,6 +274,12 @@ def read_device_config(interface):
             psk_bytes = ch_settings.psk if ch_settings.psk else b''
             ch_info['pskLength'] = len(psk_bytes)
             ch_info['pskSet'] = len(psk_bytes) > 0
+            # position_precision — настройка КАНАЛА (ChannelSettings.ModuleSettings)
+            # 0 = не передавать позицию, 13 = дефолт (~2.9км), 32 = макс (~1м)
+            if hasattr(ch_settings, 'module_settings'):
+                ch_info['positionPrecision'] = ch_settings.module_settings.position_precision
+            else:
+                ch_info['positionPrecision'] = None
             channels.append(ch_info)
     except Exception as e:
         print(f"\033[33m[WARN] Ошибка чтения каналов: {e}\033[0m")
@@ -403,8 +409,10 @@ def print_config(config, compact=False):
     # Channels
     for ch in config.get('channels', []):
         psk_info = f"PSK({ch['pskLength']}b)" if ch['pskSet'] else "no PSK"
+        pp = ch.get('positionPrecision')
+        pp_info = f", precision={pp}" if pp is not None else ""
         print(f"\033[33m[CH {ch['index']}]\033[0m name=\033[1m{ch['name'] or '(empty)'}\033[0m, "
-              f"{psk_info}, up={ch['uplinkEnabled']}, down={ch['downlinkEnabled']}")
+              f"{psk_info}, up={ch['uplinkEnabled']}, down={ch['downlinkEnabled']}{pp_info}")
 
     # Узлы в сети
     nodes = config.get('nodes', [])
@@ -439,9 +447,11 @@ def compare_configs(device_config, preset_file):
     check('nodeInfoBroadcastSecs', d['device']['nodeInfoBroadcastSecs'], p.get('nodeInfoBroadcastSecs', 900), 's')
     check('rebroadcastMode', d['device']['rebroadcastMode'], p.get('rebroadcastMode', 'ALL'))
 
-    # Position
+    # Position (positionFlags — битовое поле, positionPrecision — настройка канала)
     check('gpsMode', d['position']['gpsMode'], p.get('gpsMode', 'ENABLED'))
-    check('positionFlags', d['position']['positionFlags'], p.get('positionPrecision', 35))
+    check('positionFlags', d['position']['positionFlags'], p.get('positionFlags', 943))
+    # positionPrecision — настройка КАНАЛА (channel.settings.module_settings.position_precision),
+    # НЕ позиционного конфига! Проверяется отдельно ниже в секции канала.
     check('positionBroadcastSecs', d['position']['positionBroadcastSecs'], p.get('positionBroadcastSecs', 300), 's')
     check('gpsUpdateInterval', d['position']['gpsUpdateInterval'], p.get('gpsUpdateInterval', 30), 's')
 
@@ -465,6 +475,21 @@ def compare_configs(device_config, preset_file):
     # Telemetry
     if 'error' not in d.get('telemetry', {}):
         check('telemetryInterval', d['telemetry']['deviceUpdateInterval'], p.get('telemetryInterval', 300), 's')
+
+    # Канал 0 — positionPrecision (настройка КАНАЛА, не PositionConfig!)
+    # Проверяем channel[0].module_settings.position_precision
+    ch0 = None
+    for ch in d.get('channels', []):
+        if ch.get('index') == 0:
+            ch0 = ch
+            break
+    if ch0 is not None:
+        pp_actual = ch0.get('positionPrecision')
+        pp_expected = p.get('positionPrecision', 32)
+        # Маппинг для понятного вывода
+        pp_labels = {0: 'не передавать', 13: '~2.9км (дефолт)', 32: '~1м (макс)'}
+        pp_unit = f" ({pp_labels.get(pp_actual, '')})" if pp_actual in pp_labels else ''
+        check('positionPrecision (канал 0)', pp_actual, pp_expected, f' бит{pp_unit}')
 
     print(f"\n\033[1m{'ЕСТЬ ОТЛИЧИЯ' if diffs else 'СОВПАДАЕТ'} ({diffs} различий)\033[0m")
 

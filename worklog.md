@@ -27,3 +27,25 @@ Stage Summary:
   - `positionPrecision=32` → channel position_precision=32 → full precision (~1m)
   - `positionPrecision=14` → channel position_precision=14 → ~1.5km (firmware default)
   - `positionFlags=943` → position_flags=943 → all data (ALT+MSL+GEO+DOP+HVDOP+SAT+SEQ+TS+HEADING+SPEED)
+---
+Task ID: 27
+Agent: main
+Task: Фикс positionPrecision — почему при заливке пресета не выставляется максимальная точность местоположения
+
+Work Log:
+- Исследована документация Meshtastic 2.7.15: positionPrecision — это настройка КАНАЛА (ChannelSettings.ModuleSettings.position_precision), НЕ позиционного конфига!
+- Дефолт прошивки = 13 (~2.9км), а НЕ 14 (~1.5км) как считалось ранее. Проверено по Channels.cpp v2.7.15
+- positionPrecision = 32 = максимальная точность (~1-3м GPS точность)
+- Найдены и исправлены баги:
+  1. techo-bridge.py: убран try/except вокруг записи канала — при ошибке вся транзакция откатывается (раньше тихо игнорировалось, и коммитился конфиг БЕЗ position_precision!)
+  2. techo-bridge.py: добавлена немедленная диагностика position_precision после writeChannel(0) для отладки
+  3. Скрипты setup-tracker.sh/bat и setup-base.sh/bat: `--set position.position_precision` → `--ch-index 0 --ch-set module_settings.position_precision` (старый путь НЕ работает!)
+  4. techo-dump-config.py: кросс-поле баг — positionFlags сравнивался с positionPrecision (разные поля!)
+  5. techo-dump-config.py: добавлено чтение и вывод position_precision из channel.settings.module_settings
+  6. Все комментарии обновлены: дефолт прошивки = 13 (~2.9км), не 14 (~1.5км)
+  7. UI: обновлены метки в settings-presets-tab.tsx и device-setup-tab.tsx
+
+Stage Summary:
+- Корневая причина: try/except вокруг записи канала в мосте глотал ошибки, и position_precision молча не записывался → устройство использовало дефолт 13 (~2.9км)
+- Дополнительная причина: скрипты использовали неверный путь `--set position.position_precision` вместо `--ch-set module_settings.position_precision`
+- Все файлы исправлены, документация обновлена
