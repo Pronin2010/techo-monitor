@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/836",
+    "name": "T-Echo does not keep stable gps fix · Issue #836",
+    "snippet": "Aug 8, 2021 — I have two T - Echo's , after installation they initially get a gps fix but after a few minutes (<5) the sateillite number falls to zero and then ...",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1m33po4/techo_device_no_gps_lock_no_satellites_detected",
+    "name": "T-Echo device \"No GPS Lock\" / No satellites detected",
+    "snippet": "I might have an issue with a T - Echo device that I recently bought, as GPS -related, all I can see is \"No GPS Lock \", and no satellites being detected.",
+    "host_name": "www.reddit.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://portal.u-blox.com/s/question/0D52p0000BwCiq8CQC/reasons-for-the-gps-fix-to-take-several-minutes",
+    "name": "Reasons for the GPS fix to take several minutes",
+    "snippet": "Jan 12, 2022 — Most likely causes of long TTFF with CAM-M8Q implementation are: - inadequate size ground plane,or with holes or cuts rather than solid copper ground plane.",
+    "host_name": "portal.u-blox.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/2751",
+    "name": "\"no GPS module\" after update [Bug]: · Issue #2751",
+    "snippet": "Aug 28, 2023 — I haven' t had an L76K to test it on. I think it will detect the GPS chip, but probably won' t know how to reset the baud yet. But I'd love to get ...",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/500362027115277/posts/1821285681689565",
+    "name": "I have a problem with meshtastic. Its doesnt find satellites",
+    "snippet": "Also, some hardware has very small, very poor patch antennas . If so, best to upgrade the antenna . This may require modifying the case. Finally, ...",
+    "host_name": "www.facebook.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/334",
+    "name": "Meshtastic turns on UBX protocol (and turns NEMA off)",
+    "snippet": "Aug 24, 2020 — On polling the GPS protocol version after u - blox factory restore, the V1.0 t -beam often restarted due to a 'guru meditation error' in State 3.",
+    "host_name": "github.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.aliexpress.com/s/wiki-ssr/article/lilygo-t-deck-plus-esp32-s3-gps-lorawan-lcd-long-distance-communication-wireless-module-products-info-and-review",
+    "name": "LILYGO T-Deck Plus ESP32-S3 with GPS, LoRaWAN, and",
+    "snippet": "Use a high-gain antenna : The default PCB antenna provides ~ 5 dBi gain. For distances beyond 5 km, replace it with a 10 dBi external whip antenna connected via U ...",
+    "host_name": "www.aliexpress.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/8084",
+    "name": "[Bug]: T-Echo Lite GPS Module doesn´t work · Issue #8084",
+    "snippet": "Sep 22, 2025 — LILYGO T - Echo Lite with installed L76K GPS Module doesn´t seems to work. It shows \"No Sats\" all the time and does not get a position. GPS Mode ...",
+    "host_name": "github.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/1436922756909707/posts/1862671904334788",
+    "name": "Considering the Lil problem tdeck pro as a first meshtastic",
+    "snippet": "Considering the Lil problem tdeck pro as a first meshtastic device. Not a big network near me but wanting to try to get people interested. Is this ...",
+    "host_name": "www.facebook.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.arduinolibraries.info/libraries",
+    "name": "All Libraries",
+    "snippet": "Apr 16, 2026 — The software available in this library is designed to break down the flight software from the Artemis CubeSat Kit into individual components, ...",
+    "host_name": "www.arduinolibraries.info",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

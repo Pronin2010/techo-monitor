@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://github.com/Xinyuan-LilyGO/T-Echo/issues/32",
+    "name": "Intermittent GPS failure - solved · Issue #32",
+    "snippet": "Oct 2, 2023 — Looking at the board, in the upper left hand corner there is a stripe of conductive mesh tape connecting the SMA socket ground to the GPS chip ...",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1m33po4/techo_device_no_gps_lock_no_satellites_detected",
+    "name": "T-Echo device \"No GPS Lock\" / No satellites detected",
+    "snippet": "If the GPS and its antenna are working correctly it should get a location fix in about 45seconds from a cold factory fresh start.",
+    "host_name": "www.reddit.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/1057087942178453/posts/1168852684335311",
+    "name": "What causes T-Echo stability problems and how to fix them?",
+    "snippet": "Anyone having stability problems with the T-Echo?  Both my units lock up hard about once every week or two and can't boot.  I have to load the factory ...",
+    "host_name": "www.facebook.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/3059",
+    "name": "T-Echo changing any position settings results in \"no GPS",
+    "snippet": "Jan 5, 2024 — For T - Echo changing any parameter in the Position settings tab results in the GPS not being detected \"no GPS device\". Changing the GPS pin ...",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/2008",
+    "name": "[Bug]: T-Echo GPS: 'no GPS module found' · Issue #2008",
+    "snippet": "Nov 29, 2022 — I erased the devices and installed latest firmware 2.0.6.97fd5cf.uf2. On both devices I now see the message 'no GPS module found' and GPS is not working.",
+    "host_name": "github.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  }
+]

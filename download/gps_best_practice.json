@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/position",
+    "name": "Position Configuration",
+    "snippet": "GPS position configuration settings for your Meshtastic device including update intervals, broadcast settings, and GPIO.",
+    "host_name": "meshtastic.org",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://openelab.io/blogs/getting-started/meshtastic-guide-positioning-and-location-settings?srsltid=AfmBOop_zIPhVJjLtOyiHahFP93ZJFu8zJvyPJEgUhO6xGzPQVm9tXyO",
+    "name": "Meshtastic Guide - Positioning and Location Settings",
+    "snippet": "Dec 15, 2025 — The available configuration options include: GPS Mode, GPS Update Interval , Fixed Position , Smart Broadcast , Smart Broadcast Minimum Distance, ...",
+    "host_name": "openelab.io",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://store.rokland.com/pages/changing-the-gps-interval-in-the-meshtastic-app?srsltid=AfmBOoqtH7fzcfDvJG11eZxqK5Lj4ImNahGUH6STScdZEBKbd40UQo3f",
+    "name": "Changing the GPS interval in the Meshtastic app",
+    "snippet": "1. Connect to Your Device · 2. Navigate to Radio Configuration · 3. Adjust Position Settings · 4. Save and Apply ...",
+    "host_name": "store.rokland.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/8029",
+    "name": "Wait until after GPS lock hold before updating position, if",
+    "snippet": "Sep 18, 2025 — We want to avoid potential loops where any of the broadcast /update/interval settings are set to exactly or less than the 20 second hold time.",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/configuration/tips",
+    "name": "Configuration Tips",
+    "snippet": "The position_precision setting allows control of the level of precision for location data that is sent over a particular channel. This can be useful for privacy ...",
+    "host_name": "meshtastic.org",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1re7v8i/t1000e_automatic_location_sending_issues_2715",
+    "name": "T1000-E automatic location sending issues 2.7.15",
+    "snippet": "I set my gps update interval to 30 seconds, and the broadcast interval to 5 minutes. Biggest issue was aligning config between devices because ...",
+    "host_name": "www.reddit.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio",
+    "name": "Radio Configuration",
+    "snippet": "Dive into the technical specifics of configuring your Meshtastic radio settings , including frequency ranges, power limits, and channels for optimal ...",
+    "host_name": "meshtastic.org",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/948131383462670/posts/948277413448067",
+    "name": "How to make your device display on https://meshmap.net/?",
+    "snippet": "To solve this problem, just go to the settings page → Channels → put the default channel like LongFast at the highest priority (0th), and move the private ...",
+    "host_name": "www.facebook.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/6785",
+    "name": "[Bug]: Position Broadcast not respecting settings #6785",
+    "snippet": "May 10, 2025 — Description. I have the position settings as follows: GPS Update Interval: 60 seconds . Position Broadcast Interval: 300 seconds. Smart Position ...",
+    "host_name": "github.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/device",
+    "name": "Device Configuration",
+    "snippet": "Learn about and compare device roles such as Client, Repeater, and Router as well as other Device settings .",
+    "host_name": "meshtastic.org",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

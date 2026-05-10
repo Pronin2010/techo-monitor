@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/836",
+    "name": "T-Echo does not keep stable gps fix · Issue #836",
+    "snippet": "8 Aug 2021 — Describe the bug . I have two T - Echo's , after installation they initially get a gps fix but after a few minutes (<5) the sateillite number falls ...\nAug 8, 2564 BE — Describe the bug . I have two T - Echo's , after installation they initially get a gps fix but after a few minutes (<5) the sateillite number falls ... Read more\nDescribe the bug. I have two T-Echo's, after installation they initially get a gps fix but after a few minutes (<5) the sateillite number falls ... Missing: drift coordinates jumping",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1jneevm/techo_with_gps_issues",
+    "name": "T-Echo with GPS Issues : r/meshtastic",
+    "snippet": "Try opening it up and taking a look inside at the battery and GPS antenna. My battery likes to flop around inside and maybe your battery is messing with the ...\nTry opening it up and taking a look inside at the battery and GPS antenna . My battery likes to flop around inside and maybe your battery is messing with the ... Read more\nTry opening it up and taking a look inside at the battery and GPS antenna. My battery likes to flop around inside and maybe your battery is messing with the ... Missing: drift losing fix bug #836 coordinates jumping",
+    "host_name": "www.reddit.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/8403",
+    "name": "[Bug]: Fixed GPS position changes after saving · Issue #8403",
+    "snippet": "19 Oct 2025 — When setting fixed coordinates , they show correctly for the node initially, but then change to a place about a mile away after a few seconds. I ...\nWhen setting fixed coordinates, they show correctly for the node initially, but then change to a place about a mile away after a few seconds. I ... Missing: Echo drift losing #836 jumping",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1dghnpz/losing_fixed_position",
+    "name": "Losing fixed position : r/meshtastic",
+    "snippet": "I manually add the GPS position which works for a few hours, then it just stops sending it. I go back and log into it and the fixed position is ...",
+    "host_name": "www.reddit.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/992",
+    "name": "T-Echo - GPS sign gets flipped · Issue #992",
+    "snippet": "12 Dec 2021 — I get almost instant GPS lock with a soft reset T - Echo with Soft-RF firmware, just running Meshtastic , where on Meshtastic it can take from 5 ...",
+    "host_name": "github.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/1057087942178453/posts/1168852684335311",
+    "name": "What causes T-Echo stability problems and how to fix them?",
+    "snippet": "Anyone having stability problems with the T-Echo?  Both my units lock up hard about once every week or two and can't boot.  I have to load the factory ...",
+    "host_name": "www.facebook.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1m33po4/techo_device_no_gps_lock_no_satellites_detected",
+    "name": "T-Echo device \"No GPS Lock\" / No satellites detected",
+    "snippet": "If the GPS and its antenna are working correctly it should get a location fix in about 45seconds from a cold factory fresh start. Read more",
+    "host_name": "www.reddit.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/2008",
+    "name": "[Bug]: T-Echo GPS: 'no GPS module found' · Issue #2008",
+    "snippet": "Nov 29, 2565 BE — I erased the devices and installed latest firmware 2.0.6.97fd5cf.uf2. On both devices I now see the message 'no GPS module found' and GPS is not working. Read more",
+    "host_name": "github.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/pl-PL/docs/development/device/error-codes",
+    "name": "Critical Error Codes",
+    "snippet": "Critical Error Codes. The device might report these fault codes on the screen, but it will also be outputted on the device serial output. Read more",
+    "host_name": "meshtastic.org",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/position",
+    "name": "Position Configuration",
+    "snippet": "GPS position configuration settings for your Meshtastic device including update intervals, broadcast settings, and GPIO.",
+    "host_name": "meshtastic.org",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

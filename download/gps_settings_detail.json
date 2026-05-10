@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/position",
+    "name": "Position Configuration | Meshtastic",
+    "snippet": "GPS position configuration settings for your Meshtastic device including update intervals, broadcast settings, and GPIO. Missing: gps_attempt_time | Show results with: gps_attempt_time",
+    "host_name": "meshtastic.org",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://openelab.io/blogs/getting-started/meshtastic-guide-positioning-and-location-settings?srsltid=AfmBOorwFWDFk07ah8kqZ1yxXvYJekiFECHEIFGU_4DPc14-xhWMIeBD",
+    "name": "Meshtastic Guide - Positioning and Location Settings",
+    "snippet": "The available configuration options include: GPS Mode, GPS Update Interval, Fixed Position, Smart Broadcast, Smart Broadcast Minimum Distance, ... Missing: tracker forest gps_attempt_time",
+    "host_name": "openelab.io",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://store.rokland.com/pages/changing-the-gps-interval-in-the-meshtastic-app?srsltid=AfmBOopo-PhHwVA_jOsF8-uN1O6V7XSchUG4unCfbxYFVaAeWHthseg4",
+    "name": "Changing the GPS interval in the Meshtastic app - Rokland",
+    "snippet": "1. Connect to Your Device. Open the Meshtastic app on your smartphone. · 2. Navigate to Radio Configuration. Missing: tracker forest gps_attempt_time",
+    "host_name": "store.rokland.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/8029",
+    "name": "Wait until after GPS lock hold before updating position, if we can.",
+    "snippet": "Is using 20 second hold even for an gps_update_interval of 40 seconds too aggressive? Should we water it down to reduce power usage at the ... Missing: 30 gps_attempt_time\nIf we look at the broadcast/smart update/gps update intervals and they are all well above 20 seconds, it's likely safe. However, on the other ... Missing: 30 | Show results with: 30",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://buf.build/meshtastic/protobufs/file/6a94e6a77f67d26a8b065c2ea61f07376a5ed142:meshtastic/config.proto",
+    "name": "config.proto - meshtastic - Buf",
+    "snippet": "* How long should we try to get our position during each gps_update_interval attempt? (in seconds). 244, * Or if zero, use the default of 30 seconds. 245, * If ...",
+    "host_name": "buf.build",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  }
+]

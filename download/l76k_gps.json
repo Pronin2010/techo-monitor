@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/8084",
+    "name": "[Bug]: T-Echo Lite GPS Module doesn´t work · Issue #8084 - GitHub",
+    "snippet": "LILYGO T-Echo Lite with installed L76K GPS Module doesn´t seems to work. It shows \"No Sats\" all the time and does not get a position. GPS ... Missing: drift 2024",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/position",
+    "name": "Position Configuration | Meshtastic",
+    "snippet": "GPS position configuration settings for your Meshtastic device including update intervals, broadcast settings, and GPIO. Missing: L76K firmware drift 2024 2025",
+    "host_name": "meshtastic.org",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/hardware/devices/lilygo/techo",
+    "name": "LILYGO® TTGO T-Echo devices - Meshtastic",
+    "snippet": "The T-Echo by LILYGO® supports a low power consumption micro-controller and an e-ink display. Further information on the LILYGO® T-Echo devices can be found on ... Missing: position drift solution 2024 2025",
+    "host_name": "meshtastic.org",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://store.rokland.com/pages/how-to-enable-gps-lilygo-ttgo-meshtastic-t-echo?srsltid=AfmBOopQLGjbtCUcqWEouMiGqcJB1WVVgAOvc-wHfBrs_l9x0POISuLX",
+    "name": "How to Enable GPS - LILYGO® TTGO Meshtastic T-Echo - Rokland",
+    "snippet": "This article will guide you through the process of enabling the GPS functionality within the Meshtastic configuration settings. Missing: drift solution 2024 2025",
+    "host_name": "store.rokland.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1m33po4/techo_device_no_gps_lock_no_satellites_detected",
+    "name": "T-Echo device \"No GPS Lock\" / No satellites detected : r/meshtastic",
+    "snippet": "I might have an issue with a T-Echo device that I recently bought, as GPS-related, all I can see is \"No GPS Lock\", and no satellites being detected. Missing: L76K firmware drift",
+    "host_name": "www.reddit.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/orgs/meshtastic/discussions/30",
+    "name": "GPS Data wrong with T-echo · meshtastic · Discussion #30 - GitHub",
+    "snippet": "I always get incorrect GPS data from my T-Echo. The position given is always the same. But no fixed position is configured. The correct position is shown on the ... Missing: L76K chip drift 2025",
+    "host_name": "github.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://forums.quectel.com/t/firmware-protocol-version-for-the-l76k/40194",
+    "name": "Firmware/Protocol version for the L76K - Quectel Forums",
+    "snippet": "“When using 1Hz position updates and logging to SD card, I sometimes see a pattern of 20 minutes good operation followed by 10 minutes of lock ...",
+    "host_name": "forums.quectel.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/302143017312754/posts/1568258687367841",
+    "name": "I cannot get GPS working on Meshtastic, tried 3 firmwares, manually",
+    "snippet": "Having problems with atak and meshtastic. My t Echo doesnt find satellites, even of the GPS Is enabled. What can I do? Missing: L76K drift",
+    "host_name": "www.facebook.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://wiki.seeedstudio.com/L76K_Path_Tracking_on_Ubidots",
+    "name": "L76K Path Tracking on Ubidots | Seeed Studio Wiki",
+    "snippet": "Use the L76K GNSS module to locate an object and display the track on a map. For this purpose, we can achieve it by combining the SeeedStudio XIAO development ...",
+    "host_name": "wiki.seeedstudio.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://forum.rakwireless.com/t/gps-not-working-on-rak-4631-meshtastic/13709",
+    "name": "Gps not working on RAK 4631 Meshtastic - RAKwireless Forum",
+    "snippet": "I have tried to see if changing firmware would help but to no avail. The device is not picking up my 12500. When connected to serial it searches ... Missing: Echo position drift",
+    "host_name": "forum.rakwireless.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

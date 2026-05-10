@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/position",
+    "name": "Position Configuration | Meshtastic",
+    "snippet": "GPS position configuration settings for your Meshtastic device including update intervals, broadcast settings, and GPIO. Missing: drift | Show results with: drift",
+    "host_name": "meshtastic.org",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1adaerx/how_to_completely_disable_position_updates",
+    "name": "How to completely disable position updates? : r/meshtastic - Reddit",
+    "snippet": "Using the Meshtastic app, I've unchecked ALL position toggles but the Meshtasic continues to broadcast my device locations every ~15 minutes (default value). Wrong GPS reading all devices GPS Position Information More results from www.reddit.com Missing: drift tracker position_broadcast_smart_enabled",
+    "host_name": "www.reddit.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/6785",
+    "name": "[Bug]: Position Broadcast not respecting settings #6785 - GitHub",
+    "snippet": "Description. I have the position settings as follows: GPS Update Interval: 60 seconds. Position Broadcast Interval: 300 seconds. Smart Position ... Missing: drift position_broadcast_smart_enabled",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://openelab.io/blogs/getting-started/meshtastic-guide-positioning-and-location-settings?srsltid=AfmBOop1AGs7mrmRNfInYz8Beel9olGvjOEYekaRQit9RiX1kW3B5Cfg",
+    "name": "Meshtastic Guide - Positioning and Location Settings",
+    "snippet": "The available configuration options include: GPS Mode, GPS Update Interval, Fixed Position, Smart Broadcast, Smart Broadcast Minimum Distance, ... Missing: drift tracker",
+    "host_name": "openelab.io",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/configuration/tips",
+    "name": "Configuration Tips | Meshtastic",
+    "snippet": "Tips and Solutions to help you get the most out of your Meshtastic device and network. Missing: drift position_broadcast_smart_enabled",
+    "host_name": "meshtastic.org",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://store.rokland.com/pages/changing-the-gps-interval-in-the-meshtastic-app?srsltid=AfmBOoo2tbSBZJpK5PWRn0fM_3SzpYchXL_KVmG4Xffxn_n9KDlDz0vT",
+    "name": "Changing the GPS interval in the Meshtastic app - Rokland",
+    "snippet": "Smart Broadcast: This is a very useful feature that is enabled by default. It allows the device to intelligently determine when to broadcast its position. Missing: drift tracker position_broadcast_smart_enabled",
+    "host_name": "store.rokland.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=JGlWoDrpLNk",
+    "name": "Meshtastic's Position Precision Feature - YouTube",
+    "snippet": "Advanced Meshtastic - Protecting your GPS location. The Comms Channel ... Vatican radio DX on SdrPlay RSPDX2 using new cables, antenna tuner, ... Missing: drift stationary position_broadcast_smart_enabled",
+    "host_name": "www.youtube.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/cs-CZ/docs/configuration/radio/device",
+    "name": "Device Configuration | Meshtastic",
+    "snippet": "TRACKER, Broadcasts GPS position packets as priority. Tracking the location of individuals or assets, especially in scenarios where timely and efficient ... Missing: drift stationary smart position_broadcast_smart_enabled",
+    "host_name": "meshtastic.org",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshunderground.com/posts/1743514015486-meshtastic-gps---unleashing-location-awareness-in-your-off-grid-network",
+    "name": "Meshtastic GPS - Location Awareness in Your Off-Grid Network",
+    "snippet": "Understanding Smart Broadcast and Position Flags. Smart broadcast optimizes position updates to balance battery life and network performance. Missing: drift position_broadcast_smart_enabled",
+    "host_name": "meshunderground.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/6627",
+    "name": "Stationary GPS mode when fixed position is enabled · Issue #6627",
+    "snippet": "This mode provides more accurate readings and improves power efficiency. When fixed pos and GPS are enabled, the GPS should start using the ... Missing: drift broadcast position_broadcast_smart_enabled",
+    "host_name": "github.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

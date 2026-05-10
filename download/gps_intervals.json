@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/position",
+    "name": "Position Configuration",
+    "snippet": "Smart Broadcast Minimum Distance ​. Default of 0 is 100 meters. The minimum distance in meters traveled (since the last send) before we can send a position to ... Read more\nGPS position configuration settings for your Meshtastic device including update intervals, broadcast settings, and GPIO. Missing: stationary | Show results with: stationary",
+    "host_name": "meshtastic.org",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/6269",
+    "name": "[Bug]: GPS position update stops when hiking · Issue #6269",
+    "snippet": "Mar 8, 2025 — My device settings are: MediumFast, precise location on two channels, Local Only, smart position enabled with Broadcast interval 2hr, Minimum ... Read more",
+    "host_name": "github.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://openelab.io/blogs/getting-started/meshtastic-guide-positioning-and-location-settings?srsltid=AfmBOoqnX9l8FRwITkbIHB7xUE0nhyIXTG48nmw_sP4V8fF-p-7fIstL",
+    "name": "Meshtastic Guide - Positioning and Location Settings",
+    "snippet": "Dec 15, 2025 — The available configuration options include: GPS Mode, GPS Update Interval , Fixed Position, Smart Broadcast, Smart Broadcast Minimum Distance, ... Read more",
+    "host_name": "openelab.io",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://store.rokland.com/pages/changing-the-gps-interval-in-the-meshtastic-app?srsltid=AfmBOoqdLyFgA9tKASl4LWioqCj8SD952hIEZI2SNC6Ml4zeaniscLPV",
+    "name": "Changing the GPS interval in the Meshtastic app",
+    "snippet": "1. Connect to Your Device · 2. Navigate to Radio Configuration · 3. Adjust Position Settings · 4. Save and Apply ... Read more",
+    "host_name": "store.rokland.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/configuration/tips",
+    "name": "Configuration Tips",
+    "snippet": "The position_precision setting allows control of the level of precision for location data that is sent over a particular channel. This can be useful for privacy ... Read more",
+    "host_name": "meshtastic.org",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1o59pft/broadcast_interval_update",
+    "name": "Broadcast interval update : r/meshtastic",
+    "snippet": "You should really only need to set smart position and then set the minimum distance accordingly. That will send your location out to the ... Read more",
+    "host_name": "www.reddit.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=J89N3nIbJns",
+    "name": "Advanced Meshtastic - Radio Configuration Part 2",
+    "snippet": "Welcome to part two in the Advanced Meshtastic Series where we continue going over the Radio Configuration settings and cover the following ...",
+    "host_name": "www.youtube.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/device",
+    "name": "Device Configuration",
+    "snippet": "TRACKER , Broadcasts GPS position packets as priority. Tracking the location of individuals or assets, especially in scenarios where timely and efficient ... Read more",
+    "host_name": "meshtastic.org",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/8029",
+    "name": "Wait until after GPS lock hold before updating position, if",
+    "snippet": "Sep 18, 2025 — We want to avoid potential loops where any of the broadcast /update/interval settings are set to exactly or less than the 20 second hold time. Read more\nHold for (gps_update_interval – 1). Update local position after the hold. This gives the best possible chance for a high quality lock, given our ... Missing: stationary | Show results with: stationary",
+    "host_name": "github.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshunderground.com/posts/1743514015486-meshtastic-gps---unleashing-location-awareness-in-your-off-grid-network",
+    "name": "Meshtastic GPS - Location Awareness in Your Off-Grid",
+    "snippet": "Apr 1, 2025 — The “ Smart Broadcast Minimum Distance ” and “ Smart Broadcast Minimum Interval” settings allow you to fine-tune this behavior, specifying the ... Read more\nConfiguration Settings: Meshtastic allows you to fine-tune GPS settings, such as the update interval and broadcast interval. Experiment with ...",
+    "host_name": "meshunderground.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

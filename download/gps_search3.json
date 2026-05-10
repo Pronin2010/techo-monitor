@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/827",
+    "name": "NRF52 Deep Sleeps Inappopriately · Issue #827 · meshtastic/firmware",
+    "snippet": "T-Echo on NRF52 worked very bad with sleep, it's not connected to the phone on battery and no any buttons worked. Problem is in both of NRF ...",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/5498",
+    "name": "[Bug]: RAK4631, nRF52, mqtt channel json message TX to local",
+    "snippet": "Here, the issue is reproducible: after parsing the mqtt channel JSON message and before the LoRa transmission - to the local mesh -, the RAK was ...",
+    "host_name": "github.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/discussions/9936",
+    "name": "What if Every Hop Cost Just 1 TX Instead of n? · meshtastic firmware",
+    "snippet": "What scenarios should the simulator test that I'm missing? Is a firmware prototype (as optional routing module alongside managed flooding) worth pursuing? The ...",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/4723?timeline_page=1",
+    "name": "[Bug]: T114 can't send messages longer than 47 chars #4723 - GitHub",
+    "snippet": "Hello dear community, it is definitely not a hardware issue. I have fixed it on 3 devices. How? nrf erase multiple times, firmware 2.5, then ...",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/releases",
+    "name": "Releases · meshtastic/firmware - GitHub",
+    "snippet": "Fixed the issue where T-Echo did not completely shut down peripherals… by @lewisxhe in #8524; Fix apply device-install permissions by @vidplace7 in #8911 ...",
+    "host_name": "github.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/1364",
+    "name": "Linux / Pine / RAK 3172 Support #1364 - meshtastic/firmware - GitHub",
+    "snippet": "These are preliminary notes on support for Meshtastic in the Pinetab. A RF95 is connected via a CH341 USB-SPI chip.",
+    "host_name": "github.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/orgs/meshtastic/discussions/30",
+    "name": "GPS Data wrong with T-echo · meshtastic · Discussion #30 - GitHub",
+    "snippet": "I always get incorrect GPS data from my T-Echo. The position given is always the same. But no fixed position is configured. The correct position is shown on the ...",
+    "host_name": "github.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/1057087942178453/posts/1168852684335311",
+    "name": "What causes T-Echo stability problems and how to fix them?",
+    "snippet": "One known issue is the corruption on flash. This happen when flash is being accessed then there is power reset. I cannot get GPS working on Meshtastic, tried 3 firmwares, manually ... T-deck gps inaccurate with meshtastic? - Facebook More results from www.facebook.com",
+    "host_name": "www.facebook.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/3059",
+    "name": "T-Echo changing any position settings results in \"no GPS device",
+    "snippet": "All device get the GPS module detected and having a position lock within a few minutes. Changing GPS setting do not have any other effect than ... Missing: nRF52 | Show results with: nRF52",
+    "host_name": "github.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.nordicsemi.com/bundle/ncs-2.1.2/page/nrf/known_issues.html",
+    "name": "Known issues - Technical Documentation",
+    "snippet": "Workaround: Set CONFIG_FW_INFO in MCUboot. ... The preprogrammed Asset Tracker does not come with the best external antenna performance.",
+    "host_name": "docs.nordicsemi.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]
