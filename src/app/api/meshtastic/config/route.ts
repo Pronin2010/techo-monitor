@@ -62,6 +62,7 @@ export async function POST(request: Request) {
       smartBroadcastEnabled: preset.smartBroadcastEnabled,
       smartBroadcastMinDist: preset.smartBroadcastMinDist,
       smartBroadcastMinInterval: preset.smartBroadcastMinInterval,
+      fixedPosition: preset.fixedPosition,
       powerSaving: preset.powerSaving,
       lsSecs: preset.lsSecs,
       minWakeSecs: preset.minWakeSecs,

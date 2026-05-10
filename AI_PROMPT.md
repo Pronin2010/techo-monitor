@@ -194,6 +194,21 @@ techo-dump-config.py              # Скрипт чтения конфигура
 - **Все флаги**: **1023**
 - ⚠️ HEADING/SPEED — для транспорта, пешком данные ненадёжны
 
+### Fixed Position (фиксированная позиция)
+- `position.fixed_position` (protobuf Config.PositionConfig, поле 3)
+- **true** = устройство использует последнюю известную позицию без обновления GPS
+- Для стационарных устройств: базовая станция, трекер в лагере
+- ⚠️ **Баг #8403**: GPS коллбек перезаписывает fixed_position → при fixedPosition=true мост ставит gps_mode=DISABLED
+- CLI: `meshtastic --set position.fixed_position true`
+- Задание координат: `--setlat XX.XXXX --setlon YY.YYYY --setalt ZZ`
+- Python: `node.setFixedPosition(lat, lon, alt)` / `node.removeFixedPosition()`
+- ⚠️ При position_precision < 32 координаты округляются и повреждяются (баг #7478)
+
+### ⚠️ Дрейф GPS координат у стационарного трекера
+**Причины**: (1) Естественный шум GPS ±3-10м, нет фильтрации в Meshtastic; (2) smart broadcast с малым мин. расстоянием; (3) слишком частый GPS-опрос (gpsUpdateInterval=1); (4) position_precision < 32 обфусцирует координаты
+**Решения**: Увеличить smartBroadcastMinDist (50-100м), увеличить gpsUpdateInterval (30 сек), включить fixedPosition для стационарных, positionPrecision=32
+**Известные баги**: #8403 (GPS→fixed_position), #7478 (precision→округление), #836 (T-Echo GPS теряет фикс)
+
 ### Ключевые изменения 2.7.15
 - Телеметрия отключена по умолчанию
 - Прямые сообщения только через PKI
@@ -251,7 +266,7 @@ Preset
   name, description?, icon, role, powerSaving, lsSecs, minWakeSecs
   gpsMode, gpsUpdateInterval, agpsEnabled, gpsAttemptTime
   positionPrecision(32), positionFlags(299), positionBroadcastSecs, smartBroadcast*
-  telemetryInterval, region, modemPreset, txPower, hopLimit, usePreamble
+  fixedPosition(false), telemetryInterval, region, modemPreset, txPower, hopLimit, usePreamble
   bluetoothEnabled, bluetoothFixedPin?, screenOnSecs, ledDisabled
   rebroadcastMode, channelId? → Channel
   isBuiltIn, builtinId? @unique
@@ -326,6 +341,7 @@ SyncLog
 30. Полная телеметрия: добавлены 7 полей (speed, heading, satsInView, HDOP, pressure, channelUtilization, airUtilTx) в БД, мост, API, UI. Мост извлекает groundSpeed(мм/с→м/с), groundTrack(1/10000°→°), satsInView, HDOP(÷100) из Position; channelUtilization, airUtilTx из DeviceMetrics; barometricPressure из EnvironmentMetrics. Кэши node_dev_metrics/node_env_metrics для periodic sync. Карточка узла: скорость(км/ч), курс(°), спутники(цвет), HDOP(цвет), давление(гПа), загрузка канала(%), эфир TX(%). Карта: скорость, курс, спутники в попапе.
 31. Фикс setOwner и factory reset: (а) При factory reset поля имени очищаются — устройство получает дефолтное «Meshtastic XXXX», иначе setOwner() перезаписывал старое имя; (б) short_name макс. 4 символа (nChars=4 в Python-библиотеке, НЕ 5); (в) Защита от sys.exit() при пустом имени в setOwner(); (г) Задержка 5 сек после factory reset перед setOwner(); (д) Проверено по исходникам AdminModule.cpp + NodeDB.cpp v2.7.15: factory_reset_config→factoryReset()→installDefaultDeviceState()→сброс owner.
 32. Установка имени устройства через setOwner без пресета: (а) POST /api/set-owner в мосте — вызывает setOwner() на локальном или удалённом узле, ensureSessionKey() перед вызовом, не требует перезагрузки; (б) POST /api/meshtastic/set-owner в API дашборда — пересылает запрос на мост + обновляет БД при успехе; (в) Диалог редактирования узла — новая опция «Установить на устройстве» с индикатором статуса моста; (г) Без опции имя меняется только в БД и перезаписывается при следующей синхронизации.
+33. GPS дрейф и fixedPosition: (а) Исследована проблема дрейфа координат у стационарного трекера — 4 причины (GPS шум ±3-10м без фильтрации, smart broadcast с малым порогом, gpsUpdateInterval=1 сек слишком частый, position_precision<32 обфусцирует); (б) Добавлено поле fixedPosition (Boolean, default false) в Preset модель, мост, UI пресетов, API; (в) При fixedPosition=true мост принудительно ставит gps_mode=DISABLED (баг #8403: onGPSChanged перезаписывает fixed_position); (г) UI: чекбокс «Фиксированная позиция» с предупреждением + отображение в карточке пресета; (д) Генерация команд/YAML включает fixed_position; (е) Документация обновлена: PROJECT_RULES.md (раздел 4.2 — fixedPosition + дрейф GPS), AI_PROMPT.md
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -357,4 +373,4 @@ ALL, LOCAL_SKIP, SIMPLE
 
 ---
 
-_Последнее обновление: 2026-05-10 (Установка имени устройства: POST /api/set-owner в мосте, опция «Установить на устройстве» в диалоге редактирования)_
+_Последнее обновление: 2026-05-11 (GPS дрейф: fixedPosition, рекомендации, баги #8403/#7478/#836)_

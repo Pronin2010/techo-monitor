@@ -92,3 +92,23 @@ Stage Summary:
 - Без чекбокса имя сохраняется только в БД (как раньше) — будет перезаписано при синхронизации
 - Мост получил новый endpoint POST /api/set-owner для установки имени без полного пресета
 - CLI-альтернатива: `meshtastic --set-owner "Имя" --set-owner-short "IMYA"`
+
+---
+Task ID: 33
+Agent: main
+Task: Исследовать проблему дрейфа GPS координат у стационарного трекера, добавить fixedPosition, обновить рекомендации
+
+Work Log:
+- Исследована документация Meshtastic 2.7.15 и GitHub issues по проблеме GPS дрейфа
+- Найдены 4 причины: (1) GPS шум ±3-10м без фильтрации; (2) smart broadcast с малым порогом; (3) gpsUpdateInterval=1 слишком частый; (4) position_precision<32 обфусцирует
+- Найдены баги прошивки: #8403 (onGPSChanged перезаписывает fixed_position), #7478 (precision<32 округляет координаты), #836 (T-Echo GPS теряет фикс)
+- Добавлено поле fixedPosition (Boolean, default false) в: prisma/schema.prisma, src/lib/builtin-presets.ts, techo-bridge.py, settings-presets-tab.tsx, API роуты (presets/route.ts, config/route.ts)
+- В мосте: при fixedPosition=true принудительно gps_mode=DISABLED (баг #8403), диагностика fixed_position после перезагрузки
+- В UI: чекбокс «Фиксированная позиция» с Tooltip и Alert-предупреждением, отображение «Фикс. позиция» в карточке пресета, генерация команд/YAML с fixed_position
+- Обновлена документация: PROJECT_RULES.md (раздел 4.2: fixedPosition + дрейф GPS + таблица решений + баги), AI_PROMPT.md
+
+Stage Summary:
+- Корневая причина дрейфа: Meshtastic не фильтрует GPS + баг #8403 при fixed_position
+- Добавлена настройка fixedPosition для стационарных устройств
+- Мост автоматически отключает GPS при fixedPosition=true
+- Рекомендации: увеличить smartBroadcastMinDist (50-100м), gpsUpdateInterval (30 сек), использовать fixedPosition для стационарных

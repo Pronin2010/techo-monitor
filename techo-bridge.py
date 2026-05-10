@@ -474,11 +474,32 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             if smart_enabled:
                 node.localConfig.position.broadcast_smart_minimum_distance = config.get('smartBroadcastMinDist', 20)
                 node.localConfig.position.broadcast_smart_minimum_interval_secs = config.get('smartBroadcastMinInterval', 60)
+            # Fixed position — зафиксировать координаты устройства
+            # Protobuf: Config.PositionConfig.fixed_position (поле 3)
+            # Когда fixed_position=true, устройство использует последнюю известную позицию
+            # вместо обновления от GPS. Полезно для стационарных устройств.
+            # ⚠️ ВАЖНО: Известный баг прошивки #8403 — если GPS включён (ENABLED),
+            #   коллбек onGPSChanged перезаписывает fixed_position! Поэтому при
+            #   fixed_position=true принудительно ставим gps_mode=DISABLED.
+            # CLI: meshtastic --set position.fixed_position true
+            # Python: node.localConfig.position.fixed_position = True
+            # Для задания конкретных координат: node.setFixedPosition(lat, lon, alt)
+            # или CLI: meshtastic --setlat XX.XX --setlon YY.YY --setalt ZZ
+            fixed_pos = config.get('fixedPosition', False)
+            if fixed_pos:
+                node.localConfig.position.fixed_position = True
+                # Если GPS включён — принудительно отключаем (баг #8403)
+                if gps_str == 'ENABLED':
+                    print("\033[33m[CFG] ⚠ fixed_position=true → gps_mode принудительно DISABLED (баг #8403: GPS перезаписывает fixed_position)\033[0m")
+                    node.localConfig.position.gps_mode = GPS_MODE_MAP['DISABLED']
+            else:
+                node.localConfig.position.fixed_position = False
             node.writeConfig("position")
             time.sleep(0.5)
             sections_written.append("position")
             flags_val = 0 if flags == 0 else flags
-            print(f"\033[32m[CFG] position: gps={gps_str}, flags={flags_val}, smart={smart_enabled}\033[0m")
+            fixed_str = f', fixed=True (gps→DISABLED)' if fixed_pos else ''
+            print(f"\033[32m[CFG] position: gps={gps_str}, flags={flags_val}, smart={smart_enabled}{fixed_str}\033[0m")
 
             # ── Power ──
             node.localConfig.power.is_power_saving = config.get('powerSaving', False)
@@ -671,7 +692,8 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                     p = fresh_node.localConfig.position
                     bt_fresh = fresh_node.localConfig.bluetooth
                     bt_mode_fresh = BT_MODE_REVERSE.get(bt_fresh.mode, f'UNKNOWN({bt_fresh.mode})')
-                    print(f"\033[36m[DIAG] После применения: role={d.role}, region={l.region}, modem={l.modem_preset}, gps_mode={p.gps_mode}, flags={p.position_flags}\033[0m")
+                    fixed_pos_read = getattr(p, 'fixed_position', None)
+                    print(f"\033[36m[DIAG] После применения: role={d.role}, region={l.region}, modem={l.modem_preset}, gps_mode={p.gps_mode}, flags={p.position_flags}, fixed_position={fixed_pos_read}\033[0m")
                     # Проверяем position_precision на канале 0
                     try:
                         ch0 = fresh_node.channels[0]

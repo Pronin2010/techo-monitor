@@ -28,6 +28,7 @@ export interface BuiltinPresetData {
   smartBroadcastEnabled: boolean
   smartBroadcastMinDist: number
   smartBroadcastMinInterval: number
+  fixedPosition: boolean    // position.fixed_position: зафиксировать координаты. true = устройство использует последнюю позицию без обновления GPS. ⚠️ Баг #8403: нужен gps_mode=DISABLED
   telemetryInterval: number
   region: string
   modemPreset: string
@@ -64,6 +65,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     smartBroadcastEnabled: true,
     smartBroadcastMinDist: 20,
     smartBroadcastMinInterval: 60,
+    fixedPosition: false,
     telemetryInterval: 300,
     region: 'EU_433',
     modemPreset: 'LONG_MODERATE',
@@ -98,6 +100,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     smartBroadcastEnabled: true,
     smartBroadcastMinDist: 50,
     smartBroadcastMinInterval: 300,
+    fixedPosition: false,
     telemetryInterval: 900,
     region: 'EU_433',
     modemPreset: 'LONG_MODERATE',
@@ -132,6 +135,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     smartBroadcastEnabled: false,
     smartBroadcastMinDist: 0,
     smartBroadcastMinInterval: 0,
+    fixedPosition: false,     // Базовая станция в помещении — координаты не нужны
     telemetryInterval: 300,
     region: 'EU_433',
     modemPreset: 'LONG_MODERATE',
@@ -166,6 +170,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     smartBroadcastEnabled: true,
     smartBroadcastMinDist: 100,
     smartBroadcastMinInterval: 300,
+    fixedPosition: false,
     telemetryInterval: 300,
     region: 'EU_433',
     modemPreset: 'LONG_FAST',

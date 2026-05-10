@@ -47,6 +47,7 @@ interface PresetData {
   smartBroadcastEnabled: boolean
   smartBroadcastMinDist: number
   smartBroadcastMinInterval: number
+  fixedPosition: boolean
   telemetryInterval: number
   region: string
   modemPreset: string
@@ -94,6 +95,7 @@ const DEFAULT_PRESET = {
   smartBroadcastEnabled: true,
   smartBroadcastMinDist: 20,
   smartBroadcastMinInterval: 60,
+  fixedPosition: false,
   telemetryInterval: 300,
   region: 'EU_433',
   modemPreset: 'LONG_MODERATE',
@@ -369,6 +371,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       smartBroadcastEnabled: preset.smartBroadcastEnabled,
       smartBroadcastMinDist: preset.smartBroadcastMinDist,
       smartBroadcastMinInterval: preset.smartBroadcastMinInterval,
+      fixedPosition: preset.fixedPosition,
       telemetryInterval: preset.telemetryInterval,
       region: preset.region,
       modemPreset: preset.modemPreset,
@@ -462,6 +465,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
         smartBroadcastEnabled: preset.smartBroadcastEnabled,
         smartBroadcastMinDist: preset.smartBroadcastMinDist,
         smartBroadcastMinInterval: preset.smartBroadcastMinInterval,
+        fixedPosition: preset.fixedPosition,
         telemetryInterval: preset.telemetryInterval,
         region: preset.region,
         modemPreset: preset.modemPreset,
@@ -676,6 +680,12 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       lines.push(`${cmd} --set position.broadcast_smart_minimum_distance ${p.smartBroadcastMinDist}`)
       lines.push(`${cmd} --set position.broadcast_smart_minimum_interval_secs ${p.smartBroadcastMinInterval}`)
     }
+    // Fixed position — зафиксировать координаты (для стационарных устройств)
+    if (p.fixedPosition) {
+      lines.push(`${cmd} --set position.fixed_position true`)
+      lines.push('# ⚠️ При fixed_position=true нужно также: --set position.gps_mode DISABLED')
+      lines.push('# Для задания координат: --setlat ШИРОТА --setlon ДОЛГОТА --setalt ВЫСОТА')
+    }
 
     // --- Bluetooth ---
     lines.push(`${cmd} --set bluetooth.enabled ${p.bluetoothEnabled}`)
@@ -758,6 +768,10 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     if (p.smartBroadcastEnabled) {
       ylines.push(`    broadcast_smart_minimum_distance: ${p.smartBroadcastMinDist}`)
       ylines.push(`    broadcast_smart_minimum_interval_secs: ${p.smartBroadcastMinInterval}`)
+    }
+    if (p.fixedPosition) {
+      ylines.push('    fixed_position: true')
+      ylines.push('    # ⚠️ gps_mode должен быть DISABLED при fixed_position (баг #8403)')
     }
     ylines.push('')
     ylines.push('module_config:')
@@ -845,6 +859,9 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     if (preset.smartBroadcastEnabled) {
       lines.push(`${cmd} --set position.broadcast_smart_minimum_distance ${preset.smartBroadcastMinDist}`)
       lines.push(`${cmd} --set position.broadcast_smart_minimum_interval_secs ${preset.smartBroadcastMinInterval}`)
+    }
+    if (preset.fixedPosition) {
+      lines.push(`${cmd} --set position.fixed_position true`)
     }
     lines.push(`${cmd} --set bluetooth.enabled ${preset.bluetoothEnabled}`)
     lines.push(`${cmd} --set display.screen_on_secs ${preset.screenOnSecs}`)
@@ -1276,6 +1293,14 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                                 <Cpu className="size-3.5 text-muted-foreground shrink-0" />
                                 <span className="text-muted-foreground text-xs">Smart:</span>
                                 <span className="font-medium text-xs">{preset.smartBroadcastMinDist}м / {preset.smartBroadcastMinInterval}с</span>
+                              </div>
+                            )}
+
+                            {/* Fixed position */}
+                            {preset.fixedPosition && (
+                              <div className="flex items-center gap-2">
+                                <MapPin className="size-3.5 text-amber-500 shrink-0" />
+                                <span className="font-medium text-xs text-amber-600 dark:text-amber-400">Фикс. позиция</span>
                               </div>
                             )}
 
@@ -1857,6 +1882,50 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                           />
                         </div>
                       </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Фиксированная позиция — для стационарных устройств */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="fixed-position" className="flex items-center gap-1.5">
+                          Фиксированная позиция
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="size-3.5 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-sm">
+                              Устройство использует последнюю известную позицию без обновления от GPS.
+                              Полезно для стационарных устройств (базовая станция, лагерь).
+                              ⚠️ GPS будет принудительно отключён (баг #8403: GPS перезаписывает fixed_position).
+                              Для задания конкретных координат используйте CLI: --setlat ШИРОТА --setlon ДОЛГОТА
+                            </TooltipContent>
+                          </Tooltip>
+                        </Label>
+                        <p className="text-[11px] text-muted-foreground">
+                          position.fixed_position — зафиксировать координаты
+                        </p>
+                      </div>
+                      <Checkbox
+                        id="fixed-position"
+                        checked={form.fixedPosition}
+                        onCheckedChange={v => updateField('fixedPosition', !!v)}
+                      />
+                    </div>
+                    {form.fixedPosition && (
+                      <Alert className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+                        <Info className="size-4 text-amber-500" />
+                        <AlertDescription className="text-xs text-amber-700 dark:text-amber-300">
+                          GPS будет принудительно отключён (gps_mode=DISABLED) при применении пресета.
+                          Устройство использует последнюю полученную GPS-позицию.
+                          Для задания конкретных координат: <code className="bg-muted px-1 rounded">--setlat</code>{' '}
+                          <code className="bg-muted px-1 rounded">--setlon</code>{' '}
+                          <code className="bg-muted px-1 rounded">--setalt</code>
+                        </AlertDescription>
+                      </Alert>
                     )}
                   </div>
                 </div>

@@ -125,6 +125,7 @@ model Preset {
   smartBroadcastEnabled Boolean @default(true)
   smartBroadcastMinDist Int @default(20)
   smartBroadcastMinInterval Int @default(60)
+  fixedPosition Boolean @default(false)  // position.fixed_position: зафиксировать координаты устройства. true = устройство использует последнюю известную позицию без обновления GPS. Для стационарных устройств (база, лагерь). ⚠️ Баг #8403: GPS перезаписывает fixed_position — нужно gps_mode=DISABLED
 
   // Telemetry
   telemetryInterval Int @default(300)
