@@ -71,7 +71,39 @@ _Прочитай этот файл в начале каждого чата и �
 - Все флаги: 1023
 - ⚠️ SPEED/HEADING — для транспорта, пешком ненадёжны
 
-## 4.3. Mesh-стратегия
+## 4.3. Телеметрия (данные от трекера)
+
+Мост извлекает данные из protobuf-пакетов Meshtastic и отправляет в дашборд:
+
+### Position (порт 3)
+| Поле protobuf | Поле БД | Конвертация | Описание |
+|---------------|---------|-------------|----------|
+| latitudeI | latitude | ÷ 1e7 | Широта |
+| longitudeI | longitude | ÷ 1e7 | Долгота |
+| altitude | altitude | как есть | Высота (м) |
+| groundSpeed | speed | ÷ 1000 мм/с → м/с | Скорость |
+| groundTrack | heading | ÷ 10000 → градусы | Курс |
+| satsInView | satsInView | как есть | Кол-во спутников GPS |
+| HDOP | hdop | ÷ 100 | Горизонтальная точность |
+
+### DeviceMetrics (порт 7, телеметрия)
+| Поле protobuf | Поле БД | Описание |
+|---------------|---------|----------|
+| batteryLevel | batteryLevel | Заряд батареи (%) |
+| voltage | voltage | Напряжение (В) |
+| channelUtilization | channelUtilization | Загрузка канала (%) |
+| airUtilTx | airUtilTx | Использование эфира TX (%) |
+
+### EnvironmentMetrics (порт 7, телеметрия)
+| Поле protobuf | Поле БД | Описание |
+|---------------|---------|----------|
+| temperature | temperature | Температура (°C) |
+| humidity | humidity | Влажность (%) |
+| barometricPressure | pressure | Давление (гПа) |
+
+⚠️ Мост использует кэши `node_dev_metrics` и `node_env_metrics` для передачи этих данных в periodic sync (раньше они терялись — извлекались в on_receive, но не попадали в node_entry).
+
+## 4.4. Mesh-стратегия
 
 - **Трекеры (TRACKER)** — конечные узлы, спят и экономят батарею, не ретранслируют пока спят
 - **Надёжность mesh обеспечивается промежуточными узлами** (ROUTER / REPEATER), не трекерами
@@ -126,4 +158,4 @@ _Прочитай этот файл в начале каждого чата и �
 
 ---
 
-_Последнее обновление: 2026-05-09 (Добавлены позиционные настройки: positionPrecision + positionFlags)_
+_Последнее обновление: 2026-05-09 (Полная телеметрия: speed, heading, satsInView, HDOP, pressure, channelUtilization, airUtilTx)_

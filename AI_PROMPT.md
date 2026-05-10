@@ -226,6 +226,8 @@ Node ──< Telemetry
   name, shortName, hardwareModel, role, status
   batteryLevel?, voltage?, usbPower, snr, rssi
   latitude?, longitude?, altitude?
+  speed?, heading?, satsInView?, hdop?        # GPS-данные позиции
+  pressure?, channelUtilization?, airUtilTx?   # Давление, сеть
   lsSecs?, minWakeSecs?, lastSeen
 
 Channel ──< ConnectionConfig
@@ -235,7 +237,10 @@ Channel ──< ConnectionConfig
 
 Telemetry
   nodeId → Node, batteryLevel?, voltage?, snr, rssi
-  temperature?, humidity?, latitude?, longitude?, altitude?
+  temperature?, humidity?, pressure?           # Окружающая среда
+  latitude?, longitude?, altitude?
+  speed?, heading?, satsInView?, hdop?          # GPS-данные позиции
+  channelUtilization?, airUtilTx?               # Сетевая статистика
 
 ConnectionConfig
   type (serial/mqtt/disabled), serialPort, mqttBroker
@@ -308,6 +313,7 @@ SyncLog
 27. Фикс positionPrecision: убран try/catch вокруг записи канала (ошибка → откат транзакции), добавлена немедленная диагностика position_precision после writeChannel(0), исправлен дефолт прошивки с 14 на 13 (проверено по Channels.cpp v2.7.15), исправлены скрипты (--set position.position_precision → --ch-index 0 --ch-set module_settings.position_precision), исправлен баг в techo-dump-config.py (positionFlags сравнивался с positionPrecision)
 28. Автосинхронизация БД: prisma db push в dev-скрипте + postinstall prisma generate
 29. Фикс positionFlags: 943→299 (пеший режим, дефолт 811 без SPEED). Проверено по protobuf config.proto v2.7.15. Все пресеты, UI-опции, скрипты обновлены.
+30. Полная телеметрия: добавлены 7 полей (speed, heading, satsInView, HDOP, pressure, channelUtilization, airUtilTx) в БД, мост, API, UI. Мост извлекает groundSpeed(мм/с→м/с), groundTrack(1/10000°→°), satsInView, HDOP(÷100) из Position; channelUtilization, airUtilTx из DeviceMetrics; barometricPressure из EnvironmentMetrics. Кэши node_dev_metrics/node_env_metrics для periodic sync. Карточка узла: скорость(км/ч), курс(°), спутники(цвет), HDOP(цвет), давление(гПа), загрузка канала(%), эфир TX(%). Карта: скорость, курс, спутники в попапе.
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -339,4 +345,4 @@ ALL, LOCAL_SKIP, SIMPLE
 
 ---
 
-_Последнее обновление: 2026-05-09 (Фикс positionFlags: 943→299 пеший режим, таблица PositionFlags, автосинхронизация БД)_
+_Последнее обновление: 2026-05-09 (Полная телеметрия: speed, heading, satsInView, HDOP, pressure, channelUtilization, airUtilTx)_
