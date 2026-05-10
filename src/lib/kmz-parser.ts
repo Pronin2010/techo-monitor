@@ -154,9 +154,15 @@ async function parseKmz(file: File): Promise<KmzParseResult> {
     return null
   })
 
-  // Пустой GeoJSON допустим, если есть GroundOverlay
-  const finalGeojson: FeatureCollection = (geojson.features && geojson.features.length > 0)
-    ? geojson
+  // Убираем из GeoJSON полигоны-дубликаты GroundOverlay
+  // @tmcw/togeojson превращает <GroundOverlay> в Polygon — это синий прямоугольник,
+  // который дублирует растровое изображение. Он не нужен.
+  const filteredFeatures = groundOverlays.length > 0
+    ? geojson.features.filter(f => !isGroundOverlayPolygon(f, groundOverlays))
+    : geojson.features
+
+  const finalGeojson: FeatureCollection = filteredFeatures.length > 0
+    ? { type: 'FeatureCollection', features: filteredFeatures }
     : { type: 'FeatureCollection', features: [] }
 
   if (finalGeojson.features.length === 0 && groundOverlays.length === 0) {
@@ -207,8 +213,13 @@ async function parseKml(file: File): Promise<KmzParseResult> {
     return null
   })
 
-  const finalGeojson: FeatureCollection = (geojson.features && geojson.features.length > 0)
-    ? geojson
+  // Убираем из GeoJSON полигоны-дубликаты GroundOverlay
+  const filteredFeatures = groundOverlays.length > 0
+    ? geojson.features.filter(f => !isGroundOverlayPolygon(f, groundOverlays))
+    : geojson.features
+
+  const finalGeojson: FeatureCollection = filteredFeatures.length > 0
+    ? { type: 'FeatureCollection', features: filteredFeatures }
     : { type: 'FeatureCollection', features: [] }
 
   if (finalGeojson.features.length === 0 && groundOverlays.length === 0) {
@@ -222,6 +233,55 @@ async function parseKml(file: File): Promise<KmzParseResult> {
     fileName: file.name,
     warnings,
   }
+}
+
+/**
+ * Проверяет, является ли GeoJSON-фича полигоном-дубликатом GroundOverlay
+ * (прямоугольник с координатами, совпадающими с LatLonBox оверлея)
+ */
+function isGroundOverlayPolygon(
+  feature: GeoJSON.Feature,
+  overlays: GroundOverlayData[]
+): boolean {
+  const geom = feature.geometry
+  if (!geom) return false
+  if (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon') return false
+
+  // Получаем bbox фичи
+  const coords = geom.type === 'Polygon'
+    ? geom.coordinates[0] // внешнее кольцо
+    : (geom as GeoJSON.MultiPolygon).coordinates[0][0]
+
+  if (!coords || coords.length < 4) return false
+
+  // Вычисляем bbox полигона [minLon, minLat, maxLon, maxLat]
+  const lons = coords.map((c: number[]) => c[0])
+  const lats = coords.map((c: number[]) => c[1])
+  const featWest = Math.min(...lons)
+  const featEast = Math.max(...lons)
+  const featSouth = Math.min(...lats)
+  const featNorth = Math.max(...lats)
+
+  // Проверяем совпадение с любым GroundOverlay (с допуском ~0.0001°)
+  const EPS = 0.0001
+  for (const go of overlays) {
+    const goWest = go.bounds[0][1]
+    const goSouth = go.bounds[0][0]
+    const goEast = go.bounds[1][1]
+    const goNorth = go.bounds[1][0]
+
+    if (
+      Math.abs(featSouth - goSouth) < EPS &&
+      Math.abs(featNorth - goNorth) < EPS &&
+      Math.abs(featWest - goWest) < EPS &&
+      Math.abs(featEast - goEast) < EPS
+    ) {
+      console.log(`[KMZ] Убран полигон-дубликат GroundOverlay: ${feature.properties?.name || '(без имени)'}`)
+      return true
+    }
+  }
+
+  return false
 }
 
 /**
