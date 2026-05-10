@@ -21,7 +21,9 @@ export interface BuiltinPresetData {
   agpsEnabled: boolean
   gpsAttemptTime: number
   positionPrecision: number   // channel module_settings.position_precision (0-32 бита). 32 = макс. точность (~1м), 13 = дефолт прошивки (~2.9км), 0 = не передавать
-  positionFlags: number      // position.position_flags (битовая маска PositionFlags). 943 = все данные
+  positionFlags: number      // position.position_flags (битовая маска PositionFlags protobuf).
+                             // ALT=1, ALT_MSL=2, GEO=4, DOP=8, HVDOP=16, SAT=32, SEQ=64, TS=128, HEADING=256, SPEED=512
+                             // 299 = дефолт без SPEED (пеший), 811 = дефолт прошивки (с SPEED), 1023 = все
   positionBroadcastSecs: number
   smartBroadcastEnabled: boolean
   smartBroadcastMinDist: number
@@ -57,7 +59,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     agpsEnabled: false,
     gpsAttemptTime: 90,
     positionPrecision: 32,  // Максимальная точность координат (~1м)
-    positionFlags: 943,     // ALT+MSL+GEO+DOP+HVDOP+SAT+SEQ+TS+HEADING+SPEED
+    positionFlags: 299,     // ALT+MSL+DOP+SAT+HEADING (дефолт 811 без SPEED — пеший режим)
     positionBroadcastSecs: 60,
     smartBroadcastEnabled: true,
     smartBroadcastMinDist: 20,
@@ -91,7 +93,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     agpsEnabled: false,
     gpsAttemptTime: 90,
     positionPrecision: 32,  // Максимальная точность координат (~1м)
-    positionFlags: 943,     // ALT+MSL+GEO+DOP+HVDOP+SAT+SEQ+TS+HEADING+SPEED
+    positionFlags: 299,     // ALT+MSL+DOP+SAT+HEADING (дефолт 811 без SPEED — пеший режим)
     positionBroadcastSecs: 300,
     smartBroadcastEnabled: true,
     smartBroadcastMinDist: 50,
@@ -125,7 +127,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     agpsEnabled: false,
     gpsAttemptTime: 0,
     positionPrecision: 0,   // Не передавать координаты
-    positionFlags: 0,       // Нет флагов позиции
+    positionFlags: 0,       // Не передавать (GPS не нужен в помещении)
     positionBroadcastSecs: 900,
     smartBroadcastEnabled: false,
     smartBroadcastMinDist: 0,
@@ -159,7 +161,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     agpsEnabled: true,
     gpsAttemptTime: 30,
     positionPrecision: 32,  // Максимальная точность координат (~1м)
-    positionFlags: 175,     // ALT+MSL+GEO+DOP+SAT+TS (без HEADING/SPEED)
+    positionFlags: 299,     // ALT+MSL+DOP+SAT+HEADING (дефолт 811 без SPEED — пеший режим)
     positionBroadcastSecs: 300,
     smartBroadcastEnabled: true,
     smartBroadcastMinDist: 100,

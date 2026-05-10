@@ -89,7 +89,7 @@ const DEFAULT_PRESET = {
   agpsEnabled: false,
   gpsAttemptTime: 90,
   positionPrecision: 32,
-  positionFlags: 943,
+  positionFlags: 299,
   positionBroadcastSecs: 60,
   smartBroadcastEnabled: true,
   smartBroadcastMinDist: 20,
@@ -173,12 +173,14 @@ const POSITION_PRECISION_OPTIONS = [
   { value: 32, label: '32 — максимальная (~1 м)' },
 ]
 
-/** Флаги состава данных позиции (position.position_flags) */
+/** Флаги состава данных позиции (position.position_flags)
+ *  ALT=1, ALT_MSL=2, GEO=4, DOP=8, HVDOP=16, SAT=32, SEQ=64, TS=128, HEADING=256, SPEED=512
+ */
 const POSITION_FLAGS_OPTIONS = [
   { value: 0, label: '0 — не передавать позицию' },
-  { value: 3, label: '3 — минимальная (ALTITUDE+ALTITUDE_MSL)' },
-  { value: 175, label: '175 — базовая (+GEO+DOP+SAT+TS)' },
-  { value: 943, label: '943 — полная (+HVDOP+SEQ+HEADING+SPEED)' },
+  { value: 3, label: '3 — минимальная (ALT+ALT_MSL)' },
+  { value: 299, label: '299 — пеший режим (ALT+MSL+DOP+SAT+HEADING)' },
+  { value: 811, label: '811 — дефолт прошивки (+SPEED, транспорт)' },
   { value: 1023, label: '1023 — все флаги' },
 ]
 
@@ -1769,7 +1771,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Какие данные включать в позиционные сообщения. 943 = полная (ALT+MSL+GEO+DOP+HVDOP+SAT+SEQ+TS+HEADING+SPEED).
+                      Какие данные включать в позиционные сообщения. ALT=1, ALT_MSL=2, GEO=4, DOP=8, HVDOP=16, SAT=32, SEQ=64, TS=128, HEADING=256, SPEED=512. 299 = пеший, 811 = транспорт, 1023 = все.
                     </p>
                   </div>
 

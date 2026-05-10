@@ -44,8 +44,8 @@ meshtastic %PORT% --set position.gps_update_interval 15
 echo [5/12] GPS attempt time: 90 сек (больше времени для леса)
 meshtastic %PORT% --set position.gps_attempt_time 90
 
-echo [6/12] Position flags: 939 (с меткой времени)
-meshtastic %PORT% --set position.position_flags 939
+echo [6/12] Position flags: 299 (пеший режим, без SPEED)
+meshtastic %PORT% --set position.position_flags 299
 
 echo [7/12] Точность позиции: 32 (полная точность) — настройка КАНАЛА
 meshtastic %PORT% --ch-index 0 --ch-set module_settings.position_precision 32

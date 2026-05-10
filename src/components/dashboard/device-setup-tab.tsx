@@ -206,7 +206,7 @@ const INITIAL_STATE = {
   gpsMode: 'ENABLED' as GpsMode,
   gpsUpdateInterval: 30,
   positionPrecision: 32,
-  positionFlags: 943,
+  positionFlags: 299,
   // --- Telemetry ---
   telemetryDeviceInterval: 300,
   // --- LoRa Advanced ---
@@ -969,8 +969,8 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
                         {[
                           { value: 0, label: '0 — не передавать' },
                           { value: 3, label: '3 — минимальная (ALT+MSL)' },
-                          { value: 175, label: '175 — базовая (+GEO+DOP+SAT+TS)' },
-                          { value: 943, label: '943 — полная (+HVDOP+SEQ+HEADING+SPEED)' },
+                          { value: 299, label: '299 — пеший режим (ALT+MSL+DOP+SAT+HEADING)' },
+                          { value: 811, label: '811 — дефолт прошивки (+SPEED, транспорт)' },
                           { value: 1023, label: '1023 — все флаги' },
                         ].map((o) => (
                           <SelectItem key={o.value} value={String(o.value)}>

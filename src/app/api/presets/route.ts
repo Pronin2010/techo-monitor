@@ -53,7 +53,7 @@ export async function POST(request: Request) {
         agpsEnabled: body.agpsEnabled ?? false,
         gpsAttemptTime: body.gpsAttemptTime ?? 90,
         positionPrecision: body.positionPrecision ?? 32,
-        positionFlags: body.positionFlags ?? 943,
+        positionFlags: body.positionFlags ?? 299,
         positionBroadcastSecs: body.positionBroadcastSecs ?? 300,
         smartBroadcastEnabled: body.smartBroadcastEnabled ?? true,
         smartBroadcastMinDist: body.smartBroadcastMinDist ?? 20,

@@ -428,13 +428,14 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             # Максимальная точность = 1023 (все флаги)
             # Типичные наборы:
             #   3   = ALTITUDE + ALTITUDE_MSL (минимальная)
-            #   175 = ALT+MSL+GEO+DOP+SAT+TS (точная позиция без движения)
-            #   943 = +HEADING+SPEED (полная с движением)
+            #   299 = ALT+MSL+DOP+SAT+HEADING (пеший режим, без SPEED)
+            #   811 = дефолт прошивки (ALT+MSL+DOP+SAT+HEADING+SPEED, транспорт)
             #   1023 = все флаги (максимальная)
             #
             # positionFlags из UI — точное значение position_flags
-            # Для максимальной точности UI передаёт 943 или 1023
-            flags = config.get('positionFlags', 943)
+            # Для пешего режима: 299 (дефолт 811 без SPEED)
+            # Для транспорта: 811 (дефолт прошивки)
+            flags = config.get('positionFlags', 299)
             if flags == 0:
                 node.localConfig.position.position_flags = 0   # Не отправлять позицию
             else:

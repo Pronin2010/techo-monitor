@@ -449,7 +449,7 @@ def compare_configs(device_config, preset_file):
 
     # Position (positionFlags — битовое поле, positionPrecision — настройка канала)
     check('gpsMode', d['position']['gpsMode'], p.get('gpsMode', 'ENABLED'))
-    check('positionFlags', d['position']['positionFlags'], p.get('positionFlags', 943))
+    check('positionFlags', d['position']['positionFlags'], p.get('positionFlags', 299))
     # positionPrecision — настройка КАНАЛА (channel.settings.module_settings.position_precision),
     # НЕ позиционного конфига! Проверяется отдельно ниже в секции канала.
     check('positionBroadcastSecs', d['position']['positionBroadcastSecs'], p.get('positionBroadcastSecs', 300), 's')
