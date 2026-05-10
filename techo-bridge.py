@@ -472,8 +472,8 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             smart_enabled = config.get('smartBroadcastEnabled', True)
             node.localConfig.position.position_broadcast_smart_enabled = smart_enabled
             if smart_enabled:
-                node.localConfig.position.broadcast_smart_minimum_distance = config.get('smartBroadcastMinDist', 20)
-                node.localConfig.position.broadcast_smart_minimum_interval_secs = config.get('smartBroadcastMinInterval', 60)
+                node.localConfig.position.broadcast_smart_minimum_distance = config.get('smartBroadcastMinDist', 100)  # Дефолт прошивки = 100м. Было 20м — слишком мало, GPS шум ±10м
+                node.localConfig.position.broadcast_smart_minimum_interval_secs = config.get('smartBroadcastMinInterval', 120)  # Было 60 сек — слишком часто
             # Fixed position — зафиксировать координаты устройства
             # Protobuf: Config.PositionConfig.fixed_position (поле 3)
             # Когда fixed_position=true, устройство использует последнюю известную позицию

@@ -93,8 +93,8 @@ const DEFAULT_PRESET = {
   positionFlags: 299,
   positionBroadcastSecs: 60,
   smartBroadcastEnabled: true,
-  smartBroadcastMinDist: 20,
-  smartBroadcastMinInterval: 60,
+  smartBroadcastMinDist: 100,    // Дефолт прошивки = 100м. Было 20м — слишком мало
+  smartBroadcastMinInterval: 120,  // Было 60 — слишком часто
   fixedPosition: false,
   telemetryInterval: 300,
   region: 'EU_433',
@@ -1867,7 +1867,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                             type="number"
                             min={1}
                             value={form.smartBroadcastMinDist}
-                            onChange={e => updateField('smartBroadcastMinDist', Number(e.target.value) || 20)}
+                            onChange={e => updateField('smartBroadcastMinDist', Number(e.target.value) || 100)}
                             className="w-28"
                           />
                         </div>

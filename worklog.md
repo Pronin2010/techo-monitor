@@ -112,3 +112,25 @@ Stage Summary:
 - Добавлена настройка fixedPosition для стационарных устройств
 - Мост автоматически отключает GPS при fixedPosition=true
 - Рекомендации: увеличить smartBroadcastMinDist (50-100м), gpsUpdateInterval (30 сек), использовать fixedPosition для стационарных
+
+---
+Task ID: 34
+Agent: main
+Task: Углублённое исследование GPS дрейфа, обновление рекомендаций и пресетов
+
+Work Log:
+- Исследована документация Meshtastic 2.7.15 и GitHub issues по проблеме GPS дрейфа
+- Найден аппаратный дефект T-Echo (LilyGO issue #32): проводящая сетка внутри замыкает пассивные компоненты GPS-антенны → GPS теряет спутники через 2-5 мин
+- Подтверждён баг #836: T-Echo L76K GNSS периодически теряет фикс после нескольких минут работы
+- Найдены новые баги: #8029 (GPS lock hold 20 сек), #992 (инверсия знака координат), #6785 (Smart Broadcast спорадическое вещание)
+- Прочитана официальная документация position config: дефолты прошивки gpsUpdateInterval=0 (=120 сек), smartBroadcastMinDist=0 (=100 м), smartBroadcastMinInterval=0 (=900 сек)
+- Пресет «Трекер лес 12ч» исправлен: gpsUpdateInterval 1→30, smartBroadcastMinDist 20→100, smartBroadcastMinInterval 60→120
+- Пресет «Трекер лес 5 дней»: smartBroadcastMinDist 50→100
+- Дефолты обновлены в 6 файлах: builtin-presets.ts, prisma/schema.prisma, presets/route.ts, settings-presets-tab.tsx, techo-bridge.py
+- Документация обновлена: PROJECT_RULES.md (6 причин по вероятности, таблица сравнения с дефолтами прошивки, 6 багов), AI_PROMPT.md (задача 34)
+
+Stage Summary:
+- Главный вывод: симптом «после перезагрузки работает, потом дрейфует» = баг #836 + возможно аппаратный дефект LilyGO #32
+- Пресет «Трекер лес 12ч» имел критически неверные настройки: gpsUpdateInterval=1 (GPS не успевает), smartBroadcastMinDist=20 (GPS шум превышает порог)
+- Все дефолты приведены к рекомендациям дефолтов прошивки Meshtastic
+- Для стационарных устройств рекомендуется fixedPosition=true + gps_mode=DISABLED

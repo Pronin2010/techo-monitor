@@ -48,7 +48,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     builtinId: 'tracker-forest-12h',
     name: 'Трекер лес 12ч',
     description:
-      'Автономная работа без телефона. GPS всегда включён, EASY™ прогноз орбит. Автономность ~20 часов на 850 мАч.',
+      'Автономная работа без телефона. GPS всегда включён, EASY™ прогноз орбит. Автономность ~20 часов на 850 мАч. ⚠️ Если GPS дрейфует — проверить аппаратный дефект (LilyGO #32).',
     icon: '🌲',
     role: 'TRACKER',
     nodeInfoBroadcastSecs: 900,
@@ -56,15 +56,15 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     lsSecs: 0,
     minWakeSecs: 10,
     gpsMode: 'ENABLED',
-    gpsUpdateInterval: 1,
+    gpsUpdateInterval: 30,     // Было 1 сек — СЛИШКОМ ЧАСТО! L76K не успевает дать качественный фикс. Дефолт прошивки = 120 сек, минимум для леса = 30 сек
     agpsEnabled: false,
     gpsAttemptTime: 90,
     positionPrecision: 32,  // Максимальная точность координат (~1м)
     positionFlags: 299,     // ALT+MSL+DOP+SAT+HEADING (дефолт 811 без SPEED — пеший режим)
     positionBroadcastSecs: 60,
     smartBroadcastEnabled: true,
-    smartBroadcastMinDist: 20,
-    smartBroadcastMinInterval: 60,
+    smartBroadcastMinDist: 100,   // Было 20м — СЛИШКОМ МАЛО! GPS шум ±10м вызывает ложные вещания. Дефолт прошивки = 100м
+    smartBroadcastMinInterval: 120,  // Было 60 сек — увеличить до 120 сек для леса
     fixedPosition: false,
     telemetryInterval: 300,
     region: 'EU_433',
@@ -98,7 +98,7 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     positionFlags: 299,     // ALT+MSL+DOP+SAT+HEADING (дефолт 811 без SPEED — пеший режим)
     positionBroadcastSecs: 300,
     smartBroadcastEnabled: true,
-    smartBroadcastMinDist: 50,
+    smartBroadcastMinDist: 100,    // Было 50м — дефолт прошивки = 100м, оптимально для леса
     smartBroadcastMinInterval: 300,
     fixedPosition: false,
     telemetryInterval: 900,

@@ -123,8 +123,8 @@ model Preset {
   positionFlags      Int @default(299)   // position.position_flags: битовая маска PositionFlags (protobuf). ALT=1, ALT_MSL=2, GEO=4, DOP=8, HVDOP=16, SAT=32, SEQ=64, TS=128, HEADING=256, SPEED=512. 299 = дефолт(811) без SPEED (пеший), 811 = дефолт прошивки, 1023 = все
   positionBroadcastSecs Int @default(300)
   smartBroadcastEnabled Boolean @default(true)
-  smartBroadcastMinDist Int @default(20)
-  smartBroadcastMinInterval Int @default(60)
+  smartBroadcastMinDist Int @default(100)     // Дефолт прошивки = 100м (0=100м). Было 20м — слишком мало, GPS шум ±10м вызывает ложные вещания
+  smartBroadcastMinInterval Int @default(120)  // Минимум 120 сек для леса. Было 60 сек — слишком часто
   fixedPosition Boolean @default(false)  // position.fixed_position: зафиксировать координаты устройства. true = устройство использует последнюю известную позицию без обновления GPS. Для стационарных устройств (база, лагерь). ⚠️ Баг #8403: GPS перезаписывает fixed_position — нужно gps_mode=DISABLED
 
   // Telemetry
