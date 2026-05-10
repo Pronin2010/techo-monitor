@@ -64,7 +64,7 @@ src/
 │   ├── db.ts                     # Prisma Client (singleton, dev query logging)
 │   ├── types.ts                  # TypeScript типы + константы Meshtastic
 │   ├── utils.ts                  # cn() + serializeBigInt()
-│   ├── kmz-parser.ts             # KMZ/KML → GeoJSON парсер (@tmcw/togeojson + fflate)
+│   ├── kmz-parser.ts             # KMZ/KML → GeoJSON парсер (@tmcw/togeojson + fflate), GroundOverlay (ImageOverlay)
 │   └── builtin-presets.ts        # 4 встроенных пресета
 prisma/
 └── schema.prisma                 # 6 моделей: Node, Channel, Telemetry, ConnectionConfig, Preset, SyncLog
@@ -364,7 +364,7 @@ SyncLog
 34. Углублённое исследование GPS дрейфа: (а) Найден аппаратный дефект T-Echo — LilyGO issue #32: проводящая сетка внутри замыкает пассивные компоненты GPS-антенны → GPS теряет спутники через 2-5 мин; (б) Подтверждён баг #836 — T-Echo L76K GNSS периодически теряет фикс; (в) Найдены баги #8029 (GPS lock hold 20 сек), #992 (инверсия знака координат), #6785 (Smart Broadcast спорадическое вещание); (г) Пресет «Трекер лес 12ч» исправлен: gpsUpdateInterval 1→30 сек (L76K не успевает за 1 сек), smartBroadcastMinDist 20→100 м (дефолт прошивки, GPS шум ±10м), smartBroadcastMinInterval 60→120 сек; (д) Пресет «Трекер лес 5 дней»: smartBroadcastMinDist 50→100 м; (е) Все дефолты обновлены в 6 файлах: builtin-presets.ts, prisma/schema.prisma, presets/route.ts, settings-presets-tab.tsx, techo-bridge.py; (ж) Документация обновлена: PROJECT_RULES.md (расширенный раздел 4.2 — 6 причин по вероятности, таблица сравнения с дефолтами прошивки, 6 багов), AI_PROMPT.md
 35. Новый порядок прошивки пресетом: factory reset → 20 сек → reconnect → setOwner (имя) → reboot → 20 сек → reconnect → транзакция (конфиг) → reboot. (а) apply_config_to_node() перестроен в 3 явных шага с отдельной перезагрузкой после имени; (б) Таймаут API 120→180 сек; (в) UI диалог обновлён с описанием нового порядка; (г) Документация обновлена
 36. Ревью проекта: (а) MODEM_PRESET_MAP — добавлены LITE_FAST/SLOW, NARROW_FAST/SLOW (молча пропускались при push); (б) REBROADCAST_MODE_MAP — добавлены алиасы LOCAL_SKIP→1, SIMPLE→5; (в) usePreamble — зомби-поле, убрано из UI/CLI/YAML; (г) ROLE_MAP — комментарий TAK≠TAK_TRACKER; (д) Bridge docstring обновлён
-37. KMZ/KML overlay на карте: (а) Создан kmz-parser.ts — парсинг .kmz (unzip через fflate + KML→GeoJSON через @tmcw/togeojson) и .kml; (б) Карта (map-leaflet.tsx) — кнопка загрузки KMZ/KML, drag & drop, GeoJSON-слой с цветовым кодированием (точки=розовый, линии=оранжевый, полигоны=фиолетовый), popup с name/description, управление видимостью, подгонка bounds; (в) Панель «Слой» в статистике карты
+37. KMZ/KML overlay на карте: (а) Создан kmz-parser.ts — парсинг .kmz (unzip через fflate + KML→GeoJSON через @tmcw/togeojson) и .kml; (б) Карта (map-leaflet.tsx) — кнопка загрузки KMZ/KML, drag & drop, GeoJSON-слой с цветовым кодированием (точки=розовый, линии=оранжевый, полигоны=фиолетовый), popup с name/description, управление видимостью, подгонка bounds; (в) Панель «Слой» в статистике карты; (г) GroundOverlay — растровые изображения из KMZ (base64 data URL) через L.ImageOverlay с bounds, opacity из <color> KML, подгонка карты по combined bounds (вектор+растр)
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах

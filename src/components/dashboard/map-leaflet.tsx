@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Polyline, GeoJSON, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polyline, GeoJSON, ImageOverlay, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Badge } from '@/components/ui/badge'
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Wifi, WifiOff, Battery, Signal, Mountain, Moon, Sun, Repeat, EyeOff, Gauge, Navigation, Satellite, Upload, X, Layers, MapPin, Route as RouteIcon, Hexagon } from 'lucide-react'
 import type { MeshNode, NodeRole } from '@/lib/types'
 import { ROLE_META } from '@/lib/types'
-import { parseKmzFile, getGeoJsonStats, type KmzParseResult } from '@/lib/kmz-parser'
+import { parseKmzFile, getGeoJsonStats, type KmzParseResult, type GroundOverlayData } from '@/lib/kmz-parser'
 import type { FeatureCollection } from 'geojson'
 
 // Fix for default marker icons
@@ -66,23 +66,52 @@ function FitBounds({ nodes }: { nodes: MeshNode[] }) {
   return null
 }
 
-// Компонент для подгонки карты под bounds overlay-слоя
-function FitOverlayBounds({ geojson, trigger }: { geojson: FeatureCollection | null; trigger: number }) {
+// Компонент для подгонки карты под bounds overlay-слоя (вектор + растр)
+function FitOverlayBounds({
+  geojson,
+  groundOverlays,
+  trigger
+}: {
+  geojson: FeatureCollection | null
+  groundOverlays: GroundOverlayData[]
+  trigger: number
+}) {
   const map = useMap()
 
   React.useEffect(() => {
-    if (!geojson || trigger === 0) return
+    if (trigger === 0) return
 
     try {
-      const geoJsonLayer = L.geoJSON(geojson)
-      const bounds = geoJsonLayer.getBounds()
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [50, 50] })
+      let allBounds: L.LatLngBounds | null = null
+
+      // Bounds из векторных данных
+      if (geojson && geojson.features.length > 0) {
+        const geoJsonLayer = L.geoJSON(geojson)
+        const bounds = geoJsonLayer.getBounds()
+        if (bounds.isValid()) {
+          allBounds = bounds
+        }
+      }
+
+      // Bounds из растровых оверлеев (GroundOverlay)
+      for (const go of groundOverlays) {
+        const goBounds = L.latLngBounds(go.bounds[0], go.bounds[1])
+        if (goBounds.isValid()) {
+          if (allBounds) {
+            allBounds.extend(goBounds)
+          } else {
+            allBounds = goBounds
+          }
+        }
+      }
+
+      if (allBounds && allBounds.isValid()) {
+        map.fitBounds(allBounds, { padding: [50, 50] })
       }
     } catch {
       // игнорируем ошибки bounds
     }
-  }, [geojson, trigger, map])
+  }, [geojson, groundOverlays, trigger, map])
 
   return null
 }
@@ -304,23 +333,42 @@ export default function MapLeaflet({ nodes }: MapViewProps) {
         {/* KMZ/KML Overlay */}
         {overlay && overlayVisible && (
           <>
-            <GeoJSON
-              key={`${overlay.fileName}-${overlay.sourceType}`}
-              data={overlay.geojson}
-              style={geoJsonStyle}
-              onEachFeature={onEachFeature}
-              pointToLayer={(_feature, latlng) => {
-                return L.circleMarker(latlng, {
-                  radius: 6,
-                  color: '#e11d48',
-                  weight: 2,
-                  opacity: 0.9,
-                  fillColor: '#e11d48',
-                  fillOpacity: 0.6,
-                })
-              }}
+            {/* GroundOverlay — растровые изображения на карте */}
+            {overlay.groundOverlays.map(go => (
+              <ImageOverlay
+                key={go.id}
+                url={go.imageUrl}
+                bounds={go.bounds}
+                opacity={go.opacity}
+                interactive={true}
+              />
+            ))}
+
+            {/* Векторные данные (точки, линии, полигоны) — только если есть */}
+            {overlay.geojson.features.length > 0 && (
+              <GeoJSON
+                key={`${overlay.fileName}-${overlay.sourceType}-vector`}
+                data={overlay.geojson}
+                style={geoJsonStyle}
+                onEachFeature={onEachFeature}
+                pointToLayer={(_feature, latlng) => {
+                  return L.circleMarker(latlng, {
+                    radius: 6,
+                    color: '#e11d48',
+                    weight: 2,
+                    opacity: 0.9,
+                    fillColor: '#e11d48',
+                    fillOpacity: 0.6,
+                  })
+                }}
+              />
+            )}
+
+            <FitOverlayBounds
+              geojson={overlay.geojson}
+              groundOverlays={overlay.groundOverlays}
+              trigger={overlayFitTrigger}
             />
-            <FitOverlayBounds geojson={overlay.geojson} trigger={overlayFitTrigger} />
           </>
         )}
 
@@ -595,6 +643,12 @@ export default function MapLeaflet({ nodes }: MapViewProps) {
 
               {/* Статистика объектов */}
               <div className="flex flex-wrap gap-1.5 text-[9px]">
+                {overlay.groundOverlays.length > 0 && (
+                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                    <Layers className="h-2.5 w-2.5" />
+                    {overlay.groundOverlays.length} оверлей
+                  </span>
+                )}
                 {overlayStats.points > 0 && (
                   <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">
                     <MapPin className="h-2.5 w-2.5" />

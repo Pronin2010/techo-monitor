@@ -213,4 +213,5 @@ Stage Summary:
 - Пользователь может наложить .kmz/.kml файл на карту дашборда
 - Два способа загрузки: кнопка или drag & drop
 - GeoJSON-слой отображается поверх тайлов OSM с popup и управлением
-- Файлы: src/lib/kmz-parser.ts (новый), src/components/dashboard/map-leaflet.tsx (обновлён)
+- **GroundOverlay**: растровые изображения из KMZ-архива извлекаются и отображаются через L.ImageOverlay с bounds и opacity
+- Файлы: src/lib/kmz-parser.ts (обновлён), src/components/dashboard/map-leaflet.tsx (обновлён)
