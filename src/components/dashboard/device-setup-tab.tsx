@@ -207,8 +207,12 @@ const INITIAL_STATE = {
   // --- GPS ---
   gpsMode: 'ENABLED' as GpsMode,
   gpsUpdateInterval: 30,
+  agpsEnabled: false,
   positionPrecision: 32,
   positionFlags: 299,
+  positionBroadcastSecs: 300,
+  smartBroadcastMinDist: 100,
+  smartBroadcastMinInterval: 120,
   // --- Telemetry ---
   telemetryDeviceInterval: 300,
   // --- LoRa Advanced ---
@@ -369,10 +373,15 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     lines.push(`${p} --set position.gps_mode ${state.gpsMode}`)
     if (state.gpsMode === 'ENABLED') {
       lines.push(`${p} --set position.gps_update_interval ${state.gpsUpdateInterval}`)
+      lines.push(`${p} --set position.gps_attempt_time 90`)
     }
-    if (state.positionFlags > 0) {
-      lines.push(`${p} --set position.position_flags ${state.positionFlags}`)
+    if (state.agpsEnabled) {
+      lines.push(`${p} --set gps.agps_enabled true`)
     }
+    lines.push(`${p} --set position.position_flags ${state.positionFlags}`)
+    lines.push(`${p} --set position.position_broadcast_secs ${state.positionBroadcastSecs}`)
+    lines.push(`${p} --set position.broadcast_smart_minimum_distance ${state.smartBroadcastMinDist}`)
+    lines.push(`${p} --set position.broadcast_smart_minimum_interval_secs ${state.smartBroadcastMinInterval}`)
     if (state.positionPrecision > 0) {
       lines.push(`${p} --ch-index 0 --ch-set module_settings.position_precision ${state.positionPrecision}`)
     }
@@ -392,6 +401,8 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
       if (state.frequencyOverride) {
         lines.push(`${p} --ch-index 0 --ch-set frequency ${state.frequencyOverride}`)
       }
+      lines.push(`${p} --ch-index 0 --ch-set module_settings.position_precision ${state.positionPrecision}`)
+      lines.push(`${p} --reboot`)
     }
 
     return lines
@@ -463,14 +474,31 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
       ylines.push(`    gps_update_interval: ${state.gpsUpdateInterval}`)
       ylines.push(`    gps_attempt_time: ${state.gpsMode === 'ENABLED' ? 90 : 0}`)
     }
-    ylines.push('    position_broadcast_smart_enabled: true')
+    if (state.agpsEnabled) {
+      ylines.push('    agps_enabled: true')
+    }
     ylines.push(`    position_flags: ${state.positionFlags}`)
+    ylines.push(`    position_broadcast_secs: ${state.positionBroadcastSecs}`)
+    ylines.push('    position_broadcast_smart_enabled: true')
+    ylines.push(`    broadcast_smart_minimum_distance: ${state.smartBroadcastMinDist}`)
+    ylines.push(`    broadcast_smart_minimum_interval_secs: ${state.smartBroadcastMinInterval}`)
     // Device-specific position overrides (rx_gpio, tx_gpio, etc.)
+    // Пропускаем дублирующиеся поля, уже выведенные из state
+    const DEVICE_SETUP_POSITION_KEYS = new Set([
+      'gps_attempt_time',
+      'position_broadcast_smart_enabled',
+      'broadcast_smart_minimum_distance',
+      'broadcast_smart_minimum_interval_secs',
+      'agps_enabled',
+      'position_flags',
+      'position_broadcast_secs',
+      'gps_update_interval',
+      'gps_mode',
+      'fixed_position',
+    ])
     if (selectedDevice) {
-      const posExtras = selectedDevice.yamlExtras.filter(e => e.section === 'config' && e.subsection === 'position')
-      // Skip gps_attempt_time since we handle it in the main position section
+      const posExtras = selectedDevice.yamlExtras.filter(e => e.section === 'config' && e.subsection === 'position' && !DEVICE_SETUP_POSITION_KEYS.has(e.key))
       for (const extra of posExtras) {
-        if (['gps_attempt_time'].includes(extra.key)) continue
         if (extra.note) ylines.push(`    # ${extra.note}`)
         ylines.push(`    ${extra.key}: ${typeof extra.value === 'string' ? `"${extra.value}"` : extra.value}`)
       }
@@ -480,18 +508,32 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     ylines.push('module_config:')
     ylines.push('  telemetry:')
     ylines.push(`    device_update_interval: ${state.telemetryDeviceInterval}`)
-    ylines.push('  channel:')
-    ylines.push('    module_settings:')
-    ylines.push(`      position_precision: ${state.positionPrecision}`)
+    // ❌ module_config.channel.module_settings УБРАН — --configure игнорирует эту секцию!
+    // position_precision настраивается через CLI: --ch-index 0 --ch-set module_settings.position_precision N
 
-    // Channel commands (as comments in YAML)
+    // channel_url ВСЕГДА закомментирован — баг --seturl с base64 PSK (символ '+' ломает парсер)
+    ylines.push('# channel_url: "https://..."  # ⚠️ Закомментирован — --seturl багует с base64 PSK (символ "+")')
+
+    // Канал — ВСЕГДА отдельные команды после --configure (channel_url закомментирован из-за бага --seturl)
     if (state.setPrivatePsk && state.psk) {
       ylines.push('')
-      ylines.push('# Каналы необходимо настроить отдельно командами:')
-      ylines.push(`# python -m meshtastic --ch-index 0 --ch-set psk "base64:${state.psk}"`)
-      ylines.push(`# python -m meshtastic --ch-index 0 --ch-set name "${state.channelName}"`)
-      ylines.push(`# python -m meshtastic --ch-index 0 --ch-set uplink_enabled ${state.uplinkEnabled}`)
-      ylines.push(`# python -m meshtastic --ch-index 0 --ch-set downlink_enabled ${state.downlinkEnabled}`)
+      ylines.push('# ── Настройка канала (ПОСЛЕ --configure) ──')
+      ylines.push('# channel_url закомментирован из-за бага --seturl с base64 PSK')
+      ylines.push(`python -m meshtastic --ch-index 0 --ch-set psk "base64:${state.psk}"`)
+      ylines.push(`python -m meshtastic --ch-index 0 --ch-set name "${state.channelName}"`)
+      ylines.push(`python -m meshtastic --ch-index 0 --ch-set uplink_enabled ${state.uplinkEnabled}`)
+      ylines.push(`python -m meshtastic --ch-index 0 --ch-set downlink_enabled ${state.downlinkEnabled}`)
+      if (state.frequencyOverride) {
+        ylines.push(`python -m meshtastic --ch-index 0 --ch-set frequency ${state.frequencyOverride}`)
+      }
+      ylines.push(`python -m meshtastic --ch-index 0 --ch-set module_settings.position_precision ${state.positionPrecision}`)
+      ylines.push('python -m meshtastic --reboot')
+    } else if (state.positionPrecision > 0) {
+      // position_precision даже без канала
+      ylines.push('')
+      ylines.push('# ── Точность координат (ПОСЛЕ --configure) ──')
+      ylines.push(`python -m meshtastic --ch-index 0 --ch-set module_settings.position_precision ${state.positionPrecision}`)
+      ylines.push('python -m meshtastic --reboot')
     }
 
     return ylines.join('\n')

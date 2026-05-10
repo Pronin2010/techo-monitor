@@ -745,9 +745,9 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     ylines.push('# Экспорт: python -m meshtastic --export-config > backup.yaml')
     ylines.push('')
 
-    // channel_url (если привязан канал с URL)
-    if (linkedChannel?.channelUrl) {
-      ylines.push(`channel_url: "${linkedChannel.channelUrl}"`)
+    // channel_url ВСЕГДА закомментирован — баг --seturl с base64 PSK (символ '+' ломает парсер)
+    if (linkedChannel) {
+      ylines.push('# channel_url: "https://..."  # ⚠️ Закомментирован — --seturl багует с base64 PSK (символ "+")')
       ylines.push('')
     }
 
@@ -807,8 +807,21 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       ylines.push('    # ⚠️ gps_mode должен быть DISABLED при fixed_position (баг #8403)')
     }
     // Device-specific position overrides from yamlExtras (rx_gpio, tx_gpio, etc.)
+    // Пропускаем дублирующиеся поля, уже выведенные из пресета
+    const PRESET_POSITION_KEYS = new Set([
+      'gps_attempt_time',
+      'position_broadcast_smart_enabled',
+      'broadcast_smart_minimum_distance',
+      'broadcast_smart_minimum_interval_secs',
+      'agps_enabled',
+      'position_flags',
+      'position_broadcast_secs',
+      'gps_update_interval',
+      'gps_mode',
+      'fixed_position',
+    ])
     if (device) {
-      const posExtras = device.yamlExtras.filter(e => e.section === 'config' && e.subsection === 'position' && !['gps_attempt_time'].includes(e.key))
+      const posExtras = device.yamlExtras.filter(e => e.section === 'config' && e.subsection === 'position' && !PRESET_POSITION_KEYS.has(e.key))
       for (const extra of posExtras) {
         if (extra.note) ylines.push(`    # ${extra.note}`)
         ylines.push(`    ${extra.key}: ${typeof extra.value === 'string' ? `"${extra.value}"` : extra.value}`)
@@ -818,9 +831,8 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     ylines.push('module_config:')
     ylines.push('  telemetry:')
     ylines.push(`    device_update_interval: ${p.telemetryInterval}`)
-    ylines.push('  channel:')
-    ylines.push('    module_settings:')
-    ylines.push(`      position_precision: ${p.positionPrecision}`)
+    // ❌ module_config.channel.module_settings УБРАН — --configure игнорирует эту секцию!
+    // position_precision настраивается через CLI: --ch-index 0 --ch-set module_settings.position_precision N
 
     // Device-specific module_config overrides from yamlExtras
     if (device) {
@@ -840,17 +852,20 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       }
     }
 
-    // Канал (если привязан, но без URL — нужны отдельные команды)
-    if (linkedChannel && !linkedChannel.channelUrl) {
+    // Канал — ВСЕГДА отдельные команды после --configure (channel_url закомментирован из-за бага --seturl)
+    if (linkedChannel) {
       ylines.push('')
-      ylines.push('# Каналы (без channel_url — настройте отдельно):')
-      ylines.push(`# python -m meshtastic --ch-index 0 --ch-set psk "base64:${linkedChannel.psk}"`)
-      ylines.push(`# python -m meshtastic --ch-index 0 --ch-set name "${linkedChannel.name}"`)
-      ylines.push(`# python -m meshtastic --ch-index 0 --ch-set uplink_enabled ${linkedChannel.uplink}`)
-      ylines.push(`# python -m meshtastic --ch-index 0 --ch-set downlink_enabled ${linkedChannel.downlink}`)
+      ylines.push('# ── Настройка канала (ПОСЛЕ --configure) ──')
+      ylines.push('# channel_url закомментирован из-за бага --seturl с base64 PSK')
+      ylines.push(`python -m meshtastic --ch-index 0 --ch-set psk "base64:${linkedChannel.psk}"`)
+      ylines.push(`python -m meshtastic --ch-index 0 --ch-set name "${linkedChannel.name}"`)
+      ylines.push(`python -m meshtastic --ch-index 0 --ch-set uplink_enabled ${linkedChannel.uplink}`)
+      ylines.push(`python -m meshtastic --ch-index 0 --ch-set downlink_enabled ${linkedChannel.downlink}`)
       if (linkedChannel.frequency) {
-        ylines.push(`# python -m meshtastic --ch-index 0 --ch-set frequency ${linkedChannel.frequency}`)
+        ylines.push(`python -m meshtastic --ch-index 0 --ch-set frequency ${linkedChannel.frequency}`)
       }
+      ylines.push(`python -m meshtastic --ch-index 0 --ch-set module_settings.position_precision ${p.positionPrecision}`)
+      ylines.push('python -m meshtastic --reboot')
     }
 
     return {
@@ -938,6 +953,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       }
       // Position precision (channel module_settings)
       lines.push(`${cmd} --ch-index 0 --ch-set module_settings.position_precision ${preset.positionPrecision}`)
+      lines.push(`${cmd} --reboot`)
     }
     return lines.join('\n')
   }, [channels])

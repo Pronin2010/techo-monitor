@@ -328,7 +328,7 @@ SyncLog
 
 ## 9. Текущее состояние (из worklog)
 
-### Выполнено (38 задач):
+### Выполнено (39 задач):
 1. Рефакторинг вкладки Статус — аккордеон-строки, поиск, упрощённый диалог
 2. Визард подключения — 3 шага вместо 1162 строк
 3. Фикс CLI-команд для meshtastic 2.7.8 (проверено по исходникам)
@@ -367,6 +367,7 @@ SyncLog
 36. Ревью проекта: (а) MODEM_PRESET_MAP — добавлены LITE_FAST/SLOW, NARROW_FAST/SLOW (молча пропускались при push); (б) REBROADCAST_MODE_MAP — добавлены алиасы LOCAL_SKIP→1, SIMPLE→5; (в) usePreamble — зомби-поле, убрано из UI/CLI/YAML; (г) ROLE_MAP — комментарий TAK≠TAK_TRACKER; (д) Bridge docstring обновлён
 37. KMZ/KML overlay на карте: (а) Создан kmz-parser.ts — парсинг .kmz (unzip через fflate + KML→GeoJSON через @tmcw/togeojson) и .kml; (б) Карта (map-leaflet.tsx) — кнопка загрузки KMZ/KML, drag & drop, GeoJSON-слой с цветовым кодированием (точки=розовый, линии=оранжевый, полигоны=фиолетовый), popup с name/description, управление видимостью, подгонка bounds; (в) Панель «Слой» в статистике карты; (г) GroundOverlay — растровые изображения из KMZ (base64 data URL) через L.ImageOverlay с bounds, opacity из <color> KML, подгонка карты по combined bounds (вектор+растр); (д) Фильтрация синего полигона-дубликата GroundOverlay — удаление <GroundOverlay> из XML до togeojson
 38. Профили устройств: (а) device-profiles.ts — 2 профиля: T-Echo (LilyGO, nRF52840 + L76K GPS, e-ink, 850 мАч), Heltec Wireless Tracker V1.1 (ESP32-S3FN8 + UC6580 GNSS, LCD 0.96", USB-C); (б) Каждый профиль: аппаратные характеристики (CPU, GPS, дисплей, батарея, LoRa, BT), специфичные команды прошивки (pre/post), инструкции по прошивке (flashInstructions), предупреждения, defaultsOverride; (в) UI: кнопки выбора устройства над карточками пресетов; (г) UI: выбор типа устройства в диалоге пуша; (д) UI: панель характеристик + warnings + инструкция по прошивке (аккордеон) в генераторе команд; (е) Генерация команд: заголовок с устройством, pre/post команды, warnings; (ж) Heltec Tracker: UC6580 GNSS баги — модуль сбрасывается при выключенном экране (#5088), дефолтная конфигурация Meshtastic ухудшает GNSS (#10202); LCD жрёт батарею → screenOnSecs=30 (НЕ 0!), LED включён; (з) FlashInstruction — новый тип: пошаговая инструкция по прошивке (step, description, command?, note?); (и) Heltec Tracker прошивка: Web Flasher или CLI (device-install.sh / esptool.py), boot mode через USER+RESET, V1.1 требует прошивку ≥ 2.2.17 (GPIO3 для GNSS питания); TRACKER роль + power_saving — сон между вещаниями, LoRa не принимает во время сна
+39. Фикс генерации YAML/CLI (9 критических багов): (а) Убрана секция module_config.channel.module_settings.position_precision из YAML — meshtastic --configure игнорирует эту секцию! position_precision настраивается только через CLI: --ch-index 0 --ch-set module_settings.position_precision N; (б) channel_url ВСЕГДА закомментирован в YAML — баг --seturl с base64 PSK (символ '+' ломает парсер); (в) Команды канала ВСЕГДА добавляются после --configure + --reboot (раньше только при отсутствии channelUrl); (г) Устранено дублирование smart broadcast настроек из yamlExtras Heltec Tracker — PRESET_POSITION_KEYS/DEVICE_SETUP_POSITION_KEYS фильтры; (д) device-setup-tab: добавлены недостающие поля в YAML — position_broadcast_secs, smart broadcast (distance, interval), agps_enabled; (е) device-setup-tab: добавлены недостающие поля в INITIAL_STATE — agpsEnabled, positionBroadcastSecs, smartBroadcastMinDist, smartBroadcastMinInterval; (ж) device-setup-tab: добавлен gps_attempt_time, position_broadcast_secs, smart broadcast, position_flags в CLI команды; (з) Fallback: position_precision + --reboot даже без привязанного канала
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -399,4 +400,4 @@ ALL(0), ALL_SKIP_DECODING(1), LOCAL_ONLY(2), KNOWN_ONLY(3), NONE(4), CORE_PORTNU
 
 ---
 
-_Последнее обновление: 2026-05-11 (Задача 39: Профили устройств — T-Echo + Heltec Wireless Tracker V1.1)_
+_Последнее обновление: 2026-05-11 (Задача 39: Фикс генерации YAML/CLI — 9 критических багов)_
