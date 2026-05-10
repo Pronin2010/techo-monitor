@@ -293,6 +293,18 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                           factory_reset=False):
     """Применить конфигурацию пресета к узлу (локальному или удалённому).
 
+    Порядок прошивки (при factory_reset=True):
+      1. Полная очистка устройства (factory_reset_config)
+      2. Ожидание 20 сек → переподключение по COM-порту
+      3. Отправка нового имени (setOwner) → ожидание 20 сек (перезагрузка)
+      4. Переподключение → отправка остальных данных пресета (транзакция)
+      5. Перезагрузка устройства
+
+    Порядок прошивки (без factory_reset):
+      1. Отправка имени (setOwner), если указано
+      2. Отправка данных пресета (транзакция)
+      3. Перезагрузка устройства
+
     Args:
         interface: meshtastic SerialInterface
         node_id: '!hexid' или None/пустая строка для локального узла
@@ -321,9 +333,11 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
 
         sections_written = []
 
-        # ── Factory Reset ──
+        # ══════════════════════════════════════════════════════════════
+        # ШАГ 1: Factory Reset (полная очистка устройства)
+        # ══════════════════════════════════════════════════════════════
         if factory_reset:
-            print("\033[1;31m[CFG] ⚠ СБРОС ДО ЗАВОДСКИХ НАСТРОЕК...\033[0m")
+            print("\033[1;31m[CFG] ═══ ШАГ 1: СБРОС ДО ЗАВОДСКИХ НАСТРОЕК ═══\033[0m")
             # Порядок действий:
             # 1. ensureSessionKey() — запрашивает adminSessionPassKey у устройства
             #    Без session_passkey Meshtastic 2.7.x МОЛЧА ИГНОРИРУЕТ admin-команды!
@@ -348,7 +362,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             sections_written.append("factory_reset")
             # После factoryReset устройство перезагружается — серийное соединение разрывается.
             # Нельзя использовать старый interface — нужно пересоздать SerialInterface.
-            print("\033[33m[CFG] Ожидание перезагрузки (20 сек)...\033[0m")
+            print("\033[33m[CFG] Ожидание перезагрузки после сброса (20 сек)...\033[0m")
             time.sleep(20)
             # Пересоздаём интерфейс (закрываем старый, открываем новый)
             new_iface = _reconnect_interface(max_retries=5, retry_delay=5)
@@ -361,7 +375,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                     node = interface.getNode(node_id, timeout=120)
                 else:
                     node = interface.localNode
-                print("\033[32m[CFG] Повторное подключение после сброса — ОК\033[0m")
+                print("\033[32m[CFG] Переподключение после сброса — ОК\033[0m")
                 # Диагностика: проверить текущую конфигурацию после factory reset
                 try:
                     d = node.localConfig.device
@@ -373,34 +387,67 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                 print(f"\033[31m[CFG] Не удалось получить узел после переподключения: {e}\033[0m")
                 return {'success': False, 'message': f'Сброс выполнен, мост переподключён, но не удалось получить узел: {e}', 'sections': sections_written}
 
-        # ── Имя устройства ──
-        # ВНИМАНИЕ: После factory reset устройство получает дефолтное имя
-        # "Meshtastic XXXX". Если device_name/device_short_name указаны,
-        # setOwner() перезапишет дефолтное имя на указанное.
-        # Если имена не указаны (None) — устройство сохранит дефолтное.
+        # ══════════════════════════════════════════════════════════════
+        # ШАГ 2: Установка имени устройства (setOwner)
+        # После factory reset устройство получает дефолтное имя
+        # «Meshtastic XXXX». setOwner() перезапишет его.
+        # При factory reset — обязательная перезагрузка после имени,
+        # чтобы устройство корректно инициализировалось с новым именем.
         #
         # Ограничение Python-библиотеки meshtastic 2.7.8:
         #   - short_name обрезается до 4 символов (nChars=4), НЕ 5!
         #   - Пустая строка ("") вызывает sys.exit() — мост падает!
         #   Поэтому пустые строки конвертируются в None (пропуск setOwner).
+        # ══════════════════════════════════════════════════════════════
         if device_name or device_short_name:
+            step_label = "ШАГ 2" if factory_reset else "УСТАНОВКА ИМЕНИ"
+            print(f"\033[1;33m[CFG] ═══ {step_label}: УСТАНОВКА ИМЕНИ УСТРОЙСТВА ═══\033[0m")
             try:
-                # Дополнительная задержка после factory reset — устройству нужно
-                # время на полную инициализацию перед приёмом admin-команд
+                # После factory reset — получаем свежий session key
                 if factory_reset:
-                    print("\033[33m[CFG] Ожидание готовности устройства (5 сек) перед setOwner...\033[0m")
-                    time.sleep(5)
+                    try:
+                        node.ensureSessionKey()
+                        print("\033[32m[CFG] session_passkey получен перед setOwner\033[0m")
+                    except Exception as e:
+                        print(f"\033[33m[CFG] ensureSessionKey() перед setOwner не удался: {e}\033[0m")
+
                 node.setOwner(long_name=device_name, short_name=device_short_name)
                 name_info = f"{device_name or ''}/{device_short_name or ''}"
                 sections_written.append(f"owner={name_info}")
                 print(f"\033[32m[CFG] owner: {name_info}\033[0m")
-                # Диагностика: проверяем, что имя реально установилось
-                time.sleep(1)
-                try:
-                    owner_info = node.localConfig  # Попробуем прочитать
-                    print(f"\033[36m[DIAG] setOwner отправлен. Проверка имени...\033[0m")
-                except Exception:
-                    pass
+
+                # При factory reset — перезагружаем устройство после установки имени,
+                # ждём 20 сек, переподключаемся
+                if factory_reset:
+                    print("\033[33m[CFG] Перезагрузка после установки имени...\033[0m")
+                    try:
+                        node.reboot(secs=2)
+                    except Exception:
+                        pass  # reboot может вызвать отключение — это нормально
+                    print("\033[33m[CFG] Ожидание перезагрузки после имени (20 сек)...\033[0m")
+                    time.sleep(20)
+                    # Переподключение
+                    new_iface = _reconnect_interface(max_retries=5, retry_delay=5)
+                    if not new_iface:
+                        return {'success': False, 'message': 'Имя установлено, но не удалось переподключиться. Перезапустите мост вручную.', 'sections': sections_written}
+                    interface = new_iface
+                    try:
+                        if node_id and node_id.strip():
+                            node = interface.getNode(node_id, timeout=120)
+                        else:
+                            node = interface.localNode
+                        print("\033[32m[CFG] Переподключение после установки имени — ОК\033[0m")
+                    except Exception as e:
+                        print(f"\033[31m[CFG] Не удалось получить узел после перезагрузки имени: {e}\033[0m")
+                        return {'success': False, 'message': f'Имя установлено, но не удалось получить узел: {e}', 'sections': sections_written}
+                else:
+                    # Без factory reset — просто короткая пауза
+                    time.sleep(1)
+                    try:
+                        owner_info = node.localConfig
+                        print("\033[36m[DIAG] setOwner отправлен. Проверка имени...\033[0m")
+                    except Exception:
+                        pass
             except SystemExit:
                 # setOwner() может вызвать sys.exit() при пустом имени — перехватываем!
                 print("\033[31m[CFG] КРИТИЧЕСКАЯ ОШИБКА: setOwner() вызвал sys.exit()! "
@@ -408,6 +455,12 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             except Exception as e:
                 print(f"\033[31m[CFG] Ошибка установки имени: {e}\033[0m")
                 # Не прерываем — имя не критично, конфиг важнее
+
+        # ══════════════════════════════════════════════════════════════
+        # ШАГ 3: Применение остальных данных пресета (транзакция)
+        # ══════════════════════════════════════════════════════════════
+        step3_label = "ШАГ 3" if factory_reset else "КОНФИГУРАЦИЯ"
+        print(f"\033[1;33m[CFG] ═══ {step3_label}: ПРИМЕНЕНИЕ ДАННЫХ ПРЕСЕТА ═══\033[0m")
 
         # ── Session key (обязательно для 2.7.x!) ──
         # Без session_passkey Meshtastic 2.7.x МОЛЧА ИГНОРИРУЕТ admin-команды!

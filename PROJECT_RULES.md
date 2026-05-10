@@ -260,4 +260,4 @@ meshtastic --set position.fixed_position true \
 
 ---
 
-_Последнее обновление: 2026-05-11 (GPS дрейф: аппаратный дефект LilyGO #32, баги #836/#8029/#992/#6785, пресет 12ч: gpsUpdateInterval 1→30, smartBroadcastMinDist 20→100)_
+_Последнее обновление: 2026-05-11 (Порядок прошивки: factory reset → 20с → имя → 20с → конфиг → reboot)_

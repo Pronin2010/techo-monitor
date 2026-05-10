@@ -298,7 +298,13 @@ SyncLog
     ⚠️ Пустая строка в setOwner() вызывает sys.exit() — мост падает! Пустые → None (пропуск).
     ⚠️ При factory reset имя сбрасывается на «Meshtastic XXXX» — если не указать новое, останется дефолтное
   - factoryReset — сброс до заводских перед применением (ensureSessionKey + factory_reset_config=1, баг библиотеки: True→TypeError)
-  - Порядок: factoryReset → device reboot → _reconnect_interface() → (5 сек задержка) → setOwner → beginTransaction → writeConfig × N → commit → reboot
+  - Порядок (при factory_reset=True):
+    1. **ШАГ 1**: Factory reset → 20 сек ожидание → _reconnect_interface()
+    2. **ШАГ 2**: setOwner (новое имя) → reboot(secs=2) → 20 сек ожидание → _reconnect_interface()
+    3. **ШАГ 3**: ensureSessionKey → beginTransaction → writeConfig × N → commit → reboot
+  - Порядок (без factory_reset):
+    1. setOwner (если указано имя, без перезагрузки)
+    2. ensureSessionKey → beginTransaction → writeConfig × N → commit → reboot
   - При ошибке записи — перезагрузка для отката (вместо commit частичных данных)
   - При factory reset — автоматическое пересоздание SerialInterface с повторными попытками
   - После перезагрузки устройства (reboot) — мост автоматически переподключается для продолжения мониторинга
@@ -384,4 +390,4 @@ ALL, LOCAL_SKIP, SIMPLE
 
 ---
 
-_Последнее обновление: 2026-05-11 (GPS дрейф: аппаратный дефект LilyGO #32, баги #836/#8029/#992/#6785, пресет 12ч: gpsUpdateInterval 1→30, smartBroadcastMinDist 20→100)_
+_Последнее обновление: 2026-05-11 (Порядок прошивки: factory reset → 20с → имя → 20с → конфиг → reboot)_

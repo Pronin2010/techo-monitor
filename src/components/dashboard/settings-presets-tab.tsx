@@ -2263,7 +2263,9 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
             </DialogTitle>
             <DialogDescription>
               {selectedPreset
-                ? `Пресет «${selectedPreset.name}» будет применён к выбранному устройству. Устройство перезагрузится.`
+                ? pushFactoryReset
+                  ? `Пресет «${selectedPreset.name}»: 1) Сброс → 2) Установка имени → 3) Применение конфига. Устройство перезагрузится дважды.`
+                  : `Пресет «${selectedPreset.name}» будет применён к выбранному устройству. Устройство перезагрузится.`
                 : 'Выберите устройство для применения конфигурации.'}
             </DialogDescription>
           </DialogHeader>
@@ -2344,10 +2346,9 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                     Сбросить до заводских настроек
                   </Label>
                   <p className="text-[11px] text-muted-foreground">
-                    Удалить все текущие настройки перед применением пресета.
+                    Порядок: 1) Полная очистка устройства → перезагрузка 20 сек → 2) Установка нового имени → перезагрузка 20 сек → 3) Применение конфига пресета → перезагрузка.
                     Имя устройства сбросится на дефолтное «Meshtastic XXXX» —
                     введите новое имя выше или оставьте пустым.
-                    Устройство перезагрузится, затем применится новый конфиг.
                     Рекомендуется для новых устройств или при проблемах.
                   </p>
                 </div>

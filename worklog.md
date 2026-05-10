@@ -134,3 +134,26 @@ Stage Summary:
 - Пресет «Трекер лес 12ч» имел критически неверные настройки: gpsUpdateInterval=1 (GPS не успевает), smartBroadcastMinDist=20 (GPS шум превышает порог)
 - Все дефолты приведены к рекомендациям дефолтов прошивки Meshtastic
 - Для стационарных устройств рекомендуется fixedPosition=true + gps_mode=DISABLED
+
+---
+Task ID: 35
+Agent: main
+Task: Изменить порядок прошивки пресетом: полная очистка → 20с → reconnect → имя → 20с → остальные данные → reboot
+
+Work Log:
+- Прочитал текущую реализацию apply_config_to_node() в techo-bridge.py (~450 строк)
+- Проанализировал текущий порядок: factory reset → 20с → reconnect → setOwner (5с задержка) → ensureSessionKey → транзакция → commit → reboot
+- Перестроил порядок в apply_config_to_node():
+  - ШАГ 1: Factory reset → 20 сек ожидание → _reconnect_interface() (без изменений)
+  - ШАГ 2: setOwner (новое имя) → ensureSessionKey → reboot(secs=2) → 20 сек ожидание → _reconnect_interface() (НОВОЕ!)
+  - ШАГ 3: ensureSessionKey → beginTransaction → writeConfig × N → commit → reboot (как раньше)
+- При factory_reset=False: setOwner без перезагрузки (как раньше) → транзакция → reboot
+- Увеличен таймаут API: 120 сек → 180 сек (добавился этап перезагрузки после имени)
+- Обновлён UI диалога пуша: описание нового порядка в DialogDescription и в подсказке factory reset
+- Обновлена документация: AI_PROMPT.md (порядок прошивки)
+
+Stage Summary:
+- Новый порядок при factory reset: очистка → 20с → имя → 20с → конфиг → reboot
+- Ключевое изменение: setOwner теперь выполняется как отдельный шаг с перезагрузкой при factory reset
+- Это гарантирует, что устройство корректно инициализируется с новым именем перед записью конфигурации
+- Файлы: techo-bridge.py, src/app/api/meshtastic/config/route.ts, src/components/dashboard/settings-presets-tab.tsx, AI_PROMPT.md
