@@ -20,8 +20,10 @@ import {
   Plus, Copy, Download, Pencil, Trash2, CopyPlus, Terminal, FileText,
   Cpu, Radio, MapPin, Zap, Battery, Bluetooth, Monitor, Network,
   Link, Info, Shield, ChevronDown, ChevronRight, Sun, Moon,
-  Globe, Lightbulb, Repeat, Upload, Loader2,
+  Globe, Lightbulb, Repeat, Upload, Loader2, AlertTriangle,
 } from 'lucide-react'
+import { DEVICE_PROFILES, getDeviceProfile } from '@/lib/device-profiles'
+import type { DeviceProfile } from '@/lib/device-profiles'
 
 // ============================================================================
 // Локальные типы
@@ -273,10 +275,14 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
   const [selectedPreset, setSelectedPreset] = useState<PresetData | null>(null)
   const [outputMode, setOutputMode] = useState<'commands' | 'yaml'>('commands')
   const [expandedCustom, setExpandedCustom] = useState<string | null>(null)
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('t-echo')
 
   // Разделение на системные и пользовательские
   const builtinPresets = useMemo(() => presets.filter(p => p.isBuiltIn), [presets])
   const customPresets = useMemo(() => presets.filter(p => !p.isBuiltIn), [presets])
+
+  // Выбранный профиль устройства
+  const selectedDevice = useMemo(() => getDeviceProfile(selectedDeviceId), [selectedDeviceId])
 
   // ── Состояние диалога редактора ──
   const [editorOpen, setEditorOpen] = useState(false)
@@ -510,6 +516,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
   const [pushDeviceName, setPushDeviceName] = useState('')
   const [pushDeviceShortName, setPushDeviceShortName] = useState('')
   const [pushFactoryReset, setPushFactoryReset] = useState(false)
+  const [pushDeviceProfileId, setPushDeviceProfileId] = useState<string>('t-echo')
 
   /** Открыть диалог пуша и проверить мост */
   const handlePushToDevice = useCallback(async (preset: PresetData) => {
@@ -518,6 +525,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     setPushDeviceName('')
     setPushDeviceShortName('')
     setPushFactoryReset(false)
+    setPushDeviceProfileId(selectedDeviceId)  // используем текущий выбор устройства
     setPushDialogOpen(true)
     // Проверяем статус моста
     try {
@@ -543,7 +551,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       setBridgeOnline(false)
       setBridgeNodes([])
     }
-  }, [])
+  }, [selectedDeviceId])
 
   /** Обработчик смены целевого устройства — обновить имя */
   const handlePushTargetChange = useCallback((value: string) => {
@@ -631,15 +639,28 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     if (!selectedPreset) return { commands: '', yaml: '' }
 
     const p = selectedPreset
+    const device = selectedDevice
     const cmd = 'python -m meshtastic'
     const lines: string[] = []
 
     // --- Заголовок ---
     lines.push(`# Пресет: ${p.name}`)
     if (p.description) lines.push(`# ${p.description}`)
+    if (device) lines.push(`# Устройство: ${device.name}`)
     lines.push('')
 
+    // --- Pre-команды устройства (подготовка) ---
+    if (device && device.preCommands.length > 0) {
+      lines.push('# ── Подготовка устройства ──')
+      for (const c of device.preCommands) {
+        if (c.optional) lines.push(`# ${c.description}`)
+        lines.push(c.command)
+      }
+      lines.push('')
+    }
+
     // --- Device ---
+    lines.push('# ── Основной конфиг ──')
     lines.push(`${cmd} --set device.role ${p.role}`)
     lines.push(`${cmd} --set device.node_info_broadcast_secs ${p.nodeInfoBroadcastSecs}`)
 
@@ -720,9 +741,29 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       lines.push(`${cmd} --ch-index 0 --ch-set module_settings.position_precision ${p.positionPrecision}`)
     }
 
+    // --- Post-команды устройства (доп. настройки) ---
+    if (device && device.postCommands.length > 0) {
+      lines.push('')
+      lines.push('# ── Специфичные команды устройства ──')
+      for (const c of device.postCommands) {
+        if (c.optional) lines.push(`# ${c.description}`)
+        lines.push(c.command)
+      }
+    }
+
+    // --- Warnings устройства ---
+    if (device && device.warnings.length > 0) {
+      lines.push('')
+      lines.push('# ── Важные замечания ──')
+      for (const w of device.warnings) {
+        lines.push(`# ${w}`)
+      }
+    }
+
     // --- YAML ---
     const ylines: string[] = []
-    ylines.push('# Meshtastic T-Echo Configuration')
+    const deviceName = device ? device.name : 'Meshtastic'
+    ylines.push(`# Meshtastic ${deviceName} Configuration`)
     ylines.push(`# Пресет: ${p.name}`)
     if (p.description) ylines.push(`# ${p.description}`)
     ylines.push('# Прошивка 2.7.15 | Использование: python -m meshtastic --configure config.yaml')
@@ -799,7 +840,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       commands: lines.join('\n'),
       yaml: ylines.join('\n'),
     }
-  }, [selectedPreset, channels])
+  }, [selectedPreset, selectedDevice, channels])
 
   const displayContent = outputMode === 'yaml' ? commandOutput.yaml : commandOutput.commands
 
@@ -900,13 +941,42 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
             Пресеты настроек
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Готовые конфигурации для быстрой настройки T-Echo. Выберите пресет и скопируйте команды.
+            Готовые конфигурации для устройств Meshtastic. Выберите пресет, устройство и скопируйте команды.
           </p>
         </div>
         <Button onClick={handleCreate} className="gap-2">
           <Plus className="size-4" />
           Новый пресет
         </Button>
+      </div>
+
+      {/* ================================================================= */}
+      {/* Выбор устройства                                                   */}
+      {/* ================================================================= */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Label className="text-sm font-medium flex items-center gap-1.5 shrink-0">
+          <Cpu className="size-4 text-muted-foreground" />
+          Устройство:
+        </Label>
+        <div className="flex gap-2 flex-wrap">
+          {DEVICE_PROFILES.map(profile => (
+            <Button
+              key={profile.id}
+              variant={selectedDeviceId === profile.id ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setSelectedDeviceId(profile.id)}
+            >
+              <span>{profile.icon}</span>
+              <span>{profile.shortName}</span>
+            </Button>
+          ))}
+        </div>
+        {selectedDevice && (
+          <span className="text-[11px] text-muted-foreground max-w-md truncate" title={selectedDevice.description}>
+            {selectedDevice.description}
+          </span>
+        )}
       </div>
 
       {/* ================================================================= */}
@@ -1434,7 +1504,31 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            {selectedDevice && selectedPreset && (
+              <div className="border rounded-lg p-3 bg-muted/30 space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-medium">
+                  <span>{selectedDevice.icon}</span>
+                  <span>{selectedDevice.name}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px] text-muted-foreground">
+                  <span>CPU: {selectedDevice.hardware.cpu.split('(')[0].trim()}</span>
+                  <span>GPS: {selectedDevice.hardware.gps.split('(')[0].trim()}</span>
+                  <span>Дисплей: {selectedDevice.hardware.display.split('(')[0].trim()}</span>
+                  <span>Батарея: {selectedDevice.hardware.battery.split('(')[0].trim()}</span>
+                </div>
+                {selectedDevice.warnings.length > 0 && (
+                  <div className="pt-1 border-t mt-1 space-y-0.5">
+                    {selectedDevice.warnings.map((w, i) => (
+                      <p key={i} className="text-[10px] text-amber-600 flex items-start gap-1">
+                        <AlertTriangle className="size-2.5 shrink-0 mt-0.5" />
+                        {w}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <pre className="bg-muted p-4 rounded-md text-xs font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-all">
               {displayContent}
             </pre>
@@ -2271,6 +2365,37 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
             </Alert>
           ) : (
             <div className="space-y-4">
+              {/* Выбор типа устройства */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Тип устройства</Label>
+                <Select value={pushDeviceProfileId} onValueChange={setPushDeviceProfileId}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEVICE_PROFILES.map(profile => (
+                      <SelectItem key={profile.id} value={profile.id}>
+                        {profile.icon} {profile.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(() => {
+                  const profile = getDeviceProfile(pushDeviceProfileId)
+                  if (!profile || profile.warnings.length === 0) return null
+                  return (
+                    <div className="space-y-1">
+                      {profile.warnings.map((w, i) => (
+                        <p key={i} className="text-[11px] text-amber-600 flex items-start gap-1">
+                          <AlertTriangle className="size-3 shrink-0 mt-0.5" />
+                          {w}
+                        </p>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+
               {/* Выбор устройства */}
               <div className="space-y-2">
                 <Label>Целевое устройство</Label>
