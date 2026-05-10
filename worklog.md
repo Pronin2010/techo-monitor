@@ -215,3 +215,26 @@ Stage Summary:
 - GeoJSON-слой отображается поверх тайлов OSM с popup и управлением
 - **GroundOverlay**: растровые изображения из KMZ-архива извлекаются и отображаются через L.ImageOverlay с bounds и opacity
 - Файлы: src/lib/kmz-parser.ts (обновлён), src/components/dashboard/map-leaflet.tsx (обновлён)
+
+---
+Task ID: 38
+Agent: main
+Task: Профили устройств — выбор устройства при применении пресета
+
+Work Log:
+- Создан src/lib/device-profiles.ts — 6 профилей устройств (T-Echo, T-Beam Supreme, T-LoRa V2.1, Heltec V3, RAK WisBlock, DIY)
+- Каждый профиль содержит: аппаратные характеристики, специфичные команды (pre/post), предупреждения, defaultsOverride
+- Обновлён settings-presets-tab.tsx: импорт DEVICE_PROFILES, стейт selectedDeviceId, selectedDevice
+- Добавлен выбор устройства кнопками над карточками пресетов
+- Добавлен выбор типа устройства в диалоге пуша на устройство
+- Добавлена панель характеристик и warnings в генераторе команд
+- Генерация команд обновлена: заголовок с устройством, pre/post команды, warnings
+- YAML заголовок обновлён с учётом устройства
+- Обновлена документация: AI_PROMPT.md (задача 38, структура проекта, вкладка Пресеты)
+- Линтер пройден
+
+Stage Summary:
+- 6 профилей устройств с полной спецификацией
+- UI: кнопки выбора устройства, тип устройства в пуш-диалоге, панель характеристик
+- Генерация команд адаптирована под выбранное устройство
+- Файлы: src/lib/device-profiles.ts (новый), src/components/dashboard/settings-presets-tab.tsx (обновлён)
