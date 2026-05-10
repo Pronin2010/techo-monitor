@@ -133,6 +133,7 @@ export interface Channel {
   modemPreset: ModemPreset
   region: Region
   frequency: number | null   // Переопределение частоты в МГц
+  channelUrl?: string | null // URL канала для импорта через meshtastic --configure
   isDefault: boolean
   createdAt: string
   updatedAt: string

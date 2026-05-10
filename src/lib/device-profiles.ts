@@ -3,12 +3,21 @@
  *
  * Каждый профиль описывает:
  * - Аппаратную платформу (CPU, дисплей, GPS, батарея)
- * - Специфичные команды прошивки (до/после основного конфига)
- * - Инструкции по прошивке (flash)
+ * - Инструкции по прошивке (flash firmware)
+ * - Инструкции по импорту настроек (через meshtastic --configure)
+ * - Специфичные YAML-переопределения для данного устройства
  * - Ограничения и особенности
  * - Параметры по умолчанию, отличающиеся от стандартных
  *
+ * Метод конфигурации: ИМПОРТ НАСТРОЕК через YAML
+ * - Экспорт: python -m meshtastic --export-config > config.yaml
+ * - Импорт: python -m meshtastic --configure config.yaml
+ * - Формат: YAML (snake_case или camelCase ключи)
+ * - Источник: https://meshtastic.org/docs/software/python/cli
+ * - Пример: https://github.com/meshtastic/python/blob/master/example_config.yaml
+ *
  * Источники:
+ * - Heltec Low Power: https://docs.heltec.org/en/node/esp32/wireless_tracker/meshtastic_tracker.html
  * - Heltec FAQ: https://docs.heltec.org/zh_CN/node/esp32/wireless_tracker/frequently_asked_questions.html
  * - Meshtastic flash: https://meshtastic.org/docs/getting-started/flashing-firmware/esp32/
  * - Meshtastic device config: https://meshtastic.org/docs/configuration/radio/device
@@ -16,18 +25,6 @@
  * - UC6580 GPS bug #5088: https://github.com/meshtastic/firmware/issues/5088
  * - UC6580 config bug #10202: https://github.com/meshtastic/firmware/issues/10202
  */
-
-/** Команда прошивки устройства */
-export interface DeviceCommand {
-  /** Текст команды (python -m meshtastic ... или shell) */
-  command: string
-  /** Описание команды */
-  description: string
-  /** Когда выполнять: 'before' = до основного конфига, 'after' = после */
-  phase: 'before' | 'after'
-  /** Опциональная? Команда может быть пропущена */
-  optional?: boolean
-}
 
 /** Инструкция по прошивке устройства */
 export interface FlashInstruction {
@@ -37,6 +34,34 @@ export interface FlashInstruction {
   description: string
   /** Команда для выполнения (если есть) */
   command?: string
+  /** Важное примечание */
+  note?: string
+}
+
+/** Шаг импорта настроек */
+export interface ImportStep {
+  /** Номер шага */
+  step: number
+  /** Описание шага */
+  description: string
+  /** Команда для выполнения */
+  command?: string
+  /** Важное примечание */
+  note?: string
+}
+
+/** Специфичное YAML-добавление для устройства (то, что не покрывается пресетом) */
+export interface DeviceYamlExtra {
+  /** YAML-секция (например 'position', 'power', 'device') */
+  section: 'config' | 'module_config'
+  /** Подсекция (например 'position', 'power', 'device') */
+  subsection: string
+  /** Ключ настройки (snake_case) */
+  key: string
+  /** Значение */
+  value: string | number | boolean
+  /** Описание (для подсказки в UI) */
+  description: string
   /** Важное примечание */
   note?: string
 }
@@ -62,12 +87,12 @@ export interface DeviceProfile {
     lora: string
     bluetooth: string
   }
-  /** Инструкции по прошивке Meshtastic */
+  /** Инструкции по прошивке Meshtastic (firmware flash) */
   flashInstructions: FlashInstruction[]
-  /** Специфичные команды прошивки (до основного конфига) */
-  preCommands: DeviceCommand[]
-  /** Специфичные команды прошивки (после основного конфига) */
-  postCommands: DeviceCommand[]
+  /** Инструкции по импорту настроек через YAML */
+  importInstructions: ImportStep[]
+  /** Специфичные YAML-добавления (устройство-зависимые настройки, не входящие в пресет) */
+  yamlExtras: DeviceYamlExtra[]
   /** Ограничения (для отображения пользователю) */
   warnings: string[]
   /** Переопределения дефолтных значений пресета для данного устройства */
@@ -80,7 +105,17 @@ export interface DeviceProfile {
     bluetoothEnabled: boolean
     bluetoothFixedPin: string
     positionFlags: number
+    powerSaving: boolean
+    lsSecs: number
+    minWakeSecs: number
+    positionBroadcastSecs: number
+    smartBroadcastMinDist: number
+    smartBroadcastMinInterval: number
+    waitBluetoothSecs: number
+    role: string
   }>
+  /** Рекомендуемый конфиг от производителя (Heltec docs и т.д.) — для справки */
+  vendorRecommendedConfig?: string
 }
 
 // ============================================================================
@@ -123,24 +158,41 @@ export const DEVICE_PROFILES: DeviceProfile[] = [
         description: 'Дождаться перезагрузки и проверить: LED мигает, экран показывает "Meshtastic"',
       },
     ],
-    preCommands: [
+    importInstructions: [
       {
-        command: '# T-Echo: специальная подготовка не требуется',
-        description: 'T-Echo работает с meshtastic Python из коробки',
-        phase: 'before',
-        optional: true,
+        step: 1,
+        description: 'Подключить T-Echo к компьютеру через USB-C',
+        note: 'Устройство появится как /dev/ttyACM0 (Linux) или COM порт (Windows)',
+      },
+      {
+        step: 2,
+        description: 'Установить Meshtastic Python CLI (если не установлен):',
+        command: 'pip install meshtastic',
+      },
+      {
+        step: 3,
+        description: 'Сохранить сгенерированный YAML-файл на диск (кнопка «Скачать .yaml»)',
+      },
+      {
+        step: 4,
+        description: 'Применить конфигурацию командой:',
+        command: 'python -m meshtastic --configure config.yaml',
+        note: 'Устройство автоматически перезагрузится с новыми настройками',
+      },
+      {
+        step: 5,
+        description: 'Проверить применение настроек:',
+        command: 'python -m meshtastic --info',
+        note: 'Убедитесь что role, region и GPS настройки применились корректно',
       },
     ],
-    postCommands: [
+    yamlExtras: [
       {
-        command: 'python -m meshtastic --set position.gps_update_interval ${gpsUpdateInterval}',
-        description: 'T-Echo: интервал обновления GPS (L76K — минимум 30 сек, дефолт 120)',
-        phase: 'after',
-      },
-      {
-        command: 'python -m meshtastic --set position.gps_attempt_time ${gpsAttemptTime}',
+        section: 'config',
+        subsection: 'position',
+        key: 'gps_attempt_time',
+        value: 90,
         description: 'T-Echo: таймаут GPS-фикса (L76K в лесу — 90 сек, дефолт 30)',
-        phase: 'after',
       },
     ],
     warnings: [
@@ -197,51 +249,92 @@ export const DEVICE_PROFILES: DeviceProfile[] = [
         description: 'Дождаться перезагрузки. На LCD экране появится "Meshtastic"',
         note: 'Если экран пустой — проверьте что прошили правильную версию (heltec-wireless-tracker, не heltec-v3!)',
       },
+    ],
+    importInstructions: [
+      {
+        step: 1,
+        description: 'Подключить Heltec Tracker к компьютеру через USB-C',
+        note: 'Устройство появится как /dev/ttyACM0 (Linux) или COM порт (Windows)',
+      },
+      {
+        step: 2,
+        description: 'Установить Meshtastic Python CLI (если не установлен):',
+        command: 'pip install meshtastic',
+      },
+      {
+        step: 3,
+        description: 'Сохранить сгенерированный YAML-файл на диск (кнопка «Скачать .yaml»)',
+        note: 'YAML-файл содержит все настройки TRACKER + энергосбережение по рекомендациям Heltec',
+      },
+      {
+        step: 4,
+        description: 'Применить конфигурацию командой:',
+        command: 'python -m meshtastic --configure config.yaml',
+        note: 'Устройство автоматически перезагрузится с новыми настройками. TRACKER роль + power_saving = сон между вещаниями позиции (~13 мкА)',
+      },
+      {
+        step: 5,
+        description: 'Проверить применение настроек:',
+        command: 'python -m meshtastic --info',
+        note: 'Убедитесь что role=TRACKER, region=EU_433 и GPS настройки применились',
+      },
       {
         step: 6,
-        description: 'Подключиться через Python CLI и проверить связь:',
-        command: 'python -m meshtastic --info',
-        note: 'Если устройство не видно — проверьте: ls /dev/ttyACM* (Linux) или Device Manager (Windows)',
+        description: '(Опционально) Экспортировать конфиг для бэкапа:',
+        command: 'python -m meshtastic --export-config > backup.yaml',
+        note: 'Полезно для сохранения рабочей конфигурации перед экспериментами',
       },
     ],
-    preCommands: [
+    yamlExtras: [
       {
-        command: '# Heltec Wireless Tracker V1.1: проверка связи',
-        description: 'Убедиться что устройство отвечает на команды: python -m meshtastic --info',
-        phase: 'before',
-        optional: true,
-      },
-    ],
-    postCommands: [
-      {
-        command: 'python -m meshtastic --set position.gps_update_interval ${gpsUpdateInterval}',
-        description: 'Heltec Tracker: интервал обновления GPS (UC6580 — минимум 30 сек, дефолт 120)',
-        phase: 'after',
-      },
-      {
-        command: 'python -m meshtastic --set position.gps_attempt_time ${gpsAttemptTime}',
+        section: 'config',
+        subsection: 'position',
+        key: 'gps_attempt_time',
+        value: 90,
         description: 'Heltec Tracker: таймаут GPS-фикса (UC6580 в лесу — 90 сек, дефолт 30)',
-        phase: 'after',
       },
       {
-        command: 'python -m meshtastic --set display.screen_on_secs ${screenOnSecs}',
-        description: 'Heltec Tracker: таймаут экрана — LCD жрёт батарею, уменьшаем. ⚠️ НЕ ставьте 0! При screen_on_secs=0 экран выключается и UC6580 периодически сбрасывается (bug #5088)',
-        phase: 'after',
+        section: 'config',
+        subsection: 'position',
+        key: 'rx_gpio',
+        value: 33,
+        description: 'Heltec Tracker V1.1: UART RX пин для UC6580 GNSS',
+        note: 'V1.1: GPIO3 управляет питанием GNSS, GPIO33 = RX, GPIO34 = TX',
       },
       {
-        command: 'python -m meshtastic --set power.is_power_saving true',
-        description: 'Heltec Tracker: включить экономию энергии (TRACKER роль — сон между вещаниями позиции)',
-        phase: 'after',
+        section: 'config',
+        subsection: 'position',
+        key: 'tx_gpio',
+        value: 34,
+        description: 'Heltec Tracker V1.1: UART TX пин для UC6580 GNSS',
       },
       {
-        command: 'python -m meshtastic --set power.ls_secs ${lsSecs}',
-        description: 'Heltec Tracker: время сна (сек) — трекер спит между GPS-обновлениями, экономит батарею',
-        phase: 'after',
+        section: 'config',
+        subsection: 'position',
+        key: 'position_broadcast_smart_enabled',
+        value: true,
+        description: 'Heltec Tracker: умное вещание — отправлять позицию только при перемещении',
       },
       {
-        command: 'python -m meshtastic --set power.min_wake_secs ${minWakeSecs}',
-        description: 'Heltec Tracker: минимальное время бодрствования (10 сек — хватит на GPS фикс + отправку)',
-        phase: 'after',
+        section: 'config',
+        subsection: 'position',
+        key: 'broadcast_smart_minimum_distance',
+        value: 10,
+        description: 'Heltec Tracker: минимальное расстояние для вещания (10 м — рекомендация Heltec)',
+      },
+      {
+        section: 'config',
+        subsection: 'position',
+        key: 'broadcast_smart_minimum_interval_secs',
+        value: 900,
+        description: 'Heltec Tracker: минимальный интервал умного вещания (900 сек — рекомендация Heltec)',
+      },
+      {
+        section: 'config',
+        subsection: 'power',
+        key: 'wait_bluetooth_secs',
+        value: 0,
+        description: 'Heltec Tracker: не ждать Bluetooth при старте (экономия батареи, рекомендация Heltec)',
       },
     ],
     warnings: [
@@ -255,11 +348,39 @@ export const DEVICE_PROFILES: DeviceProfile[] = [
       '⚠️ TRACKER роль + power_saving: устройство спит между вещаниями позиции. LoRa радио НЕ принимает пакеты во время сна! Трекер НЕ ретранслирует чужие пакеты',
     ],
     defaultsOverride: {
+      role: 'TRACKER',
       gpsUpdateInterval: 30,
       gpsAttemptTime: 90,
       screenOnSecs: 30,     // LCD жрёт батарею — уменьшаем таймаут, но НЕ 0! (bug #5088)
       ledDisabled: false,   // LED полезен как индикатор (LCD маленький)
+      powerSaving: true,    // TRACKER + power_saving = сон между вещаниями
+      lsSecs: 900,          // Light sleep 15 мин — рекомендация Heltec
+      minWakeSecs: 30,      // Минимум 30 сек для GPS фикса — рекомендация Heltec
+      positionBroadcastSecs: 900,  // 15 мин — рекомендация Heltec
+      smartBroadcastMinDist: 10,   // 10 м — рекомендация Heltec
+      smartBroadcastMinInterval: 900,  // 15 мин — рекомендация Heltec
+      waitBluetoothSecs: 0, // Не ждать BT — рекомендация Heltec
     },
+    vendorRecommendedConfig: `# Рекомендуемый конфиг Heltec Wireless Tracker V1.1
+# Источник: https://docs.heltec.org/en/node/esp32/wireless_tracker/meshtastic_tracker.html
+# Результат: 13 мкА в режиме сна (с внешним Li-Po)
+config:
+  device:
+    role: TRACKER
+  position:
+    position_broadcast_secs: 900
+    broadcast_smart_minimum_distance: 10
+    broadcast_smart_minimum_interval_secs: 900
+    gps_update_interval: 30
+    rx_gpio: 33
+    tx_gpio: 34
+  power:
+    is_power_saving: true
+    wait_bluetooth_secs: 0
+    ls_secs: 900
+    min_wake_secs: 30
+  display:
+    screen_on_secs: 30`,
   },
 ]
 

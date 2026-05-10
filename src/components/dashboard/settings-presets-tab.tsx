@@ -273,7 +273,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
   const [presets, setPresets] = useState<PresetData[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPreset, setSelectedPreset] = useState<PresetData | null>(null)
-  const [outputMode, setOutputMode] = useState<'commands' | 'yaml'>('commands')
+  const [outputMode, setOutputMode] = useState<'commands' | 'yaml'>('yaml')
   const [expandedCustom, setExpandedCustom] = useState<string | null>(null)
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('t-echo')
 
@@ -501,7 +501,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
   /** Применить пресет — загрузить в генератор команд */
   const handleApply = useCallback((preset: PresetData) => {
     setSelectedPreset(preset)
-    toast({ title: 'Пресет применён', description: `«${preset.name}» — команды сгенерированы` })
+    toast({ title: 'Пресет применён', description: `«${preset.name}» — YAML-конфиг сгенерирован` })
   }, [toast])
 
   // ===========================================================================
@@ -643,21 +643,14 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     const cmd = 'python -m meshtastic'
     const lines: string[] = []
 
+    // --- linkedChannel (общий для команд и YAML) ---
+    const linkedChannel = p.channel ?? (p.channelId ? channels.find(c => c.id === p.channelId) : null)
+
     // --- Заголовок ---
     lines.push(`# Пресет: ${p.name}`)
     if (p.description) lines.push(`# ${p.description}`)
     if (device) lines.push(`# Устройство: ${device.name}`)
     lines.push('')
-
-    // --- Pre-команды устройства (подготовка) ---
-    if (device && device.preCommands.length > 0) {
-      lines.push('# ── Подготовка устройства ──')
-      for (const c of device.preCommands) {
-        if (c.optional) lines.push(`# ${c.description}`)
-        lines.push(c.command)
-      }
-      lines.push('')
-    }
 
     // --- Device ---
     lines.push('# ── Основной конфиг ──')
@@ -668,7 +661,6 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     lines.push(`${cmd} --set lora.region ${p.region}`)
     lines.push(`${cmd} --set lora.modem_preset ${p.modemPreset}`)
     lines.push(`${cmd} --set lora.tx_power ${p.txPower}`)
-    // use_preamble удалён — не существует в LoRaConfig прошивки 2.7.15
 
     // --- Network ---
     lines.push(`${cmd} --set network.hop_limit ${p.hopLimit}`)
@@ -685,23 +677,17 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     lines.push(`${cmd} --set position.gps_mode ${p.gpsMode}`)
     if (p.gpsMode === 'ENABLED') {
       lines.push(`${cmd} --set position.gps_update_interval ${p.gpsUpdateInterval}`)
-      // GPS attempt time (только если GPS включён и не дефолт)
-      if (p.gpsAttemptTime > 0 && p.gpsAttemptTime !== 90) {
-        lines.push(`${cmd} --set position.gps_attempt_time ${p.gpsAttemptTime}`)
-      }
+      lines.push(`${cmd} --set position.gps_attempt_time ${p.gpsAttemptTime}`)
     }
-    // AGNSS (только для клиентов с телефоном)
     if (p.agpsEnabled) {
       lines.push(`${cmd} --set gps.agps_enabled true`)
     }
-    // Position flags (which data fields to include)
     lines.push(`${cmd} --set position.position_flags ${p.positionFlags}`)
     lines.push(`${cmd} --set position.position_broadcast_secs ${p.positionBroadcastSecs}`)
     if (p.smartBroadcastEnabled) {
       lines.push(`${cmd} --set position.broadcast_smart_minimum_distance ${p.smartBroadcastMinDist}`)
       lines.push(`${cmd} --set position.broadcast_smart_minimum_interval_secs ${p.smartBroadcastMinInterval}`)
     }
-    // Fixed position — зафиксировать координаты (для стационарных устройств)
     if (p.fixedPosition) {
       lines.push(`${cmd} --set position.fixed_position true`)
       lines.push('# ⚠️ При fixed_position=true нужно также: --set position.gps_mode DISABLED')
@@ -726,7 +712,6 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     }
 
     // --- Канал (если привязан) ---
-    const linkedChannel = p.channel ?? (p.channelId ? channels.find(c => c.id === p.channelId) : null)
     if (linkedChannel) {
       lines.push('')
       lines.push('# Настройка канала')
@@ -737,18 +722,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       if (linkedChannel.frequency) {
         lines.push(`${cmd} --ch-index 0 --ch-set frequency ${linkedChannel.frequency}`)
       }
-      // Position precision (channel module_settings)
       lines.push(`${cmd} --ch-index 0 --ch-set module_settings.position_precision ${p.positionPrecision}`)
-    }
-
-    // --- Post-команды устройства (доп. настройки) ---
-    if (device && device.postCommands.length > 0) {
-      lines.push('')
-      lines.push('# ── Специфичные команды устройства ──')
-      for (const c of device.postCommands) {
-        if (c.optional) lines.push(`# ${c.description}`)
-        lines.push(c.command)
-      }
     }
 
     // --- Warnings устройства ---
@@ -760,23 +734,35 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       }
     }
 
-    // --- YAML ---
+    // --- YAML (основной формат — для импорта через meshtastic --configure) ---
     const ylines: string[] = []
     const deviceName = device ? device.name : 'Meshtastic'
     ylines.push(`# Meshtastic ${deviceName} Configuration`)
     ylines.push(`# Пресет: ${p.name}`)
     if (p.description) ylines.push(`# ${p.description}`)
-    ylines.push('# Прошивка 2.7.15 | Использование: python -m meshtastic --configure config.yaml')
+    ylines.push('# Прошивка 2.7.15')
+    ylines.push('# Импорт: python -m meshtastic --configure config.yaml')
+    ylines.push('# Экспорт: python -m meshtastic --export-config > backup.yaml')
     ylines.push('')
+
+    // channel_url (если привязан канал с URL)
+    if (linkedChannel?.channelUrl) {
+      ylines.push(`channel_url: "${linkedChannel.channelUrl}"`)
+      ylines.push('')
+    }
+
     ylines.push('config:')
     ylines.push('  device:')
     ylines.push(`    role: ${p.role}`)
     ylines.push(`    node_info_broadcast_secs: ${p.nodeInfoBroadcastSecs}`)
+    if (p.ledDisabled) {
+      ylines.push('    led_heartbeat_disabled: true')
+    }
     ylines.push('  lora:')
     ylines.push(`    region: ${p.region}`)
     ylines.push(`    modem_preset: ${p.modemPreset}`)
     ylines.push(`    tx_power: ${p.txPower}`)
-    // use_preamble удалён — не существует в LoRaConfig прошивки 2.7.15
+    ylines.push('    tx_enabled: true')
     ylines.push('  network:')
     ylines.push(`    hop_limit: ${p.hopLimit}`)
     ylines.push(`    rebroadcast_mode: ${p.rebroadcastMode}`)
@@ -785,6 +771,13 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     if (SLEEP_ROLES.has(p.role)) {
       ylines.push(`    ls_secs: ${p.lsSecs}`)
       ylines.push(`    min_wake_secs: ${p.minWakeSecs}`)
+    }
+    // Device-specific power overrides from yamlExtras
+    if (device) {
+      const powerExtras = device.yamlExtras.filter(e => e.section === 'config' && e.subsection === 'power')
+      for (const extra of powerExtras) {
+        ylines.push(`    ${extra.key}: ${typeof extra.value === 'string' ? `"${extra.value}"` : extra.value}`)
+      }
     }
     ylines.push('  bluetooth:')
     ylines.push(`    enabled: ${p.bluetoothEnabled}`)
@@ -797,9 +790,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     ylines.push(`    gps_mode: ${p.gpsMode}`)
     if (p.gpsMode === 'ENABLED') {
       ylines.push(`    gps_update_interval: ${p.gpsUpdateInterval}`)
-      if (p.gpsAttemptTime > 0 && p.gpsAttemptTime !== 90) {
-        ylines.push(`    gps_attempt_time: ${p.gpsAttemptTime}`)
-      }
+      ylines.push(`    gps_attempt_time: ${p.gpsAttemptTime}`)
     }
     if (p.agpsEnabled) {
       ylines.push('    agps_enabled: true')
@@ -807,6 +798,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     ylines.push(`    position_flags: ${p.positionFlags}`)
     ylines.push(`    position_broadcast_secs: ${p.positionBroadcastSecs}`)
     if (p.smartBroadcastEnabled) {
+      ylines.push('    position_broadcast_smart_enabled: true')
       ylines.push(`    broadcast_smart_minimum_distance: ${p.smartBroadcastMinDist}`)
       ylines.push(`    broadcast_smart_minimum_interval_secs: ${p.smartBroadcastMinInterval}`)
     }
@@ -814,19 +806,44 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       ylines.push('    fixed_position: true')
       ylines.push('    # ⚠️ gps_mode должен быть DISABLED при fixed_position (баг #8403)')
     }
+    // Device-specific position overrides from yamlExtras (rx_gpio, tx_gpio, etc.)
+    if (device) {
+      const posExtras = device.yamlExtras.filter(e => e.section === 'config' && e.subsection === 'position' && !['gps_attempt_time'].includes(e.key))
+      for (const extra of posExtras) {
+        if (extra.note) ylines.push(`    # ${extra.note}`)
+        ylines.push(`    ${extra.key}: ${typeof extra.value === 'string' ? `"${extra.value}"` : extra.value}`)
+      }
+    }
     ylines.push('')
     ylines.push('module_config:')
     ylines.push('  telemetry:')
     ylines.push(`    device_update_interval: ${p.telemetryInterval}`)
-
-    // Channel module_settings.position_precision
     ylines.push('  channel:')
     ylines.push('    module_settings:')
     ylines.push(`      position_precision: ${p.positionPrecision}`)
 
-    if (linkedChannel) {
+    // Device-specific module_config overrides from yamlExtras
+    if (device) {
+      const moduleExtras = device.yamlExtras.filter(e => e.section === 'module_config')
+      for (const extra of moduleExtras) {
+        if (extra.note) ylines.push(`    # ${extra.note}`)
+        ylines.push(`    ${extra.key}: ${typeof extra.value === 'string' ? `"${extra.value}"` : extra.value}`)
+      }
+    }
+
+    // Warnings устройства
+    if (device && device.warnings.length > 0) {
       ylines.push('')
-      ylines.push('# Каналы необходимо настроить отдельно командами:')
+      ylines.push('# ── Важные замечания ──')
+      for (const w of device.warnings) {
+        ylines.push(`# ${w}`)
+      }
+    }
+
+    // Канал (если привязан, но без URL — нужны отдельные команды)
+    if (linkedChannel && !linkedChannel.channelUrl) {
+      ylines.push('')
+      ylines.push('# Каналы (без channel_url — настройте отдельно):')
       ylines.push(`# python -m meshtastic --ch-index 0 --ch-set psk "base64:${linkedChannel.psk}"`)
       ylines.push(`# python -m meshtastic --ch-index 0 --ch-set name "${linkedChannel.name}"`)
       ylines.push(`# python -m meshtastic --ch-index 0 --ch-set uplink_enabled ${linkedChannel.uplink}`)
@@ -941,7 +958,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
             Пресеты настроек
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Готовые конфигурации для устройств Meshtastic. Выберите пресет, устройство и скопируйте команды.
+            Готовые конфигурации для устройств Meshtastic. Выберите пресет, устройство → скачайте YAML → импортируйте: `meshtastic --configure config.yaml`
           </p>
         </div>
         <Button onClick={handleCreate} className="gap-2">
@@ -1494,8 +1511,8 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                   onClick={() => handleDownload(
                     displayContent,
                     outputMode === 'yaml'
-                      ? `meshtastic-${selectedPreset.name.replace(/\s+/g, '-').toLowerCase()}.yaml`
-                      : `meshtastic-${selectedPreset.name.replace(/\s+/g, '-').toLowerCase()}.sh`
+                      ? `config-${selectedDeviceId}.yaml`
+                      : `config-${selectedDeviceId}.sh`
                   )}
                 >
                   <Download className="size-3" />
@@ -1572,6 +1589,61 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
             <pre className="bg-muted p-4 rounded-md text-xs font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-all">
               {displayContent}
             </pre>
+
+            {/* Инструкции по импорту настроек */}
+            {selectedDevice && selectedDevice.importInstructions.length > 0 && (
+              <Accordion type="single" collapsible className="mt-4">
+                <AccordionItem value="import">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="flex items-center gap-2 text-sm">
+                      <FileText className="size-4 text-muted-foreground" />
+                      Инструкция по импорту настроек
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3">
+                      {selectedDevice.importInstructions.map(step => (
+                        <div key={step.step} className="flex gap-3 text-sm">
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
+                            {step.step}
+                          </span>
+                          <div className="space-y-1">
+                            <p>{step.description}</p>
+                            {step.command && (
+                              <code className="block bg-muted px-2 py-1 rounded text-xs font-mono">
+                                {step.command}
+                              </code>
+                            )}
+                            {step.note && (
+                              <p className="text-xs text-muted-foreground">{step.note}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            )}
+
+            {/* Рекомендуемый конфиг от производителя */}
+            {selectedDevice?.vendorRecommendedConfig && (
+              <Accordion type="single" collapsible className="mt-2">
+                <AccordionItem value="vendor">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="flex items-center gap-2 text-sm">
+                      <Lightbulb className="size-4 text-amber-500" />
+                      Рекомендуемый конфиг от производителя
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <pre className="bg-muted/50 border rounded-lg p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap max-h-96 overflow-y-auto">
+                      {selectedDevice.vendorRecommendedConfig}
+                    </pre>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            )}
           </CardContent>
         </Card>
       )}
@@ -2095,6 +2167,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                           Оценка автономности: <strong>{formatBatteryLife(estimateBatteryHours({
                             ...form,
                             id: '',
+                            builtinId: null,
                             isBuiltIn: false,
                             channel: null,
                             createdAt: '',

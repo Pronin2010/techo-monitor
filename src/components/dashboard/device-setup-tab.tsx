@@ -22,6 +22,7 @@ import {
   Monitor,
   Network,
   CircleHelp,
+  Lightbulb,
 } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -52,6 +53,7 @@ import {
 } from '@/components/ui/tooltip'
 import { useToast } from '@/hooks/use-toast'
 import type { Channel } from '@/lib/types'
+import { DEVICE_PROFILES, getDeviceProfile } from '@/lib/device-profiles'
 
 // ============================================================================
 // Типы и константы — актуальные для meshtastic firmware 2.7.15
@@ -233,7 +235,7 @@ const INITIAL_STATE = {
   frequencyOverride: '', // Переопределение частоты (МГц)
   selectedChannelId: '' as string, // ID выбранного канала
   // --- Output ---
-  outputMode: 'commands' as 'commands' | 'yaml',
+  outputMode: 'yaml' as 'commands' | 'yaml',
 }
 
 // ============================================================================
@@ -261,6 +263,10 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
   const { toast } = useToast()
 
   const [state, setState] = useState(INITIAL_STATE)
+
+  // ── Device profile selection ──
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('t-echo')
+  const selectedDevice = useMemo(() => getDeviceProfile(selectedDeviceId), [selectedDeviceId])
 
   // ── Channel selection handler ──
   const handleChannelSelect = useCallback((channelId: string) => {
@@ -399,9 +405,11 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
 
   const yamlConfig = useMemo(() => {
     const ylines: string[] = []
-    ylines.push('# Meshtastic T-Echo Configuration')
-    ylines.push('# Прошивка 2.7.15 | Использование: python -m meshtastic --configure config.yaml')
-    ylines.push('# T-Echo должен быть подключён по USB!')
+    const deviceName = selectedDevice ? selectedDevice.name : 'Meshtastic'
+    ylines.push(`# Meshtastic ${deviceName} Configuration`)
+    ylines.push('# Прошивка 2.7.15')
+    ylines.push('# Импорт: python -m meshtastic --configure config.yaml')
+    ylines.push('# Экспорт: python -m meshtastic --export-config > backup.yaml')
     ylines.push('')
 
     // Owner
@@ -424,6 +432,7 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     ylines.push(`    region: ${state.region}`)
     ylines.push(`    modem_preset: ${state.modemPreset}`)
     ylines.push(`    tx_power: ${state.txPower}`)
+    ylines.push('    tx_enabled: true')
     // use_preamble удалён — не существует в LoRaConfig прошивки 2.7.15
     ylines.push('  network:')
     ylines.push(`    hop_limit: ${state.hopLimit}`)
@@ -433,6 +442,13 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     if (SLEEP_ROLES.has(state.role)) {
       ylines.push(`    ls_secs: ${state.sleepInterval}`)
       ylines.push(`    min_wake_secs: ${state.minWake}`)
+    }
+    // Device-specific power overrides
+    if (selectedDevice) {
+      const powerExtras = selectedDevice.yamlExtras.filter(e => e.section === 'config' && e.subsection === 'power')
+      for (const extra of powerExtras) {
+        ylines.push(`    ${extra.key}: ${typeof extra.value === 'string' ? `"${extra.value}"` : extra.value}`)
+      }
     }
     ylines.push('  bluetooth:')
     ylines.push(`    enabled: ${state.bluetoothEnabled}`)
@@ -445,8 +461,20 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     ylines.push(`    gps_mode: ${state.gpsMode}`)
     if (state.gpsMode === 'ENABLED') {
       ylines.push(`    gps_update_interval: ${state.gpsUpdateInterval}`)
+      ylines.push(`    gps_attempt_time: ${state.gpsMode === 'ENABLED' ? 90 : 0}`)
     }
+    ylines.push('    position_broadcast_smart_enabled: true')
     ylines.push(`    position_flags: ${state.positionFlags}`)
+    // Device-specific position overrides (rx_gpio, tx_gpio, etc.)
+    if (selectedDevice) {
+      const posExtras = selectedDevice.yamlExtras.filter(e => e.section === 'config' && e.subsection === 'position')
+      // Skip gps_attempt_time since we handle it in the main position section
+      for (const extra of posExtras) {
+        if (['gps_attempt_time'].includes(extra.key)) continue
+        if (extra.note) ylines.push(`    # ${extra.note}`)
+        ylines.push(`    ${extra.key}: ${typeof extra.value === 'string' ? `"${extra.value}"` : extra.value}`)
+      }
+    }
 
     ylines.push('')
     ylines.push('module_config:')
@@ -467,7 +495,7 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     }
 
     return ylines.join('\n')
-  }, [state])
+  }, [state, selectedDevice])
 
   // ---------------------------------------------------------------------------
   // Копирование / Скачивание
@@ -511,6 +539,30 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {/* ================================================================= */}
+      {/* Выбор профиля устройства                                          */}
+      {/* ================================================================= */}
+      <div className="flex items-center gap-3 flex-wrap mb-4">
+        <Label className="text-sm font-medium flex items-center gap-1.5 shrink-0">
+          <Cpu className="size-4 text-muted-foreground" />
+          Устройство:
+        </Label>
+        <div className="flex gap-2 flex-wrap">
+          {DEVICE_PROFILES.map(profile => (
+            <Button
+              key={profile.id}
+              variant={selectedDeviceId === profile.id ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setSelectedDeviceId(profile.id)}
+            >
+              <span>{profile.icon}</span>
+              <span>{profile.shortName}</span>
+            </Button>
+          ))}
+        </div>
+      </div>
+
       {/* ================================================================= */}
       {/* Выбор канала из созданных                                         */}
       {/* ================================================================= */}
@@ -563,7 +615,7 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Settings className="size-5 text-muted-foreground" />
-            Настройки прошивки Meshtastic 2.7.15
+            Настройки прошивки Meshtastic 2.7.15 — Импорт через YAML
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
@@ -1519,8 +1571,8 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
               <Button
                 variant="outline"
                 onClick={() => handleDownload(
-                  `# Meshtastic T-Echo Configuration\n# Generated by Forest Track Dashboard\n# Firmware 2.7.15 | Run in PowerShell: .\\meshtastic-setup.ps1\n# T-Echo must be connected via USB!\n\n${commandText}\n`,
-                  'meshtastic-setup.ps1'
+                  `# Meshtastic ${selectedDevice ? selectedDevice.name : 'T-Echo'} Configuration\n# Generated by Forest Track Dashboard\n# Firmware 2.7.15 | Run in PowerShell: .\\config-${selectedDeviceId}.ps1\n# Device must be connected via USB!\n\n${commandText}\n`,
+                  `config-${selectedDeviceId}.ps1`
                 )}
               >
                 <Download className="size-4 mr-1.5" />
@@ -1529,7 +1581,7 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
             ) : (
               <Button
                 variant="outline"
-                onClick={() => handleDownload(yamlConfig, 'meshtastic-config.yaml')}
+                onClick={() => handleDownload(yamlConfig, `config-${selectedDeviceId}.yaml`)}
               >
                 <Download className="size-4 mr-1.5" />
                 Скачать .yaml
@@ -1545,9 +1597,77 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Скачайте .yaml файл и запустите: <code className="bg-muted px-1 rounded">python -m meshtastic --configure meshtastic-config.yaml</code>
+              Скачайте .yaml файл и запустите: <code className="bg-muted px-1 rounded">{`python -m meshtastic --configure config-${selectedDeviceId}.yaml`}</code>
               {' '}— это самый надёжный способ настройки. Канальные команды нужно выполнить отдельно.
             </p>
+          )}
+
+          {/* Import instructions accordion */}
+          {selectedDevice && selectedDevice.importInstructions.length > 0 && (
+            <Accordion type="single" collapsible className="mt-4">
+              <AccordionItem value="import">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="flex items-center gap-2 text-sm">
+                    <FileText className="size-4 text-muted-foreground" />
+                    Инструкция по импорту настроек
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3">
+                    {selectedDevice.importInstructions.map(step => (
+                      <div key={step.step} className="flex gap-3 text-sm">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
+                          {step.step}
+                        </span>
+                        <div className="space-y-1">
+                          <p>{step.description}</p>
+                          {step.command && (
+                            <code className="block bg-muted px-2 py-1 rounded text-xs font-mono">
+                              {step.command}
+                            </code>
+                          )}
+                          {step.note && (
+                            <p className="text-xs text-muted-foreground">{step.note}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+
+          {/* Device warnings */}
+          {selectedDevice && selectedDevice.warnings.length > 0 && (
+            <div className="space-y-2 mt-2">
+              {selectedDevice.warnings.map((w, i) => (
+                <Alert key={i} className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+                  <AlertDescription className="text-amber-700 dark:text-amber-300 text-xs">
+                    {w}
+                  </AlertDescription>
+                </Alert>
+              ))}
+            </div>
+          )}
+
+          {/* Vendor recommended config */}
+          {selectedDevice?.vendorRecommendedConfig && (
+            <Accordion type="single" collapsible className="mt-2">
+              <AccordionItem value="vendor">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="flex items-center gap-2 text-sm">
+                    <Lightbulb className="size-4 text-amber-500" />
+                    Рекомендуемый конфиг от производителя
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <pre className="bg-muted/50 border rounded-lg p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap max-h-96 overflow-y-auto">
+                    {selectedDevice.vendorRecommendedConfig}
+                  </pre>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           )}
         </CardContent>
       </Card>

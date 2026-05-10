@@ -286,3 +286,81 @@ Stage Summary:
 - Heltec Tracker: 6 шагов прошивки (Web Flasher + CLI), boot mode USER+RESET, V1.1 специфика
 - UI: аккордеон "Инструкция по прошивке" в панели характеристик устройства
 - Файлы: src/lib/device-profiles.ts (обновлён), src/components/dashboard/settings-presets-tab.tsx (обновлён), AI_PROMPT.md (обновлён)
+
+---
+Task ID: 4
+Agent: main
+Task: Switch device-setup-tab from CLI-commands approach to YAML-import approach
+
+Work Log:
+- Read the full device-setup-tab.tsx (1677 lines) and device-profiles.ts
+- Changed default outputMode from 'commands' to 'yaml' (line 238)
+- Added import for DEVICE_PROFILES and getDeviceProfile from @/lib/device-profiles
+- Added Lightbulb icon import from lucide-react
+- Added selectedDeviceId state and selectedDevice memo in component
+- Updated YAML header: dynamic device name, split usage comment into import/export lines
+- Added tx_enabled: true to YAML lora section
+- Added device-specific power extras (wait_bluetooth_secs, etc.) from yamlExtras
+- Added gps_attempt_time to YAML position section when GPS is ENABLED
+- Added position_broadcast_smart_enabled: true to YAML position section
+- Added device-specific position extras (rx_gpio, tx_gpio, broadcast_smart_*) from yamlExtras
+- Added selectedDevice to yamlConfig useMemo dependency array
+- Updated card header title to "Настройки прошивки Meshtastic 2.7.15 — Импорт через YAML"
+- Updated download filenames: config-${selectedDeviceId}.yaml and config-${selectedDeviceId}.ps1
+- Added device profile selector UI at top of component (buttons with icons)
+- Added import instructions accordion after output area
+- Added device warnings display (amber alerts)
+- Added vendor recommended config accordion (with Lightbulb icon)
+- Fixed template literal in YAML hint text for proper selectedDeviceId interpolation
+- Lint passed cleanly
+
+Stage Summary:
+- Default mode changed from CLI commands to YAML import
+- Device profile selection integrated into device-setup-tab (T-Echo, Heltec Tracker)
+- YAML output now includes device-specific extras from device profiles (power, position)
+- Added tx_enabled, gps_attempt_time, position_broadcast_smart_enabled to YAML
+- Import instructions, warnings, and vendor config displayed after output area
+- Download filenames now include device ID for clarity
+
+---
+Task ID: 41
+Agent: main
+Task: Переключение на метод импорта настроек (YAML) вместо CLI-команд для конфигурации устройств
+
+Work Log:
+- Исследован формат импорта/экспорта настроек Meshtastic через web search и чтение документации
+- Прочитаны: Meshtastic CLI docs (--export-config, --configure), официальный example_config.yaml, NURDspace config examples, GitHub bug #576
+- Прочитана документация Heltec: https://docs.heltec.org/en/node/esp32/wireless_tracker/meshtastic_tracker.html
+- Найдены ключевые настройки Heltec для низкого потребления (13 мкА): TRACKER role, position_broadcast_secs=900, broadcast_smart_minimum_distance=10, gps_update_interval=30, wait_bluetooth_secs=0, ls_secs=900, min_wake_secs=30
+- Обновлён device-profiles.ts:
+  - Убраны DeviceCommand/preCommands/postCommands (CLI-подход)
+  - Добавлены ImportStep/importInstructions (пошаговая инструкция по импорту YAML)
+  - Добавлены DeviceYamlExtra/yamlExtras (устройство-специфичные YAML-добавления)
+  - Добавлен vendorRecommendedConfig (рекомендуемый конфиг от Heltec)
+  - defaultsOverride расширён: role, powerSaving, lsSecs, minWakeSecs, positionBroadcastSecs, smartBroadcastMinDist, smartBroadcastMinInterval, waitBluetoothSecs
+  - T-Echo: gps_attempt_time=90 в yamlExtras
+  - Heltec Tracker: полный набор yamlExtras (gps_attempt_time, rx_gpio=33, tx_gpio=34, broadcast_smart_minimum_distance=10, broadcast_smart_minimum_interval_secs=900, wait_bluetooth_secs=0)
+  - Heltec Tracker: defaultsOverride обновлены по рекомендациям Heltec (role=TRACKER, powerSaving=true, lsSecs=900, minWakeSecs=30, positionBroadcastSecs=900, etc.)
+- Обновлён settings-presets-tab.tsx:
+  - outputMode по умолчанию = 'yaml' (было 'commands')
+  - Описание обновлено: "скачайте YAML → импортируйте: meshtastic --configure config.yaml"
+  - YAML-генерация полностью переработана: channel_url, tx_enabled, led_heartbeat_disabled, position_broadcast_smart_enabled, device-specific yamlExtras
+  - Добавлены: ImportInstructions аккордеон, vendorRecommendedConfig аккордеон
+  - Убраны ссылки на preCommands/postCommands
+  - Скачивание: config-${deviceId}.yaml / config-${deviceId}.sh
+- Обновлён device-setup-tab.tsx:
+  - outputMode по умолчанию = 'yaml'
+  - Добавлен DEVICE_PROFILES import и selectedDevice state
+  - Device selector UI (кнопки T-Echo / Heltec Tracker)
+  - YAML генерация обновлена с device-specific extras
+  - Добавлены: ImportInstructions, device warnings, vendorRecommendedConfig
+  - Заголовок: "Настройки прошивки Meshtastic 2.7.15 — Импорт через YAML"
+- Исправлена TS-ошибка: missing builtinId в estimateBatteryHours call
+- Lint и TypeScript чисты
+
+Stage Summary:
+- Метод конфигурации переключён с CLI-команд на YAML-импорт
+- Формат: `python -m meshtastic --configure config.yaml` — одна команда вместо десятка
+- Heltec Tracker: полная интеграция с рекомендациями Heltec (13 мкА в сне)
+- UI: YAML по умолчанию, инструкции по импорту, рекомендуемый конфиг от производителя
+- Файлы: device-profiles.ts (переписан), settings-presets-tab.tsx (обновлён), device-setup-tab.tsx (обновлён)
