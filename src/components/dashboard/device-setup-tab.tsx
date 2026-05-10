@@ -206,6 +206,7 @@ const INITIAL_STATE = {
   gpsMode: 'ENABLED' as GpsMode,
   gpsUpdateInterval: 30,
   positionPrecision: 32,
+  positionFlags: 943,
   // --- Telemetry ---
   telemetryDeviceInterval: 300,
   // --- LoRa Advanced ---
@@ -363,8 +364,11 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     if (state.gpsMode === 'ENABLED') {
       lines.push(`${p} --set position.gps_update_interval ${state.gpsUpdateInterval}`)
     }
+    if (state.positionFlags > 0) {
+      lines.push(`${p} --set position.position_flags ${state.positionFlags}`)
+    }
     if (state.positionPrecision > 0) {
-      lines.push(`${p} --set position.position_precision ${state.positionPrecision}`)
+      lines.push(`${p} --ch-index 0 --ch-set module_settings.position_precision ${state.positionPrecision}`)
     }
 
     // --- Telemetry ---
@@ -442,12 +446,15 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     if (state.gpsMode === 'ENABLED') {
       ylines.push(`    gps_update_interval: ${state.gpsUpdateInterval}`)
     }
-    ylines.push(`    position_precision: ${state.positionPrecision}`)
+    ylines.push(`    position_flags: ${state.positionFlags}`)
 
     ylines.push('')
     ylines.push('module_config:')
     ylines.push('  telemetry:')
     ylines.push(`    device_update_interval: ${state.telemetryDeviceInterval}`)
+    ylines.push('  channel:')
+    ylines.push('    module_settings:')
+    ylines.push(`      position_precision: ${state.positionPrecision}`)
 
     // Channel commands (as comments in YAML)
     if (state.setPrivatePsk && state.psk) {
@@ -909,11 +916,11 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
 
                   <Separator />
 
-                  {/* Точность позиции */}
+                  {/* Точность координат (module_settings.position_precision) */}
                   <div className="space-y-2">
                     <Label htmlFor="precision" className="flex items-center gap-1.5">
                       <MapPin className="size-3.5 text-muted-foreground" />
-                      Точность позиции (position.position_precision)
+                      Точность координат (module_settings.position_precision)
                     </Label>
                     <Select
                       value={String(state.positionPrecision)}
@@ -925,9 +932,11 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
                       <SelectContent>
                         {[
                           { value: 0, label: '0 — не передавать' },
-                          { value: 16, label: '16 — низкая (~1.5 км)' },
-                          { value: 24, label: '24 — средняя (~150 м)' },
-                          { value: 32, label: '32 — максимальная' },
+                          { value: 14, label: '14 — ~1.5 км (дефолт)' },
+                          { value: 16, label: '16 — ~365 м' },
+                          { value: 20, label: '20 — ~23 м' },
+                          { value: 24, label: '24 — ~1.4 м' },
+                          { value: 32, label: '32 — максимальная (~1 м)' },
                         ].map((o) => (
                           <SelectItem key={o.value} value={String(o.value)}>
                             {o.label}
@@ -936,9 +945,54 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Меньшие значения экономят эфир и батарею, но снижают точность координат
+                      Управляет радиусом/обфускацией координат. Меньшие значения — больше скрытность, но ниже точность.
+                      Устанавливается на канал через <code className="bg-muted px-1 rounded text-[11px]">module_settings.position_precision</code>.
                     </p>
                   </div>
+
+                  <Separator />
+
+                  {/* Состав данных позиции (position.position_flags) */}
+                  <div className="space-y-2">
+                    <Label htmlFor="position-flags" className="flex items-center gap-1.5">
+                      <Activity className="size-3.5 text-muted-foreground" />
+                      Состав данных позиции (position.position_flags)
+                    </Label>
+                    <Select
+                      value={String(state.positionFlags)}
+                      onValueChange={(v) => updateField('positionFlags', Number(v))}
+                    >
+                      <SelectTrigger id="position-flags" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          { value: 0, label: '0 — не передавать' },
+                          { value: 3, label: '3 — минимальная (ALT+MSL)' },
+                          { value: 175, label: '175 — базовая (+GEO+DOP+SAT+TS)' },
+                          { value: 943, label: '943 — полная (+HVDOP+SEQ+HEADING+SPEED)' },
+                          { value: 1023, label: '1023 — все флаги' },
+                        ].map((o) => (
+                          <SelectItem key={o.value} value={String(o.value)}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Битовая маска PositionFlags. Определяет, какие поля данных включаются в POSITION-сообщения.
+                    </p>
+                  </div>
+
+                  {/* Пояснение разницы */}
+                  <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+                    <Info className="size-4 text-blue-500" />
+                    <AlertDescription className="text-blue-700 dark:text-blue-300 text-xs">
+                      <strong>position_precision</strong> — насколько точно передаются координаты (радиус обфускации).
+                      &nbsp;<strong>position_flags</strong> — какие дополнительные поля (высота, спутники, скорость и т.д.)
+                      включаются в сообщение позиции. Это два независимых параметра.
+                    </AlertDescription>
+                  </Alert>
                 </div>
               </AccordionContent>
             </AccordionItem>

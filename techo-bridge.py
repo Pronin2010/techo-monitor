@@ -432,21 +432,13 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             #   943 = +HEADING+SPEED (полная с движением)
             #   1023 = все флаги (максимальная)
             #
-            # positionPrecision из UI может быть:
-            #   0     → не отправлять позицию
-            #   1-13  → устаревший порог, конвертируем в базовый набор (3)
-            #   14+   → устаревший порог, конвертируем в полный набор
-            #   Любое число > 13 → напрямую как position_flags
-            #   Для максимальной точности UI передаёт 1023 или 943
-            precision = config.get('positionPrecision', 943)
-            if precision == 0:
+            # positionFlags из UI — точное значение position_flags
+            # Для максимальной точности UI передаёт 943 или 1023
+            flags = config.get('positionFlags', 943)
+            if flags == 0:
                 node.localConfig.position.position_flags = 0   # Не отправлять позицию
-            elif precision <= 13:
-                # Обратная совместимость: старые пресеты с precision<=13
-                node.localConfig.position.position_flags = 3   # ALTITUDE + ALTITUDE_MSL
             else:
-                # Новые пресеты передают точное значение position_flags
-                node.localConfig.position.position_flags = precision
+                node.localConfig.position.position_flags = flags
             node.localConfig.position.gps_update_interval = config.get('gpsUpdateInterval', 30)
             node.localConfig.position.gps_attempt_time = config.get('gpsAttemptTime', 90)
             # Smart broadcast
@@ -458,7 +450,7 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             node.writeConfig("position")
             time.sleep(0.5)
             sections_written.append("position")
-            flags_val = 0 if precision == 0 else (3 if precision <= 13 else precision)
+            flags_val = 0 if flags == 0 else flags
             print(f"\033[32m[CFG] position: gps={gps_str}, flags={flags_val}, smart={smart_enabled}\033[0m")
 
             # ── Power ──
@@ -565,32 +557,44 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
             sections_written.append("agps")
 
             # ── Канал (Channel 0 = первичный) ──
+            # ВНИМАНИЕ: Всегда записываем канал 0, потому что нужно установить
+            # module_settings.position_precision (точность координат).
+            # Без этого позиция будет с радиусом ~1.5км (дефолт прошивки = 14)!
             ch_name = config.get('channelName', '').strip()
             ch_psk = config.get('channelPsk', '').strip()
             ch_uplink = config.get('channelUplink', True)
             ch_downlink = config.get('channelDownlink', True)
-            if ch_name or ch_psk:
-                try:
-                    import base64
-                    ch = node.channels[0]
-                    if ch_name:
-                        ch.settings.name = ch_name
-                    if ch_psk:
-                        # PSK может быть base64 или hex
-                        try:
-                            ch.settings.psk = base64.b64decode(ch_psk)
-                        except Exception:
-                            # Если не base64 — пробуем как raw bytes
-                            ch.settings.psk = ch_psk.encode('utf-8')
-                    ch.settings.uplink_enabled = ch_uplink
-                    ch.settings.downlink_enabled = ch_downlink
-                    node.writeChannel(0)
-                    sections_written.append("channel")
-                    psk_preview = ch_psk[:8] + '...' if len(ch_psk) > 8 else ch_psk
-                    print(f"\033[32m[CFG] channel[0]: name={ch_name or '(без имени)'}, psk={psk_preview or '(нет)'}, uplink={ch_uplink}, downlink={ch_downlink}\033[0m")
-                except Exception as e:
-                    print(f"\033[31m[CFG] Ошибка записи канала: {e}\033[0m")
-                    # Не прерываем — канал не критичен для базового конфига
+            # positionPrecision — биты точности координат (0-32).
+            # 32 = максимальная точность (~1м), 14 = ~1.5км (дефолт прошивки)
+            # Это поле channel.settings.module_settings.position_precision!
+            ch_precision = config.get('positionPrecision', 32)
+            try:
+                import base64
+                ch = node.channels[0]
+                if ch_name:
+                    ch.settings.name = ch_name
+                if ch_psk:
+                    # PSK может быть base64 или hex
+                    try:
+                        ch.settings.psk = base64.b64decode(ch_psk)
+                    except Exception:
+                        # Если не base64 — пробуем как raw bytes
+                        ch.settings.psk = ch_psk.encode('utf-8')
+                ch.settings.uplink_enabled = ch_uplink
+                ch.settings.downlink_enabled = ch_downlink
+                # КРИТИЧЕСКИ ВАЖНО: position_precision для координат!
+                # channel.settings.module_settings.position_precision (0-32)
+                # 32 = полная точность (~1м), 14 = ~1.5км (дефолт прошивки)
+                ch.settings.module_settings.position_precision = ch_precision
+                node.writeChannel(0)
+                sections_written.append("channel")
+                psk_preview = ch_psk[:8] + '...' if len(ch_psk) > 8 else ch_psk
+                print(f"\033[32m[CFG] channel[0]: name={ch_name or '(без имени)'}, psk={psk_preview or '(нет)'}, "
+                      f"uplink={ch_uplink}, downlink={ch_downlink}, position_precision={ch_precision}\033[0m")
+            except Exception as e:
+                print(f"\033[31m[CFG] Ошибка записи канала: {e}\033[0m")
+                # Не прерываем — канал не критичен для базового конфига,
+                # но позиция будет неточной!
 
         except Exception as e:
             # При ошибке — откатить транзакцию через перезагрузку
@@ -633,6 +637,13 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                     bt_fresh = fresh_node.localConfig.bluetooth
                     bt_mode_fresh = BT_MODE_REVERSE.get(bt_fresh.mode, f'UNKNOWN({bt_fresh.mode})')
                     print(f"\033[36m[DIAG] После применения: role={d.role}, region={l.region}, modem={l.modem_preset}, gps_mode={p.gps_mode}, flags={p.position_flags}\033[0m")
+                    # Проверяем position_precision на канале 0
+                    try:
+                        ch0 = fresh_node.channels[0]
+                        ch_precision_read = ch0.settings.module_settings.position_precision if hasattr(ch0.settings, 'module_settings') else 'N/A'
+                        print(f"\033[36m[DIAG] channel[0] position_precision={ch_precision_read} (32=~1м, 14=~1.5км)\033[0m")
+                    except Exception as ch_err:
+                        print(f"\033[36m[DIAG] Не удалось прочитать position_precision канала: {ch_err}\033[0m")
                     print(f"\033[36m[DIAG] BT после перезагрузки: mode={bt_fresh.mode} ({bt_mode_fresh}), fixed_pin={bt_fresh.fixed_pin}, enabled={bt_fresh.enabled}\033[0m")
                     # Проверяем, что BT FIXED_PIN реально применился
                     if bt_pin and bt_fresh.mode != 1:

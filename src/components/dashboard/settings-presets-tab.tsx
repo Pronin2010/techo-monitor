@@ -42,6 +42,7 @@ interface PresetData {
   agpsEnabled: boolean
   gpsAttemptTime: number
   positionPrecision: number
+  positionFlags: number
   positionBroadcastSecs: number
   smartBroadcastEnabled: boolean
   smartBroadcastMinDist: number
@@ -88,6 +89,7 @@ const DEFAULT_PRESET = {
   agpsEnabled: false,
   gpsAttemptTime: 90,
   positionPrecision: 32,
+  positionFlags: 943,
   positionBroadcastSecs: 60,
   smartBroadcastEnabled: true,
   smartBroadcastMinDist: 20,
@@ -150,20 +152,34 @@ const SCREEN_TIMEOUT_PRESETS = [
   { label: '5 мин', value: 300 },
 ]
 
-/** Пресеты точности позиции */
+/** Пресеты точности координат (channel module_settings.position_precision) */
 const POSITION_PRECISION_OPTIONS = [
   { value: 0, label: '0 — не передавать' },
-  { value: 10, label: '10 — ~11 км' },
-  { value: 11, label: '11 — ~5.5 км' },
-  { value: 12, label: '12 — ~2.7 км' },
-  { value: 13, label: '13 — ~1.4 км' },
-  { value: 14, label: '14 — ~680 м' },
-  { value: 15, label: '15 — ~340 м' },
-  { value: 16, label: '16 — ~170 м' },
-  { value: 17, label: '17 — ~85 м' },
-  { value: 18, label: '18 — ~42 м' },
-  { value: 19, label: '19 — ~21 м' },
-  { value: 32, label: '32 — полная точность' },
+  { value: 10, label: '10 — ~23 км' },
+  { value: 11, label: '11 — ~12 км' },
+  { value: 12, label: '12 — ~5.8 км' },
+  { value: 13, label: '13 — ~2.9 км' },
+  { value: 14, label: '14 — ~1.5 км (дефолт прошивки)' },
+  { value: 15, label: '15 — ~730 м' },
+  { value: 16, label: '16 — ~365 м' },
+  { value: 17, label: '17 — ~182 м' },
+  { value: 18, label: '18 — ~91 м' },
+  { value: 19, label: '19 — ~46 м' },
+  { value: 20, label: '20 — ~23 м' },
+  { value: 21, label: '21 — ~11 м' },
+  { value: 22, label: '22 — ~5.7 м' },
+  { value: 23, label: '23 — ~2.8 м' },
+  { value: 24, label: '24 — ~1.4 м' },
+  { value: 32, label: '32 — максимальная (~1 м)' },
+]
+
+/** Флаги состава данных позиции (position.position_flags) */
+const POSITION_FLAGS_OPTIONS = [
+  { value: 0, label: '0 — не передавать позицию' },
+  { value: 3, label: '3 — минимальная (ALTITUDE+ALTITUDE_MSL)' },
+  { value: 175, label: '175 — базовая (+GEO+DOP+SAT+TS)' },
+  { value: 943, label: '943 — полная (+HVDOP+SEQ+HEADING+SPEED)' },
+  { value: 1023, label: '1023 — все флаги' },
 ]
 
 /** Интервалы телеметрии */
@@ -346,6 +362,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       agpsEnabled: preset.agpsEnabled,
       gpsAttemptTime: preset.gpsAttemptTime,
       positionPrecision: preset.positionPrecision,
+      positionFlags: preset.positionFlags,
       positionBroadcastSecs: preset.positionBroadcastSecs,
       smartBroadcastEnabled: preset.smartBroadcastEnabled,
       smartBroadcastMinDist: preset.smartBroadcastMinDist,
@@ -438,6 +455,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
         agpsEnabled: preset.agpsEnabled,
         gpsAttemptTime: preset.gpsAttemptTime,
         positionPrecision: preset.positionPrecision,
+        positionFlags: preset.positionFlags,
         positionBroadcastSecs: preset.positionBroadcastSecs,
         smartBroadcastEnabled: preset.smartBroadcastEnabled,
         smartBroadcastMinDist: preset.smartBroadcastMinDist,
@@ -632,8 +650,8 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     if (p.agpsEnabled) {
       lines.push(`${cmd} --set gps.agps_enabled true`)
     }
-    // Position precision
-    lines.push(`${cmd} --set position.position_precision ${p.positionPrecision}`)
+    // Position flags (which data fields to include)
+    lines.push(`${cmd} --set position.position_flags ${p.positionFlags}`)
     lines.push(`${cmd} --set position.position_broadcast_secs ${p.positionBroadcastSecs}`)
     if (p.smartBroadcastEnabled) {
       lines.push(`${cmd} --set position.broadcast_smart_minimum_distance ${p.smartBroadcastMinDist}`)
@@ -669,6 +687,8 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       if (linkedChannel.frequency) {
         lines.push(`${cmd} --ch-index 0 --ch-set frequency ${linkedChannel.frequency}`)
       }
+      // Position precision (channel module_settings)
+      lines.push(`${cmd} --ch-index 0 --ch-set module_settings.position_precision ${p.positionPrecision}`)
     }
 
     // --- YAML ---
@@ -714,7 +734,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     if (p.agpsEnabled) {
       ylines.push('    agps_enabled: true')
     }
-    ylines.push(`    position_precision: ${p.positionPrecision}`)
+    ylines.push(`    position_flags: ${p.positionFlags}`)
     ylines.push(`    position_broadcast_secs: ${p.positionBroadcastSecs}`)
     if (p.smartBroadcastEnabled) {
       ylines.push(`    broadcast_smart_minimum_distance: ${p.smartBroadcastMinDist}`)
@@ -724,6 +744,11 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     ylines.push('module_config:')
     ylines.push('  telemetry:')
     ylines.push(`    device_update_interval: ${p.telemetryInterval}`)
+
+    // Channel module_settings.position_precision
+    ylines.push('  channel:')
+    ylines.push('    module_settings:')
+    ylines.push(`      position_precision: ${p.positionPrecision}`)
 
     if (linkedChannel) {
       ylines.push('')
@@ -796,7 +821,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     if (preset.agpsEnabled) {
       lines.push(`${cmd} --set gps.agps_enabled true`)
     }
-    lines.push(`${cmd} --set position.position_precision ${preset.positionPrecision}`)
+    lines.push(`${cmd} --set position.position_flags ${preset.positionFlags}`)
     lines.push(`${cmd} --set position.position_broadcast_secs ${preset.positionBroadcastSecs}`)
     if (preset.smartBroadcastEnabled) {
       lines.push(`${cmd} --set position.broadcast_smart_minimum_distance ${preset.smartBroadcastMinDist}`)
@@ -817,6 +842,8 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
       if (linkedChannel.frequency) {
         lines.push(`${cmd} --ch-index 0 --ch-set frequency ${linkedChannel.frequency}`)
       }
+      // Position precision (channel module_settings)
+      lines.push(`${cmd} --ch-index 0 --ch-set module_settings.position_precision ${preset.positionPrecision}`)
     }
     return lines.join('\n')
   }, [channels])
@@ -1188,12 +1215,21 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                               </span>
                             </div>
 
-                            {/* Точность */}
+                            {/* Точность координат */}
                             <div className="flex items-center gap-2">
                               <Zap className="size-3.5 text-muted-foreground shrink-0" />
                               <span className="text-muted-foreground text-xs">Точность:</span>
                               <span className="font-medium text-xs">
-                                {preset.positionPrecision === 32 ? 'Полная' : preset.positionPrecision === 0 ? 'Нет' : `~${preset.positionPrecision}`}
+                                {preset.positionPrecision === 32 ? 'Макс. (~1м)' : preset.positionPrecision === 14 ? 'Дефолт (~1.5км)' : preset.positionPrecision === 0 ? 'Нет' : POSITION_PRECISION_OPTIONS.find(o => o.value === preset.positionPrecision)?.label ?? `~${preset.positionPrecision}`}
+                              </span>
+                            </div>
+
+                            {/* Флаги позиции */}
+                            <div className="flex items-center gap-2">
+                              <Info className="size-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-muted-foreground text-xs">Флаги:</span>
+                              <span className="font-medium text-xs">
+                                {POSITION_FLAGS_OPTIONS.find(o => o.value === preset.positionFlags)?.label ?? String(preset.positionFlags)}
                               </span>
                             </div>
 
@@ -1695,9 +1731,9 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
 
                   <Separator />
 
-                  {/* Точность позиции */}
+                  {/* Точность координат (position_precision) */}
                   <div className="space-y-2">
-                    <Label>Точность позиции</Label>
+                    <Label>Точность координат (position_precision)</Label>
                     <Select
                       value={String(form.positionPrecision)}
                       onValueChange={v => updateField('positionPrecision', Number(v))}
@@ -1711,6 +1747,30 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Радиус/обфускация координат. Настройка канала (module_settings.position_precision). 32 = полная точность (~1м), 14 = дефолт прошивки (~1.5км).
+                    </p>
+                  </div>
+
+                  {/* Состав данных позиции (position_flags) */}
+                  <div className="space-y-2">
+                    <Label>Состав данных позиции (position_flags)</Label>
+                    <Select
+                      value={String(form.positionFlags)}
+                      onValueChange={v => updateField('positionFlags', Number(v))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {POSITION_FLAGS_OPTIONS.map(o => (
+                          <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Какие данные включать в позиционные сообщения. 943 = полная (ALT+MSL+GEO+DOP+HVDOP+SAT+SEQ+TS+HEADING+SPEED).
+                    </p>
                   </div>
 
                   {/* Интервал вещания позиции */}

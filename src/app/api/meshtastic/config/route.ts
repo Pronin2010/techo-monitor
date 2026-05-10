@@ -57,6 +57,7 @@ export async function POST(request: Request) {
       gpsAttemptTime: preset.gpsAttemptTime,
       agpsEnabled: preset.agpsEnabled,
       positionPrecision: preset.positionPrecision,
+      positionFlags: preset.positionFlags,
       positionBroadcastSecs: preset.positionBroadcastSecs,
       smartBroadcastEnabled: preset.smartBroadcastEnabled,
       smartBroadcastMinDist: preset.smartBroadcastMinDist,

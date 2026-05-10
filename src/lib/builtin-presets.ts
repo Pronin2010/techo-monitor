@@ -20,7 +20,8 @@ export interface BuiltinPresetData {
   gpsUpdateInterval: number
   agpsEnabled: boolean
   gpsAttemptTime: number
-  positionPrecision: number
+  positionPrecision: number   // channel module_settings.position_precision (0-32 бита). 32 = макс. точность (~1м)
+  positionFlags: number      // position.position_flags (битовая маска PositionFlags). 943 = все данные
   positionBroadcastSecs: number
   smartBroadcastEnabled: boolean
   smartBroadcastMinDist: number
@@ -55,7 +56,8 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     gpsUpdateInterval: 1,
     agpsEnabled: false,
     gpsAttemptTime: 90,
-    positionPrecision: 943, // Максимальная точность: ALT+MSL+GEO+DOP+HVDOP+SAT+SEQ+TS+HEADING+SPEED
+    positionPrecision: 32,  // Максимальная точность координат (~1м)
+    positionFlags: 943,     // ALT+MSL+GEO+DOP+HVDOP+SAT+SEQ+TS+HEADING+SPEED
     positionBroadcastSecs: 60,
     smartBroadcastEnabled: true,
     smartBroadcastMinDist: 20,
@@ -88,7 +90,8 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     gpsUpdateInterval: 30,
     agpsEnabled: false,
     gpsAttemptTime: 90,
-    positionPrecision: 943, // Максимальная точность: ALT+MSL+GEO+DOP+HVDOP+SAT+SEQ+TS+HEADING+SPEED
+    positionPrecision: 32,  // Максимальная точность координат (~1м)
+    positionFlags: 943,     // ALT+MSL+GEO+DOP+HVDOP+SAT+SEQ+TS+HEADING+SPEED
     positionBroadcastSecs: 300,
     smartBroadcastEnabled: true,
     smartBroadcastMinDist: 50,
@@ -121,7 +124,8 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     gpsUpdateInterval: 0,
     agpsEnabled: false,
     gpsAttemptTime: 0,
-    positionPrecision: 0,
+    positionPrecision: 0,   // Не передавать координаты
+    positionFlags: 0,       // Нет флагов позиции
     positionBroadcastSecs: 900,
     smartBroadcastEnabled: false,
     smartBroadcastMinDist: 0,
@@ -154,7 +158,8 @@ export const BUILTIN_PRESETS: BuiltinPresetData[] = [
     gpsUpdateInterval: 30,
     agpsEnabled: true,
     gpsAttemptTime: 30,
-    positionPrecision: 175, // Точная позиция: ALT+MSL+GEO+DOP+SAT+TS (без HEADING/SPEED)
+    positionPrecision: 32,  // Максимальная точность координат (~1м)
+    positionFlags: 175,     // ALT+MSL+GEO+DOP+SAT+TS (без HEADING/SPEED)
     positionBroadcastSecs: 300,
     smartBroadcastEnabled: true,
     smartBroadcastMinDist: 100,
