@@ -409,6 +409,10 @@ function formatPacketDetails(details: Record<string, unknown>): string {
   if (details.lat != null && details.lon != null) {
     parts.push(`${Number(details.lat).toFixed(5)},${Number(details.lon).toFixed(5)}`)
     if (details.alt != null) parts.push(`alt=${details.alt}m`)
+    if (details.sats != null) parts.push(`sat=${details.sats}`)
+    if (details.hdop != null) parts.push(`hdop=${details.hdop}`)
+    if (details.speed != null) parts.push(`v=${Number(details.speed).toFixed(1)}m/s`)
+    if (details.heading != null) parts.push(`dir=${details.heading}°`)
   }
   if (details.battery != null) {
     parts.push(`${details.battery}%`)
@@ -419,6 +423,15 @@ function formatPacketDetails(details: Record<string, unknown>): string {
   }
   if (details.humidity != null) {
     parts.push(`${Number(details.humidity).toFixed(0)}%`)
+  }
+  if (details.pressure != null) {
+    parts.push(`${Number(details.pressure).toFixed(1)}hPa`)
+  }
+  if (details.channelUtilization != null) {
+    parts.push(`chUtil=${Number(details.channelUtilization).toFixed(1)}%`)
+  }
+  if (details.airUtilTx != null) {
+    parts.push(`airTx=${Number(details.airUtilTx).toFixed(2)}%`)
   }
   if (details.text != null) {
     parts.push(`"${details.text}"`)

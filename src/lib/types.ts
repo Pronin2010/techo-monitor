@@ -74,6 +74,13 @@ export interface NodeTelemetry {
   rssi: number
   temperature?: number
   humidity?: number
+  pressure?: number          // Атмосферное давление (гПа)
+  speed?: number | null       // GPS ground speed (м/с)
+  heading?: number | null     // GPS heading (градусы)
+  satsInView?: number | null  // Количество GPS спутников
+  hdop?: number | null        // Horizontal Dilution of Precision
+  channelUtilization?: number | null // Загрузка канала %
+  airUtilTx?: number | null   // Использование эфира TX %
   createdAt: string
 }
 
@@ -97,6 +104,13 @@ export interface MeshNode {
   latitude: number | null
   longitude: number | null
   altitude: number | null
+  speed: number | null          // GPS ground speed (м/с)
+  heading: number | null       // GPS heading (градусы)
+  satsInView: number | null    // Количество GPS спутников
+  hdop: number | null          // Horizontal Dilution of Precision
+  pressure: number | null      // Атмосферное давление (гПа)
+  channelUtilization: number | null // Загрузка канала %
+  airUtilTx: number | null     // Использование эфира TX %
   lsSecs: number | null       // Light sleep interval in seconds
   minWakeSecs: number | null   // Minimum awake time in seconds
   lastSeen: string

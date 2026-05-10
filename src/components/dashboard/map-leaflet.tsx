@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Badge } from '@/components/ui/badge'
-import { Wifi, WifiOff, Battery, Signal, Mountain, Moon, Sun, Repeat, EyeOff } from 'lucide-react'
+import { Wifi, WifiOff, Battery, Signal, Mountain, Moon, Sun, Repeat, EyeOff, Gauge, Navigation, Satellite } from 'lucide-react'
 import type { MeshNode, NodeRole } from '@/lib/types'
 import { ROLE_META } from '@/lib/types'
 
@@ -232,6 +232,27 @@ export default function MapLeaflet({ nodes }: MapViewProps) {
                       <div className="flex items-center gap-1.5">
                         <Mountain className="h-3 w-3 text-gray-500" />
                         <span>Высота: <span className="font-medium">{node.altitude} м</span></span>
+                      </div>
+                    )}
+
+                    {node.speed != null && node.speed > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <Gauge className="h-3 w-3 text-gray-500" />
+                        <span>Скорость: <span className="font-medium">{(node.speed * 3.6).toFixed(1)} км/ч</span></span>
+                      </div>
+                    )}
+
+                    {node.heading != null && node.heading > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <Navigation className="h-3 w-3 text-gray-500" />
+                        <span>Курс: <span className="font-medium">{node.heading.toFixed(0)}°</span></span>
+                      </div>
+                    )}
+
+                    {node.satsInView != null && (
+                      <div className="flex items-center gap-1.5">
+                        <Satellite className="h-3 w-3 text-gray-500" />
+                        <span>Спутники: <span className={`font-medium ${node.satsInView >= 4 ? 'text-green-600' : node.satsInView >= 2 ? 'text-amber-600' : 'text-red-600'}`}>{node.satsInView}</span></span>
                       </div>
                     )}
 

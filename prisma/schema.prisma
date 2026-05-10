@@ -23,6 +23,13 @@ model Node {
   latitude      Float?
   longitude     Float?
   altitude      Float?
+  speed         Float?    // GPS ground speed (м/с) — Position.groundSpeed / 1000
+  heading       Float?    // GPS heading (градусы) — Position.groundTrack / 10000
+  satsInView    Int?      // Количество GPS спутников — Position.satsInView
+  hdop          Float?    // Horizontal Dilution of Precision — Position.HDOP / 100
+  pressure      Float?    // Атмосферное давление (гПа) — EnvironmentMetrics.barometricPressure
+  channelUtilization Float? // Загрузка канала % — DeviceMetrics.channelUtilization
+  airUtilTx     Float?    // Использование эфира TX % — DeviceMetrics.airUtilTx
   lsSecs        Int?      // Light sleep interval in seconds (for TRACKER/CLIENT roles)
   minWakeSecs   Int?      @default(10) // Minimum awake time in seconds before sleeping
   lastSeen      DateTime  @default(now())
@@ -59,9 +66,16 @@ model Telemetry {
   rssi          Int
   temperature   Float?
   humidity      Float?
+  pressure      Float?    // Атмосферное давление (гПа)
   latitude      Float?
   longitude     Float?
   altitude      Float?
+  speed         Float?    // GPS ground speed (м/с)
+  heading       Float?    // GPS heading (градусы)
+  satsInView    Int?      // Количество GPS спутников
+  hdop          Float?    // Horizontal Dilution of Precision
+  channelUtilization Float? // Загрузка канала %
+  airUtilTx     Float?    // Использование эфира TX %
   createdAt     DateTime @default(now())
 
   node          Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)

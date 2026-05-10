@@ -1002,8 +1002,10 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
 
     # ── Shared state ──
     node_rssi = {}
-    node_position = {}       # {from_int: {lat, lon, alt, receivedAt}}
+    node_position = {}       # {from_int: {lat, lon, alt, speed, heading, satsInView, hdop, receivedAt}}
     node_last_heard = {}     # {from_int: ISO-8601 timestamp}
+    node_dev_metrics = {}    # {from_int: {batteryLevel, voltage, channelUtilization, airUtilTx, ...}}
+    node_env_metrics = {}    # {from_int: {temperature, humidity, barometricPressure, ...}}
     my_node_num_ref = [None]
     
     # ── Packet counter & rate tracking ──
@@ -1087,13 +1089,38 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
                             lat = lat_i / 1e7
                             lon = lon_i / 1e7
                             alt = pos.get("altitude", 0)
+                            # Расширенные данные позиции:
+                            # groundSpeed в мм/с → м/с
+                            raw_speed = pos.get("groundSpeed", 0)
+                            spd = round(raw_speed / 1000.0, 2) if isinstance(raw_speed, (int, float)) and raw_speed > 0 else None
+                            # groundTrack в 1/10000 градуса → градусы
+                            raw_track = pos.get("groundTrack", 0)
+                            hdg = round(raw_track / 10000.0, 1) if isinstance(raw_track, (int, float)) and raw_track > 0 else None
+                            # satsInView — количество спутников GPS
+                            sats = pos.get("satsInView")
+                            sats = sats if isinstance(sats, int) and sats > 0 else None
+                            # HDOP в 1/100 → значение HDOP
+                            raw_hdop = pos.get("HDOP", 0)
+                            hdop_val = round(raw_hdop / 100.0, 1) if isinstance(raw_hdop, (int, float)) and raw_hdop > 0 else None
                             node_position[from_int] = {
                                 "latitude": lat,
                                 "longitude": lon,
                                 "altitude": alt,
+                                "speed": spd,
+                                "heading": hdg,
+                                "satsInView": sats,
+                                "hdop": hdop_val,
                                 "receivedAt": now_iso,
                             }
                             pkt_details = {"lat": lat, "lon": lon, "alt": alt}
+                            if spd is not None:
+                                pkt_details["speed"] = spd
+                            if hdg is not None:
+                                pkt_details["heading"] = hdg
+                            if sats is not None:
+                                pkt_details["sats"] = sats
+                            if hdop_val is not None:
+                                pkt_details["hdop"] = hdop_val
 
                     # --- NODEINFO (имена узлов) ---
                     user_info = decoded.get("user")
@@ -1109,6 +1136,8 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
                         dev_metrics = telem.get("deviceMetrics", {})
                         env_metrics = telem.get("environmentMetrics", {})
                         if dev_metrics:
+                            # Сохраняем deviceMetrics в кэш узла для periodic sync
+                            node_dev_metrics[from_int] = dev_metrics
                             pkt_details = {
                                 "battery": dev_metrics.get("batteryLevel"),
                                 "voltage": dev_metrics.get("voltage"),
@@ -1117,6 +1146,8 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
                                 "airUtilTx": dev_metrics.get("airUtilTx"),
                             }
                         if env_metrics:
+                            # Сохраняем environmentMetrics в кэш узла для periodic sync
+                            node_env_metrics[from_int] = env_metrics
                             pkt_details.update({
                                 "temperature": env_metrics.get("temperature"),
                                 "humidity": env_metrics.get("humidity"),
@@ -1149,12 +1180,30 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
                     detail_parts = []
                     if "lat" in pkt_details:
                         detail_parts.append(f"GPS={pkt_details['lat']:.5f},{pkt_details['lon']:.5f}")
+                        if pkt_details.get("alt"):
+                            detail_parts.append(f"alt={pkt_details['alt']}m")
+                        if pkt_details.get("sats"):
+                            detail_parts.append(f"sat={pkt_details['sats']}")
+                        if pkt_details.get("hdop"):
+                            detail_parts.append(f"hdop={pkt_details['hdop']}")
+                        if pkt_details.get("speed"):
+                            detail_parts.append(f"v={pkt_details['speed']}m/s")
+                        if pkt_details.get("heading"):
+                            detail_parts.append(f"dir={pkt_details['heading']}°")
                     if "battery" in pkt_details and pkt_details["battery"] is not None:
                         detail_parts.append(f"bat={pkt_details['battery']}%")
                         if pkt_details.get("voltage"):
                             detail_parts.append(f"{pkt_details['voltage']:.2f}V")
                     if "temperature" in pkt_details and pkt_details["temperature"] is not None:
                         detail_parts.append(f"T={pkt_details['temperature']:.1f}C")
+                    if "humidity" in pkt_details and pkt_details["humidity"] is not None:
+                        detail_parts.append(f"H={pkt_details['humidity']:.0f}%")
+                    if "pressure" in pkt_details and pkt_details["pressure"] is not None:
+                        detail_parts.append(f"P={pkt_details['pressure']:.1f}hPa")
+                    if "channelUtilization" in pkt_details and pkt_details["channelUtilization"] is not None:
+                        detail_parts.append(f"chUtil={pkt_details['channelUtilization']:.1f}%")
+                    if "airUtilTx" in pkt_details and pkt_details["airUtilTx"] is not None:
+                        detail_parts.append(f"airTx={pkt_details['airUtilTx']:.2f}%")
                     if "text" in pkt_details:
                         detail_parts.append(f'"{pkt_details["text"]}"')
                     if "shortName" in pkt_details:
@@ -1310,6 +1359,15 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
                     node_entry["latitude"] = pubsub_pos["latitude"]
                     node_entry["longitude"] = pubsub_pos["longitude"]
                     node_entry["altitude"] = pubsub_pos.get("altitude", 0)
+                    # Расширенные данные позиции из pubsub-кэша
+                    if pubsub_pos.get("speed") is not None:
+                        node_entry["speed"] = pubsub_pos["speed"]
+                    if pubsub_pos.get("heading") is not None:
+                        node_entry["heading"] = pubsub_pos["heading"]
+                    if pubsub_pos.get("satsInView") is not None:
+                        node_entry["satsInView"] = pubsub_pos["satsInView"]
+                    if pubsub_pos.get("hdop") is not None:
+                        node_entry["hdop"] = pubsub_pos["hdop"]
                     if pubsub_pos.get("receivedAt"):
                         node_entry.setdefault("lastHeard", pubsub_pos["receivedAt"])
                 else:
@@ -1327,12 +1385,52 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
                             node_entry["longitude"] = lon_i
                         if node_entry.get("latitude"):
                             node_entry["altitude"] = pos.get("altitude", 0)
-                
-                # Environment metrics
-                env = node.get("environmentMetrics", {})
-                if env:
-                    node_entry["temperature"] = env.get("temperature")
-                    node_entry["humidity"] = env.get("humidity")
+                        # Расширенные данные позиции из node dict (fallback)
+                        raw_speed = pos.get("groundSpeed", 0)
+                        if isinstance(raw_speed, (int, float)) and raw_speed > 0:
+                            node_entry["speed"] = round(raw_speed / 1000.0, 2)
+                        raw_track = pos.get("groundTrack", 0)
+                        if isinstance(raw_track, (int, float)) and raw_track > 0:
+                            node_entry["heading"] = round(raw_track / 10000.0, 1)
+                        raw_sats = pos.get("satsInView")
+                        if isinstance(raw_sats, int) and raw_sats > 0:
+                            node_entry["satsInView"] = raw_sats
+                        raw_hdop = pos.get("HDOP", 0)
+                        if isinstance(raw_hdop, (int, float)) and raw_hdop > 0:
+                            node_entry["hdop"] = round(raw_hdop / 100.0, 1)
+
+                # DeviceMetrics (channelUtilization, airUtilTx) — приоритет из pubsub-кэша
+                cached_dm = node_dev_metrics.get(node_id_int)
+                if cached_dm:
+                    if cached_dm.get("channelUtilization") is not None:
+                        node_entry["channelUtilization"] = round(cached_dm["channelUtilization"], 1)
+                    if cached_dm.get("airUtilTx") is not None:
+                        node_entry["airUtilTx"] = round(cached_dm["airUtilTx"], 2)
+                else:
+                    # Fallback из node dict
+                    if dm.get("channelUtilization") is not None:
+                        node_entry["channelUtilization"] = round(dm["channelUtilization"], 1)
+                    if dm.get("airUtilTx") is not None:
+                        node_entry["airUtilTx"] = round(dm["airUtilTx"], 2)
+
+                # Environment metrics — приоритет из pubsub-кэша
+                cached_env = node_env_metrics.get(node_id_int)
+                if cached_env:
+                    if cached_env.get("temperature") is not None:
+                        node_entry["temperature"] = cached_env["temperature"]
+                    if cached_env.get("humidity") is not None:
+                        node_entry["humidity"] = cached_env["humidity"]
+                    if cached_env.get("barometricPressure") is not None:
+                        node_entry["pressure"] = cached_env["barometricPressure"]
+                else:
+                    env = node.get("environmentMetrics", {})
+                    if env:
+                        if env.get("temperature") is not None:
+                            node_entry["temperature"] = env["temperature"]
+                        if env.get("humidity") is not None:
+                            node_entry["humidity"] = env["humidity"]
+                        if env.get("barometricPressure") is not None:
+                            node_entry["pressure"] = env["barometricPressure"]
 
                 # lastHeard
                 heard_time = None

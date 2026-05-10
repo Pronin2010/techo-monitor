@@ -38,6 +38,11 @@ import {
   EyeOff,
   Thermometer,
   Droplets,
+  Navigation,
+  Gauge,
+  Satellite,
+  Activity,
+  Waves,
 } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -361,6 +366,83 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
                 <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-muted-foreground">Высота:</span>
                 <span className="font-medium">{node.altitude.toFixed(0)} м</span>
+              </div>
+            )}
+
+            {/* Speed */}
+            <div className="flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground">Скорость:</span>
+              <span className="font-medium">
+                {node.speed != null && node.speed > 0
+                  ? `${(node.speed * 3.6).toFixed(1)} км/ч`
+                  : hasPosition
+                    ? 'Стоит'
+                    : '—'}
+              </span>
+            </div>
+
+            {/* Heading */}
+            <div className="flex items-center gap-2">
+              <Navigation className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground">Курс:</span>
+              <span className="font-medium">
+                {node.heading != null && node.heading > 0
+                  ? `${node.heading.toFixed(0)}°`
+                  : '—'}
+              </span>
+            </div>
+
+            {/* Satellites */}
+            <div className="flex items-center gap-2">
+              <Satellite className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground">Спутники:</span>
+              <span className="font-medium">
+                {node.satsInView != null ? (
+                  <span className={node.satsInView >= 4 ? 'text-green-500' : node.satsInView >= 2 ? 'text-amber-500' : 'text-red-500'}>
+                    {node.satsInView}
+                  </span>
+                ) : '—'}
+              </span>
+            </div>
+
+            {/* HDOP */}
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground">HDOP:</span>
+              <span className="font-medium">
+                {node.hdop != null ? (
+                  <span className={node.hdop <= 2 ? 'text-green-500' : node.hdop <= 5 ? 'text-amber-500' : 'text-red-500'}>
+                    {node.hdop.toFixed(1)}
+                  </span>
+                ) : '—'}
+              </span>
+            </div>
+
+            {/* Pressure */}
+            {node.pressure != null && (
+              <div className="flex items-center gap-2">
+                <Waves className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground">Давление:</span>
+                <span className="font-medium">{node.pressure.toFixed(1)} гПа</span>
+              </div>
+            )}
+
+            {/* Channel Utilization */}
+            {node.channelUtilization != null && (
+              <div className="flex items-center gap-2">
+                <Radio className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground">Загрузка канала:</span>
+                <span className="font-medium">{node.channelUtilization.toFixed(1)}%</span>
+              </div>
+            )}
+
+            {/* Air Util TX */}
+            {node.airUtilTx != null && (
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground">Эфир TX:</span>
+                <span className="font-medium">{node.airUtilTx.toFixed(2)}%</span>
               </div>
             )}
 

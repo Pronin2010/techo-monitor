@@ -108,6 +108,10 @@ function detectEventTypes(incoming: Record<string, unknown>, prevNode?: Record<s
     details.latitude = incoming.latitude
     details.longitude = incoming.longitude
     if (incoming.altitude != null) details.altitude = incoming.altitude
+    if (incoming.speed != null) details.speed = incoming.speed
+    if (incoming.heading != null) details.heading = incoming.heading
+    if (incoming.satsInView != null) details.satsInView = incoming.satsInView
+    if (incoming.hdop != null) details.hdop = incoming.hdop
     // Проверяем, изменилась ли позиция
     if (prevNode && prevNode.latitude != null && prevNode.longitude != null) {
       const latDiff = Math.abs((incoming.latitude as number) - (prevNode.latitude as number))
@@ -118,11 +122,19 @@ function detectEventTypes(incoming: Record<string, unknown>, prevNode?: Record<s
     }
   }
 
-  // Environment (temperature/humidity)
-  if (incoming.temperature != null || incoming.humidity != null) {
+  // Environment (temperature/humidity/pressure)
+  if (incoming.temperature != null || incoming.humidity != null || incoming.pressure != null) {
     types.push('environment')
     if (incoming.temperature != null) details.temperature = incoming.temperature
     if (incoming.humidity != null) details.humidity = incoming.humidity
+    if (incoming.pressure != null) details.pressure = incoming.pressure
+  }
+
+  // Network (channelUtilization/airUtilTx)
+  if (incoming.channelUtilization != null || incoming.airUtilTx != null) {
+    types.push('network')
+    if (incoming.channelUtilization != null) details.channelUtilization = incoming.channelUtilization
+    if (incoming.airUtilTx != null) details.airUtilTx = incoming.airUtilTx
   }
 
   // Signal (SNR/RSSI)
@@ -180,6 +192,13 @@ export async function POST(request: Request) {
             ...(incoming.latitude != null && { latitude: incoming.latitude }),
             ...(incoming.longitude != null && { longitude: incoming.longitude }),
             ...(incoming.altitude != null && { altitude: incoming.altitude }),
+            ...(incoming.speed != null && { speed: incoming.speed }),
+            ...(incoming.heading != null && { heading: incoming.heading }),
+            ...(incoming.satsInView != null && { satsInView: incoming.satsInView }),
+            ...(incoming.hdop != null && { hdop: incoming.hdop }),
+            ...(incoming.pressure != null && { pressure: incoming.pressure }),
+            ...(incoming.channelUtilization != null && { channelUtilization: incoming.channelUtilization }),
+            ...(incoming.airUtilTx != null && { airUtilTx: incoming.airUtilTx }),
             usbPower: incoming.usbPower === true || (incoming.voltage != null && incoming.voltage > 3.9),
             lsSecs: incoming.lsSecs ?? existingNode.lsSecs,
             minWakeSecs: incoming.minWakeSecs ?? existingNode.minWakeSecs,
@@ -199,9 +218,16 @@ export async function POST(request: Request) {
             rssi: incoming.rssi ?? existingNode.rssi,
             temperature: incoming.temperature ?? null,
             humidity: incoming.humidity ?? null,
+            pressure: incoming.pressure ?? null,
             latitude: incoming.latitude ?? null,
             longitude: incoming.longitude ?? null,
             altitude: incoming.altitude ?? null,
+            speed: incoming.speed ?? null,
+            heading: incoming.heading ?? null,
+            satsInView: incoming.satsInView ?? null,
+            hdop: incoming.hdop ?? null,
+            channelUtilization: incoming.channelUtilization ?? null,
+            airUtilTx: incoming.airUtilTx ?? null,
             createdAt: incoming.lastHeard
               ? new Date(incoming.lastHeard as string)
               : new Date(),
@@ -262,6 +288,13 @@ export async function POST(request: Request) {
             latitude: incoming.latitude,
             longitude: incoming.longitude,
             altitude: incoming.altitude,
+            speed: incoming.speed ?? null,
+            heading: incoming.heading ?? null,
+            satsInView: incoming.satsInView ?? null,
+            hdop: incoming.hdop ?? null,
+            pressure: incoming.pressure ?? null,
+            channelUtilization: incoming.channelUtilization ?? null,
+            airUtilTx: incoming.airUtilTx ?? null,
             lsSecs: incoming.lsSecs ?? null,
             minWakeSecs: incoming.minWakeSecs ?? 10,
             lastSeen: incoming.lastHeard
@@ -279,9 +312,16 @@ export async function POST(request: Request) {
             rssi: incoming.rssi ?? 0,
             temperature: incoming.temperature,
             humidity: incoming.humidity,
+            pressure: incoming.pressure ?? null,
             latitude: incoming.latitude,
             longitude: incoming.longitude,
             altitude: incoming.altitude,
+            speed: incoming.speed ?? null,
+            heading: incoming.heading ?? null,
+            satsInView: incoming.satsInView ?? null,
+            hdop: incoming.hdop ?? null,
+            channelUtilization: incoming.channelUtilization ?? null,
+            airUtilTx: incoming.airUtilTx ?? null,
             createdAt: incoming.lastHeard
               ? new Date(incoming.lastHeard as string)
               : new Date(),
