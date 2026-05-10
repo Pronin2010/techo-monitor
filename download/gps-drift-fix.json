@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/position",
+    "name": "Position Configuration | Meshtastic",
+    "snippet": "The minimum distance in meters traveled (since the last send) before we can send a position to the mesh if smart broadcast is enabled. Smart Broadcast Minimum ... Missing: drift filter jumping",
+    "host_name": "meshtastic.org",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://openelab.io/blogs/getting-started/meshtastic-guide-positioning-and-location-settings?srsltid=AfmBOorOkoRUflDDskicarrl_4qfEhTbnPcmUmwUnm3g6yoHWPfeuWZt",
+    "name": "Meshtastic Guide - Positioning and Location Settings",
+    "snippet": "The available configuration options include: GPS Mode, GPS Update Interval, Fixed Position, Smart Broadcast, Smart Broadcast Minimum Distance, ... Missing: drift tracker jumping",
+    "host_name": "openelab.io",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/Meshtastic-Apple/issues/1709",
+    "name": "[Bug]: Smart Position horizontal accuracy requirements too strict #1709",
+    "snippet": "Given my settings are configured to require a minimum of 200 meters before considering a broadcast, those accuracies are fine. The biggest issue ...",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1rcjw0q/noob_with_questions_gps_tracking_dog_and_truck",
+    "name": "Noob with questions, GPS tracking dog and truck : r/meshtastic",
+    "snippet": "Smart Broadcast Minimum Distance. Default of 0 is 100 meters. The minimum distance in meters traveled (since the last send) before we can send ... Missing: drift stationary filter coordinates",
+    "host_name": "www.reddit.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1kmb4uk/preferred_settings_for_a_multiperson_family",
+    "name": "Preferred settings for a multi-person \"family tracker\" : r/meshtastic",
+    "snippet": "But you can also choose 5 or 10 minutes maximum, and 5 meter increments on the minimum smart distance reporting from 10m to 150m The primary ... Missing: drift stationary filter jumping coordinates",
+    "host_name": "www.reddit.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/1655445394706994/posts/2369771449941048",
+    "name": "GPS positioning accuracy is perfect - Facebook",
+    "snippet": "Anybody have issues with GPS accuracy? I have it set for the most accurate position however it will show my location as at home when I'm ...",
+    "host_name": "www.facebook.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1jej5bs/config_help_for_realtime_locationcomms_festival",
+    "name": "Config help for realtime location/comms @ festival : r/meshtastic",
+    "snippet": "Under Position, set position broadcast interval to 15s, smart position enabled, smart broadcast min distance to 5m, smart broadcast min interval ... Missing: drift filter jumping coordinates",
+    "host_name": "www.reddit.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/Satellite.apt.group/posts/2615100912006661",
+    "name": "So, my 1.7GHz antenna and the tracker are fully built  - Facebook",
+    "snippet": "Have you got a plan and list for making the rotor?|Can you identify rotator motors? Interested in what type of motor and gearbox is used?",
+    "host_name": "www.facebook.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://web.tapr.org/meetings/DCC_2020/DCC_2020_Proceedings_25MB.pdf",
+    "name": "[PDF] Virtual DCC - tapr.net",
+    "snippet": "the 19.99 mhz signal is easily filtered out with a lowYpass filter due to its distance from the desired 10Nhz frequency. the mixer circuitry used in all the ...",
+    "host_name": "web.tapr.org",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://news.ycombinator.com/item?id=47385935",
+    "name": "$96 3D-printed rocket that recalculates its mid-air trajectory using a",
+    "snippet": "The missile is fed a static gps coordinate at launch via the umbilical, and has no mechanism in the missile or launcher to \"seek or proceed ...",
+    "host_name": "news.ycombinator.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

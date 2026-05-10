@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/position",
+    "name": "Position Configuration",
+    "snippet": "GPS position configuration settings for your Meshtastic device including update intervals, broadcast settings, and GPIO.",
+    "host_name": "meshtastic.org",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/Meshtastic-Apple/issues/1709",
+    "name": "[Bug]: Smart Position horizontal accuracy requirements too",
+    "snippet": "1 May 2026 — The biggest issue with the current accuracy requirement is that if I restart my portable node while indoors, it will revert to the stored ...",
+    "host_name": "github.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/8029",
+    "name": "Wait until after GPS lock hold before updating position, if",
+    "snippet": "18 Sept 2025 — After the recent patch , we hold lock for a bit before updating the position . The positions that come in after the hold are genuinely better ...",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/discussions/5201",
+    "name": "Fixed GPS coordinates not retained, RAK4631 · meshtastic",
+    "snippet": "My node won't keep the fixed GPS coordinates. Using RAK4631 without a GPS in Router mode, v.2.5.4., GPS =NOT_PRESENT, Smart Position = Off, GPS update set super ...",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/Meshtastic-Apple/issues/1482",
+    "name": "🐞 [Bug]: Accurate Locations Only setting does not work as",
+    "snippet": "22 Oct 2025 — Firmware Version. 2.7.11.ee68575. What did you do? Set iOS App settings: ' Location ' (privacy setting) to \"Always\"; 'Share Location ' to \"on\" ...",
+    "host_name": "github.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/8765",
+    "name": "Rework Smart Position for home-based nodes (network",
+    "snippet": "26 Nov 2025 — This idea can be greatly simplified by automatically adapting smart position radius to reported GPS Dilution of Precision . This will also ...",
+    "host_name": "github.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/7911",
+    "name": "Position broadcast interval not honored for TAK_Tracker",
+    "snippet": "7 Sept 2025 — Position interval is configured at 60s, Smart Position is configured off, and confirmed as disabled in settings of both Android app and web ...",
+    "host_name": "github.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/7177",
+    "name": "Fixed GPS remote not setting #7177 - meshtastic/firmware",
+    "snippet": "30 Jun 2025 — Go into channels settings and change your location precision . By default locations are fuzzed.",
+    "host_name": "github.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/configuration/tips",
+    "name": "Configuration Tips",
+    "snippet": "Meshtastic now supports the ability to control the precision of location data sent over a particular channel. The position_precision setting allows control of ...",
+    "host_name": "meshtastic.org",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/3273",
+    "name": "[Bug]: Position not sent · Issue #3273 · meshtastic/firmware",
+    "snippet": "Build and upload for Heltec Wireless Paper · Disable smart position , decrease GPS broadcast interval to 10 seconds (for testing).",
+    "host_name": "github.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

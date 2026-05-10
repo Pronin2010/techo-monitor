@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/6785",
+    "name": "[Bug]: Position Broadcast not respecting settings #6785 - GitHub",
+    "snippet": "Meshtastic ... Do you have a position log from the device showing that the positions being generated from the GPS are at the same location?",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/position",
+    "name": "Position Configuration | Meshtastic",
+    "snippet": "The minimum distance in meters traveled (since the last send) before we can send a position to the mesh if smart broadcast is enabled. Smart Broadcast Minimum ... Missing: jumps | Show results with: jumps",
+    "host_name": "meshtastic.org",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1jdd8x1/gps_location_wrong",
+    "name": "GPS Location wrong : r/meshtastic - Reddit",
+    "snippet": "The position_precision setting allows control of the level of precision for location data that is sent over a particular channel. This can be ... Weird position issue across multiple different node types? Precise location tracking : r/meshtastic More results from www.reddit.com Missing: smart_position_broadcast minimum_distance",
+    "host_name": "www.reddit.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/1458021825068046/posts/1872518076951750",
+    "name": "Meshtastic (PNW) Pacific North West - Facebook",
+    "snippet": "the Minimum Distance 100 The minimum distance c for smart position broadcast. meters to be considered Device GPS Fixed Position Discard ...",
+    "host_name": "www.facebook.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/8403",
+    "name": "[Bug]: Fixed GPS position changes after saving · Issue #8403 - GitHub",
+    "snippet": "When setting fixed coordinates, they show correctly for the node initially, but then change to a place about a mile away after a few seconds. I ... Missing: smart_position_broadcast minimum_distance",
+    "host_name": "github.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://openelab.io/blogs/getting-started/meshtastic-guide-positioning-and-location-settings?srsltid=AfmBOopnZEsI2ylVhcuO09ckd7pFiE3yuoxFaMmda_Bat_BXvH7A66XH",
+    "name": "Meshtastic Guide - Positioning and Location Settings",
+    "snippet": "The available configuration options include: GPS Mode, GPS Update Interval, Fixed Position, Smart Broadcast, Smart Broadcast Minimum Distance ... Missing: jumps | Show results with: jumps",
+    "host_name": "openelab.io",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.instagram.com/reel/DKyp1YnMyqf",
+    "name": "Looking to configure your SpecFive Relay on the Meshtastic App",
+    "snippet": "3:26 Settings Position Config MRD Minimum Distance 100 The minimum distance change in meters to be considered for smart position broadcast.",
+    "host_name": "www.instagram.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://store.rokland.com/pages/changing-the-gps-interval-in-the-meshtastic-app?srsltid=AfmBOoqxFv-ELppJvZ-gF4YFDyaTtdFn0LFa8laZ7upGJplUdREX1rTh",
+    "name": "Changing the GPS interval in the Meshtastic app - Rokland",
+    "snippet": "1. Connect to Your Device. Open the Meshtastic app on your smartphone. · 2. Navigate to Radio Configuration. Missing: jumps | Show results with: jumps",
+    "host_name": "store.rokland.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/8029",
+    "name": "Wait until after GPS lock hold before updating position, if we can.",
+    "snippet": "After the recent patch , we hold lock for a bit before updating the position. The positions that come in after the hold are genuinely better ... Missing: jumps minimum_distance",
+    "host_name": "github.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/Meshtastic-Android/issues/956",
+    "name": "Some nodes showing incorrect and matching GPS coordinates #956",
+    "snippet": "I can see the coordinates listed on the LCD match my real position. However the app is showing a completely incorrect location for the node. Missing: jumps smart_position_broadcast minimum_distance",
+    "host_name": "github.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

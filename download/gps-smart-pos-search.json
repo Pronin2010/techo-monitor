@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/position",
+    "name": "Position Configuration",
+    "snippet": "Smart Broadcast Minimum Distance ​. Default of 0 is 100 meters. The minimum distance in meters traveled (since the last send) before we can send a position to ...",
+    "host_name": "meshtastic.org",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1qld4dl/correct_me_if_im_wrong_gps",
+    "name": "Correct me if I'm wrong (GPS) : r/meshtastic",
+    "snippet": "Meshtastic App - Settings - Position - Smart Position Minimum Distance (30m meters).",
+    "host_name": "www.reddit.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/Meshtastic-Apple/issues/1709",
+    "name": "[Bug]: Smart Position horizontal accuracy requirements too",
+    "snippet": "May 1, 2026 — Given my settings are configured to require a minimum of 200 meters before considering a broadcast , those accuracies are fine. The biggest issue ...",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://openelab.io/blogs/getting-started/meshtastic-guide-positioning-and-location-settings?srsltid=AfmBOood6eyLw344SQ6DXYjv5yXfplNqGp2zeNQZpL1vtTpSFtUcEy4a",
+    "name": "Meshtastic Guide - Positioning and Location Settings",
+    "snippet": "Dec 15, 2025 — Smart Broadcast Minimum Distance: Default is 100 meters . Defines the ... Defines the minimum distance traveled before a new position update is ...",
+    "host_name": "openelab.io",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://store.rokland.com/pages/changing-the-gps-interval-in-the-meshtastic-app?srsltid=AfmBOor1bGbKk9X9AS86ZoNkK-rxWUsfQdAfQ9Ra-OPwum5TerA3qR8a",
+    "name": "Changing the GPS interval in the Meshtastic app",
+    "snippet": "Even if your device is getting a GPS fix every 30 seconds, you can set the broadcast interval to a much longer period (e.g., 900 seconds/15 minutes) to reduce ...",
+    "host_name": "store.rokland.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/configuration/tips",
+    "name": "Configuration Tips",
+    "snippet": "Meshtastic nodes will rebroadcast all packets if they share LoRa modem settings, regardless of encryption (unless Rebroadcast mode is set to LOCAL_ONLY).",
+    "host_name": "meshtastic.org",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshmonitor.org/features/device.html",
+    "name": "Device Configuration",
+    "snippet": "Feb 26, 2026 — Position Broadcast Interval ​. Description: How often to broadcast GPS position updates. Range : 1-4294967295 seconds. Default: 900 seconds (15 ...",
+    "host_name": "meshmonitor.org",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshnology.com/blogs/meshnology-blog-1/meshtastic-gps-node-ideal-solution-to-build-long-range-off-grid-communication-network?srsltid=AfmBOooLbebsBWtchfcv4hPA_OoVXYW-zGOV9hs6pI_5mrbuika8L2vY",
+    "name": "Meshtastic GPS Node: Build Long-Range Off-Grid Comms",
+    "snippet": "Meshtastic GPS Node is a kind of device used for long distance communication and location sharing in Meshtastic Mesh Network based on LoRa radio communication ...",
+    "host_name": "meshnology.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1rcjw0q/noob_with_questions_gps_tracking_dog_and_truck",
+    "name": "Noob with questions, GPS tracking dog and truck",
+    "snippet": "The minimum distance in meters traveled (since the last send) before we can send a position to the mesh if smart broadcast is enabled. Smart ...",
+    "host_name": "www.reddit.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://nwimesh.net/position-settings",
+    "name": "POSITION SETTINGS – NWI Mesh Net",
+    "snippet": "Meshtastic can send position updates either on a fixed interval or based on movement. Smart Position replaces fixed timers with threshold-based logic, ...",
+    "host_name": "nwimesh.net",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

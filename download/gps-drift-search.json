@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://github.com/orgs/meshtastic/discussions/30",
+    "name": "GPS Data wrong with T-echo · meshtastic · Discussion #30",
+    "snippet": "Nov 21, 2025 — I always get incorrect GPS data from my T - Echo . The position given is always the same. But no fixed position is configured. The correct position is shown on the ... Read more\nI always get incorrect GPS data from my T-Echo. The position given is always the same. But no fixed position is configured. The correct position is shown on the ... GPS Map Location Totally Wrong · meshtastic · Discussion #401 [Bug]: Fixed GPS coordinates not retained, RAK4631 · meshtastic ... More results from github.com Missing: drift | Show results with: drift",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/302143017312754/posts/1897070184486688",
+    "name": "Meshtastic map showing incorrect device location?",
+    "snippet": "I have tried resetting the GPS , charging the battery, making sure I didn' t have position set to a fixed location . I am clueless of what else ... Read more\nI have tried resetting the GPS, charging the battery, making sure I didn't have position set to a fixed location. I am clueless of what else ... Meshtastic location accuracy issue on Heltech v3? How to adjust gps location on mesh device? More results from www.facebook.com Missing: jumping | Show results with: jumping",
+    "host_name": "www.facebook.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.reddit.com/r/meshtastic/comments/1jneevm/techo_with_gps_issues",
+    "name": "T-Echo with GPS Issues : r/meshtastic",
+    "snippet": "Try opening it up and taking a look inside at the battery and GPS antenna . My battery likes to flop around inside and maybe your battery is messing with the ... Read more\nTry opening it up and taking a look inside at the battery and GPS antenna. My battery likes to flop around inside and maybe your battery is messing with the ... Wrong and stale GPS GPS Position Information More results from www.reddit.com Missing: drift jumping stationary",
+    "host_name": "www.reddit.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://store.rokland.com/pages/gps-showing-inaccurate-location-on-meshtastic-devices-wismesh-tag-pocket-t-deck-etc?srsltid=AfmBOopSJu3kF75BYgz541hHrszw7PkgigId6AEbKvwwy2ztlOQ_yfWl",
+    "name": "GPS Showing Inaccurate Location on Meshtastic Devices",
+    "snippet": "Open the Meshtastic app (iOS or Android). Go to Device Settings → Position . Turn Location OFF. Use the Web Interface to Re-Enable Precise ... Read more",
+    "host_name": "store.rokland.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/zh-CN/docs/configuration/radio/device",
+    "name": "Device Configuration",
+    "snippet": "Broadcasts GPS position packets as priority . Tracking the location of individuals or assets, especially in scenarios where timely and efficient location updates ... Read more",
+    "host_name": "meshtastic.org",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/docs/configuration/radio/position",
+    "name": "Position Configuration",
+    "snippet": "GPS position configuration settings for your Meshtastic device including update intervals, broadcast settings, and GPIO.\nGPS position configuration settings for your Meshtastic device including update intervals, broadcast settings, and GPIO. Missing: drift jumping",
+    "host_name": "meshtastic.org",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://openelab.io/blogs/getting-started/meshtastic-guide-positioning-and-location-settings?srsltid=AfmBOoogqCF270UMJuexv4UFO_B0nqgyVfoJcm0LR7dqyTOwqyFDsrLg",
+    "name": "Meshtastic Guide - Positioning and Location Settings",
+    "snippet": "Dec 15, 2025 — GPS or phone provides position ; mesh needs GPS/RTC/NTP for time. Config includes mode, interval, fixed pos, smart broadcast, flags, pins.",
+    "host_name": "openelab.io",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/meshtastic/firmware/issues/992",
+    "name": "T-Echo - GPS sign gets flipped · Issue #992",
+    "snippet": "Dec 12, 2021 — I get almost instant GPS lock with a soft reset T - Echo with Soft-RF firmware, just running Meshtastic , where on Meshtastic it can take from 5 ... Read more\nIt looks like sometimes it just affects the GPS status screen, as the node distances are sometimes right on the screen, but look ok in the app.",
+    "host_name": "github.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://meshtastic.org/tr-TR/docs/hardware/devices",
+    "name": "Devices | Supported Hardware Overview",
+    "snippet": "All-in-one unit with E-Ink screen, GPS and battery in injection-molded case . Features the low-power nRF52840 for long battery life. Name, MCU, Radio, WiFi, BT ... Read more",
+    "host_name": "meshtastic.org",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://store.rokland.com/pages/gps-showing-inaccurate-location-on-meshtastic-devices-wismesh-tag-pocket-t-deck-etc?srsltid=AfmBOop6fp5sYmyUk-DfLDTCVa5LTCE17QMgHNk4fSPNNcSg28xBuftM",
+    "name": "GPS Showing Inaccurate Location on Meshtastic Devices (WisMesh",
+    "snippet": "Open the Meshtastic app (iOS or Android). Go to Device Settings → Position. Turn Location OFF. Use the Web Interface to Re-Enable Precise ... Missing: drift jumping stationary Echo",
+    "host_name": "store.rokland.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]
