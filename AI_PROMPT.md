@@ -24,6 +24,7 @@ _Этот файл загружается в контекст AI-ассисте�
 - **Tailwind CSS 4** + **shadcn/ui** (New York style) + **Lucide** иконки
 - **Prisma ORM** + **SQLite** (файл `db/custom.db`)
 - **Leaflet** + **OpenStreetMap** — интерактивные карты
+- **@tmcw/togeojson** + **fflate** — парсинг KMZ/KML overlay на карте
 - **Python-мост** (`techo-bridge.py`) — связь с Meshtastic-устройствами
 
 ---
@@ -51,7 +52,7 @@ src/
 │   │   ├── node-status-card.tsx  # Строка узла с аккордеоном
 │   │   ├── node-form-dialog.tsx  # Диалог редактирования узла
 │   │   ├── map-view.tsx          # Вкладка карты (dynamic import)
-│   │   ├── map-leaflet.tsx       # Leaflet-карта
+│   │   ├── map-leaflet.tsx       # Leaflet-карта + KMZ/KML overlay
 │   │   ├── channel-settings.tsx  # Настройки каналов + QR
 │   │   ├── connection-tab.tsx    # Подключение (Serial/MQTT, лог синхронизаций)
 │   │   ├── device-setup-tab.tsx  # Генератор CLI-команд и YAML
@@ -63,6 +64,7 @@ src/
 │   ├── db.ts                     # Prisma Client (singleton, dev query logging)
 │   ├── types.ts                  # TypeScript типы + константы Meshtastic
 │   ├── utils.ts                  # cn() + serializeBigInt()
+│   ├── kmz-parser.ts             # KMZ/KML → GeoJSON парсер (@tmcw/togeojson + fflate)
 │   └── builtin-presets.ts        # 4 встроенных пресета
 prisma/
 └── schema.prisma                 # 6 моделей: Node, Channel, Telemetry, ConnectionConfig, Preset, SyncLog
@@ -77,7 +79,7 @@ techo-dump-config.py              # Скрипт чтения конфигура
 | Вкладка | Иконка | Описание |
 |---------|--------|----------|
 | **Статус** | Activity | Карточки узлов: батарея, SNR, RSSI, поиск, аккордеон-детали |
-| **Карта** | Map | Leaflet + OSM, маркеры по ролям, линии связи |
+| **Карта** | Map | Leaflet + OSM, маркеры по ролям, линии связи, KMZ/KML overlay |
 | **Каналы** | Settings | PSK 256 бит, модем-пресет, регион 433 МГц, QR-коды |
 | **Подключение** | SVG (кабель) | Serial/MQTT выбор, команда запуска, лог синхронизаций |
 | **Настройка** | Cpu | Генератор CLI-команд и YAML для meshtastic 2.7.15 |
@@ -325,7 +327,7 @@ SyncLog
 
 ## 9. Текущее состояние (из worklog)
 
-### Выполнено (26 задач):
+### Выполнено (37 задач):
 1. Рефакторинг вкладки Статус — аккордеон-строки, поиск, упрощённый диалог
 2. Визард подключения — 3 шага вместо 1162 строк
 3. Фикс CLI-команд для meshtastic 2.7.8 (проверено по исходникам)
@@ -361,6 +363,8 @@ SyncLog
 33. GPS дрейф и fixedPosition: (а) Исследована проблема дрейфа координат у стационарного трекера — 4 причины (GPS шум ±3-10м без фильтрации, smart broadcast с малым порогом, gpsUpdateInterval=1 сек слишком частый, position_precision<32 обфусцирует); (б) Добавлено поле fixedPosition (Boolean, default false) в Preset модель, мост, UI пресетов, API; (в) При fixedPosition=true мост принудительно ставит gps_mode=DISABLED (баг #8403: onGPSChanged перезаписывает fixed_position); (г) UI: чекбокс «Фиксированная позиция» с предупреждением + отображение в карточке пресета; (д) Генерация команд/YAML включает fixed_position; (е) Документация обновлена: PROJECT_RULES.md (раздел 4.2 — fixedPosition + дрейф GPS), AI_PROMPT.md
 34. Углублённое исследование GPS дрейфа: (а) Найден аппаратный дефект T-Echo — LilyGO issue #32: проводящая сетка внутри замыкает пассивные компоненты GPS-антенны → GPS теряет спутники через 2-5 мин; (б) Подтверждён баг #836 — T-Echo L76K GNSS периодически теряет фикс; (в) Найдены баги #8029 (GPS lock hold 20 сек), #992 (инверсия знака координат), #6785 (Smart Broadcast спорадическое вещание); (г) Пресет «Трекер лес 12ч» исправлен: gpsUpdateInterval 1→30 сек (L76K не успевает за 1 сек), smartBroadcastMinDist 20→100 м (дефолт прошивки, GPS шум ±10м), smartBroadcastMinInterval 60→120 сек; (д) Пресет «Трекер лес 5 дней»: smartBroadcastMinDist 50→100 м; (е) Все дефолты обновлены в 6 файлах: builtin-presets.ts, prisma/schema.prisma, presets/route.ts, settings-presets-tab.tsx, techo-bridge.py; (ж) Документация обновлена: PROJECT_RULES.md (расширенный раздел 4.2 — 6 причин по вероятности, таблица сравнения с дефолтами прошивки, 6 багов), AI_PROMPT.md
 35. Новый порядок прошивки пресетом: factory reset → 20 сек → reconnect → setOwner (имя) → reboot → 20 сек → reconnect → транзакция (конфиг) → reboot. (а) apply_config_to_node() перестроен в 3 явных шага с отдельной перезагрузкой после имени; (б) Таймаут API 120→180 сек; (в) UI диалог обновлён с описанием нового порядка; (г) Документация обновлена
+36. Ревью проекта: (а) MODEM_PRESET_MAP — добавлены LITE_FAST/SLOW, NARROW_FAST/SLOW (молча пропускались при push); (б) REBROADCAST_MODE_MAP — добавлены алиасы LOCAL_SKIP→1, SIMPLE→5; (в) usePreamble — зомби-поле, убрано из UI/CLI/YAML; (г) ROLE_MAP — комментарий TAK≠TAK_TRACKER; (д) Bridge docstring обновлён
+37. KMZ/KML overlay на карте: (а) Создан kmz-parser.ts — парсинг .kmz (unzip через fflate + KML→GeoJSON через @tmcw/togeojson) и .kml; (б) Карта (map-leaflet.tsx) — кнопка загрузки KMZ/KML, drag & drop, GeoJSON-слой с цветовым кодированием (точки=розовый, линии=оранжевый, полигоны=фиолетовый), popup с name/description, управление видимостью, подгонка bounds; (в) Панель «Слой» в статистике карты
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -393,4 +397,4 @@ ALL(0), ALL_SKIP_DECODING(1), LOCAL_ONLY(2), KNOWN_ONLY(3), NONE(4), CORE_PORTNU
 
 ---
 
-_Последнее обновление: 2026-05-11 (Ревью: исправлены MODEM_PRESET_MAP +4 пресета, REBROADCAST_MODE_MAP +алиасы, usePreamble убран из UI/CLI/YAML)_
+_Последнее обновление: 2026-05-11 (Задача 37: KMZ/KML overlay на карте)_

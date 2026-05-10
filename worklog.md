@@ -185,3 +185,32 @@ Stage Summary:
 - 3 критических бага: настройки молча пропускались при push-to-device из-за неверных маппингов
 - Все критические и средние расхождения исправлены и запушены
 - Commit: cc5bf3a
+
+---
+Task ID: 37
+Agent: main
+Task: KMZ/KML overlay на карте — наложение геоданных из файла на карту Leaflet
+
+Work Log:
+- Установлены библиотеки: @tmcw/togeojson (KML→GeoJSON), fflate (unzip KMZ)
+- Создан src/lib/kmz-parser.ts — парсер .kmz/.kml файлов:
+  - KMZ: распаковка ZIP (fflate unzipSync) → поиск .kml внутри → DOMParser → @tmcw/togeojson → GeoJSON
+  - KML: прямой парсинг XML → GeoJSON
+  - Утилита getGeoJsonStats() — статистика объектов (точки/линии/полигоны)
+- Обновлён map-leaflet.tsx:
+  - Кнопка «KMZ/KML» в панели статистики (раздел «Слой»)
+  - Drag & drop — перетаскивание файла на карту
+  - GeoJSON-слой с цветовым кодированием: точки=розовый, линии=оранжевый, полигоны=фиолетовый
+  - Popup на клик по объекту (name + description из KML)
+  - Управление: показать/скрыть, удалить, подогнать bounds
+  - Статистика overlay (кол-во точек, линий, полигонов)
+  - FitOverlayBounds — автоподгонка карты при загрузке
+- Убраны useCallback (React Compiler ругается на неверные deps) → обычные функции
+- Линт чист, TypeScript-ошибок в проектных файлах нет
+- Обновлена документация: AI_PROMPT.md (стек, структура, задача 37), PROJECT_RULES.md (дата)
+
+Stage Summary:
+- Пользователь может наложить .kmz/.kml файл на карту дашборда
+- Два способа загрузки: кнопка или drag & drop
+- GeoJSON-слой отображается поверх тайлов OSM с popup и управлением
+- Файлы: src/lib/kmz-parser.ts (новый), src/components/dashboard/map-leaflet.tsx (обновлён)

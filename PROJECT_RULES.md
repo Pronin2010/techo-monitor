@@ -260,4 +260,4 @@ meshtastic --set position.fixed_position true \
 
 ---
 
-_Последнее обновление: 2026-05-11 (Порядок прошивки: factory reset → 20с → имя → 20с → конфиг → reboot)_
+_Последнее обновление: 2026-05-11 (Задача 37: KMZ/KML overlay на карте)_
