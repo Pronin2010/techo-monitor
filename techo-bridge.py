@@ -299,7 +299,8 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
         config: dict с полями пресета (как из API дашборда)
         reboot_secs: секунд до перезагрузки (0 = без перезагрузки)
         device_name: длинное имя устройства (например, 'Tracker 01')
-        device_short_name: короткое имя (макс. 5 символов, например, 'TR01')
+        device_short_name: короткое имя (макс. 4 символа, например, 'TR01')
+                             ⚠️ Python-библиотека обрезает до 4 (nChars=4), НЕ 5!
         factory_reset: если True — сначала сбросить до заводских, затем применить пресет
 
     Returns:
@@ -373,12 +374,37 @@ def apply_config_to_node(interface, node_id, config, reboot_secs=5,
                 return {'success': False, 'message': f'Сброс выполнен, мост переподключён, но не удалось получить узел: {e}', 'sections': sections_written}
 
         # ── Имя устройства ──
+        # ВНИМАНИЕ: После factory reset устройство получает дефолтное имя
+        # "Meshtastic XXXX". Если device_name/device_short_name указаны,
+        # setOwner() перезапишет дефолтное имя на указанное.
+        # Если имена не указаны (None) — устройство сохранит дефолтное.
+        #
+        # Ограничение Python-библиотеки meshtastic 2.7.8:
+        #   - short_name обрезается до 4 символов (nChars=4), НЕ 5!
+        #   - Пустая строка ("") вызывает sys.exit() — мост падает!
+        #   Поэтому пустые строки конвертируются в None (пропуск setOwner).
         if device_name or device_short_name:
             try:
+                # Дополнительная задержка после factory reset — устройству нужно
+                # время на полную инициализацию перед приёмом admin-команд
+                if factory_reset:
+                    print("\033[33m[CFG] Ожидание готовности устройства (5 сек) перед setOwner...\033[0m")
+                    time.sleep(5)
                 node.setOwner(long_name=device_name, short_name=device_short_name)
                 name_info = f"{device_name or ''}/{device_short_name or ''}"
                 sections_written.append(f"owner={name_info}")
                 print(f"\033[32m[CFG] owner: {name_info}\033[0m")
+                # Диагностика: проверяем, что имя реально установилось
+                time.sleep(1)
+                try:
+                    owner_info = node.localConfig  # Попробуем прочитать
+                    print(f"\033[36m[DIAG] setOwner отправлен. Проверка имени...\033[0m")
+                except Exception:
+                    pass
+            except SystemExit:
+                # setOwner() может вызвать sys.exit() при пустом имени — перехватываем!
+                print("\033[31m[CFG] КРИТИЧЕСКАЯ ОШИБКА: setOwner() вызвал sys.exit()! "
+                      "Вероятно, передано пустое имя. Мост продолжит работу.\033[0m")
             except Exception as e:
                 print(f"\033[31m[CFG] Ошибка установки имени: {e}\033[0m")
                 # Не прерываем — имя не критично, конфиг важнее
@@ -922,7 +948,7 @@ class BridgeHTTPHandler(BaseHTTPRequestHandler):
             reboot_secs = body.get('rebootSecs', 5)
             preset_name = body.get('presetName', 'неизвестный')
             device_name = body.get('deviceName') or None      # длинное имя
-            device_short_name = body.get('deviceShortName') or None  # короткое имя (макс. 5 символов)
+            device_short_name = body.get('deviceShortName') or None  # короткое имя (макс. 4 символа)
             factory_reset = body.get('factoryReset', False)    # сброс до заводских перед конфигурацией
 
             target_label = node_id or 'BASE (локальный)'

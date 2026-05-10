@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server'
  *   nodeId: string            — nodeId устройства ('!hexid' или '' для локального BASE)
  *   rebootSecs?: number       — задержка перезагрузки (по умолчанию 5 сек, 0 = без перезагрузки)
  *   deviceName?: string       — длинное имя устройства (например, 'Tracker 01')
- *   deviceShortName?: string  — короткое имя (макс. 5 символов, например, 'TR01')
+ *   deviceShortName?: string  — короткое имя (макс. 4 символа, например, 'TR01')
  *   factoryReset?: boolean    — сбросить до заводских перед применением пресета
  *
  * Логика:

@@ -544,6 +544,12 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
   /** Обработчик смены целевого устройства — обновить имя */
   const handlePushTargetChange = useCallback((value: string) => {
     setPushTarget(value)
+    // При factory reset НЕ предзаполняем имя — устройство получит дефолтное
+    if (pushFactoryReset) {
+      setPushDeviceName('')
+      setPushDeviceShortName('')
+      return
+    }
     if (value === '_local') {
       const localNode = bridgeNodes.find(n => n.isLocal)
       if (localNode) {
@@ -557,7 +563,18 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
         setPushDeviceShortName(remoteNode.shortName !== '???' ? remoteNode.shortName : '')
       }
     }
-  }, [bridgeNodes])
+  }, [bridgeNodes, pushFactoryReset])
+
+  /** Обработчик изменения factory reset — очистить имена при включении */
+  const handleFactoryResetChange = useCallback((checked: boolean) => {
+    setPushFactoryReset(checked)
+    if (checked) {
+      // При factory reset очищаем имена — устройство получит дефолтное
+      // имя «Meshtastic XXXX». Пользователь может ввести новое имя вручную.
+      setPushDeviceName('')
+      setPushDeviceShortName('')
+    }
+  }, [])
 
   /** Отправить конфиг на устройство */
   const handleConfirmPush = useCallback(async () => {
@@ -2233,16 +2250,16 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                   <Label className="text-xs">Короткое</Label>
                   <Input
                     value={pushDeviceShortName}
-                    onChange={e => setPushDeviceShortName(e.target.value.slice(0, 5))}
+                    onChange={e => setPushDeviceShortName(e.target.value.slice(0, 4))}
                     placeholder="TR01"
-                    maxLength={5}
+                    maxLength={4}
                     className="h-8 text-sm"
                   />
                 </div>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Имя отображается в сети. Короткое — макс. 5 символов, показывается на экране устройства.
-                Оставьте пустым, чтобы не менять текущее имя.
+                Имя отображается в сети. Короткое — макс. 4 символа (ограничение библиотеки), показывается на экране устройства.
+                {pushFactoryReset ? 'При сбросе до заводских имя обнулится — введите новое или оставьте пустым для дефолтного «Meshtastic XXXX».' : 'Оставьте пустым, чтобы не менять текущее имя.'}
               </p>
 
               {/* Сброс до заводских */}
@@ -2250,7 +2267,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                 <Checkbox
                   id="factoryReset"
                   checked={pushFactoryReset}
-                  onCheckedChange={c => setPushFactoryReset(c === true)}
+                  onCheckedChange={c => handleFactoryResetChange(c === true)}
                   className="mt-0.5"
                 />
                 <div className="space-y-0.5">
@@ -2259,6 +2276,8 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                   </Label>
                   <p className="text-[11px] text-muted-foreground">
                     Удалить все текущие настройки перед применением пресета.
+                    Имя устройства сбросится на дефолтное «Meshtastic XXXX» —
+                    введите новое имя выше или оставьте пустым.
                     Устройство перезагрузится, затем применится новый конфиг.
                     Рекомендуется для новых устройств или при проблемах.
                   </p>

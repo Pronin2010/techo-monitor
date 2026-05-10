@@ -269,8 +269,11 @@ SyncLog
 - **POST /api/apply-config** — применение конфигурации на устройство
   - Параметры: role, region, modemPreset, lsSecs, minWakeSecs, gpsMode, agpsEnabled, и т.д.
   - deviceName, deviceShortName — установка имени через setOwner()
+    ⚠️ short_name ограничен 4 символами (nChars=4 в Python-библиотеке), НЕ 5!
+    ⚠️ Пустая строка в setOwner() вызывает sys.exit() — мост падает! Пустые → None (пропуск).
+    ⚠️ При factory reset имя сбрасывается на «Meshtastic XXXX» — если не указать новое, останется дефолтное
   - factoryReset — сброс до заводских перед применением (ensureSessionKey + factory_reset_config=1, баг библиотеки: True→TypeError)
-  - Порядок: factoryReset → device reboot → _reconnect_interface() → setOwner → beginTransaction → writeConfig × N → commit → reboot
+  - Порядок: factoryReset → device reboot → _reconnect_interface() → (5 сек задержка) → setOwner → beginTransaction → writeConfig × N → commit → reboot
   - При ошибке записи — перезагрузка для отката (вместо commit частичных данных)
   - При factory reset — автоматическое пересоздание SerialInterface с повторными попытками
   - После перезагрузки устройства (reboot) — мост автоматически переподключается для продолжения мониторинга
@@ -314,6 +317,7 @@ SyncLog
 28. Автосинхронизация БД: prisma db push в dev-скрипте + postinstall prisma generate
 29. Фикс positionFlags: 943→299 (пеший режим, дефолт 811 без SPEED). Проверено по protobuf config.proto v2.7.15. Все пресеты, UI-опции, скрипты обновлены.
 30. Полная телеметрия: добавлены 7 полей (speed, heading, satsInView, HDOP, pressure, channelUtilization, airUtilTx) в БД, мост, API, UI. Мост извлекает groundSpeed(мм/с→м/с), groundTrack(1/10000°→°), satsInView, HDOP(÷100) из Position; channelUtilization, airUtilTx из DeviceMetrics; barometricPressure из EnvironmentMetrics. Кэши node_dev_metrics/node_env_metrics для periodic sync. Карточка узла: скорость(км/ч), курс(°), спутники(цвет), HDOP(цвет), давление(гПа), загрузка канала(%), эфир TX(%). Карта: скорость, курс, спутники в попапе.
+31. Фикс setOwner и factory reset: (а) При factory reset поля имени очищаются — устройство получает дефолтное «Meshtastic XXXX», иначе setOwner() перезаписывал старое имя; (б) short_name макс. 4 символа (nChars=4 в Python-библиотеке, НЕ 5); (в) Защита от sys.exit() при пустом имени в setOwner(); (г) Задержка 5 сек после factory reset перед setOwner(); (д) Проверено по исходникам AdminModule.cpp + NodeDB.cpp v2.7.15: factory_reset_config→factoryReset()→installDefaultDeviceState()→сброс owner.
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -345,4 +349,4 @@ ALL, LOCAL_SKIP, SIMPLE
 
 ---
 
-_Последнее обновление: 2026-05-09 (Полная телеметрия: speed, heading, satsInView, HDOP, pressure, channelUtilization, airUtilTx)_
+_Последнее обновление: 2026-05-09 (Фикс setOwner и factory reset: очистка имён, short_name 4 символа, защита от sys.exit())_

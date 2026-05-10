@@ -103,6 +103,20 @@ _Прочитай этот файл в начале каждого чата и �
 
 ⚠️ Мост использует кэши `node_dev_metrics` и `node_env_metrics` для передачи этих данных в periodic sync (раньше они терялись — извлекались в on_receive, но не попадали в node_entry).
 
+## 4.3.1. Имя устройства (setOwner / factory reset)
+
+### Ограничения Python-библиотеки meshtastic 2.7.8
+- **short_name макс. 4 символа** (nChars=4 в setOwner()), НЕ 5! Протокол позволяет больше, но библиотека обрезает.
+- **Пустая строка вызывает sys.exit()** — мост падает! Поэтому пустые строки конвертируются в None (пропуск setOwner).
+- `setOwner()` вызывает `ensureSessionKey()` внутри себя — не нужно вызывать отдельно перед ним.
+
+### Factory reset и имя
+- `factory_reset_config` (поле 99 в AdminMessage) → `nodeDB->factoryReset()` → `installDefaultDeviceState()` → имя сбрасывается на «Meshtastic XXXX»
+- `factory_reset_device` (поле 94) → то же + очистка BLE bonds
+- ⚠️ После factory reset мост вызывает `setOwner()` — если поля имени заполнены старым именем, оно перезапишет дефолтное!
+- **Решение**: при включении factory reset поля имени очищаются автоматически. Пользователь может ввести новое имя или оставить пустым для дефолтного.
+- Проверено по исходникам AdminModule.cpp + NodeDB.cpp прошивки 2.7.15
+
 ## 4.4. Mesh-стратегия
 
 - **Трекеры (TRACKER)** — конечные узлы, спят и экономят батарею, не ретранслируют пока спят
@@ -158,4 +172,4 @@ _Прочитай этот файл в начале каждого чата и �
 
 ---
 
-_Последнее обновление: 2026-05-09 (Полная телеметрия: speed, heading, satsInView, HDOP, pressure, channelUtilization, airUtilTx)_
+_Последнее обновление: 2026-05-09 (Фикс setOwner и factory reset: очистка имён, short_name 4 символа, защита от sys.exit())_
