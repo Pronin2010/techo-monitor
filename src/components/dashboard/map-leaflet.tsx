@@ -1,13 +1,16 @@
 'use client'
 
-import React from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
+import React, { useRef, useState } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, Polyline, GeoJSON, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Badge } from '@/components/ui/badge'
-import { Wifi, WifiOff, Battery, Signal, Mountain, Moon, Sun, Repeat, EyeOff, Gauge, Navigation, Satellite } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Wifi, WifiOff, Battery, Signal, Mountain, Moon, Sun, Repeat, EyeOff, Gauge, Navigation, Satellite, Upload, X, Layers, MapPin, Route as RouteIcon, Hexagon } from 'lucide-react'
 import type { MeshNode, NodeRole } from '@/lib/types'
 import { ROLE_META } from '@/lib/types'
+import { parseKmzFile, getGeoJsonStats, type KmzParseResult } from '@/lib/kmz-parser'
+import type { FeatureCollection } from 'geojson'
 
 // Fix for default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -63,6 +66,27 @@ function FitBounds({ nodes }: { nodes: MeshNode[] }) {
   return null
 }
 
+// Компонент для подгонки карты под bounds overlay-слоя
+function FitOverlayBounds({ geojson, trigger }: { geojson: FeatureCollection | null; trigger: number }) {
+  const map = useMap()
+
+  React.useEffect(() => {
+    if (!geojson || trigger === 0) return
+
+    try {
+      const geoJsonLayer = L.geoJSON(geojson)
+      const bounds = geoJsonLayer.getBounds()
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [50, 50] })
+      }
+    } catch {
+      // игнорируем ошибки bounds
+    }
+  }, [geojson, trigger, map])
+
+  return null
+}
+
 function getStatusLabel(status: string): string {
   switch (status) {
     case 'online': return 'В сети'
@@ -97,8 +121,63 @@ function getMeshLineStyle(nodeA: MeshNode, nodeB: MeshNode) {
   return { color: '#a78bfa', weight: 1.5, opacity: 0.4, dashArray: '5, 10' }
 }
 
+// Стили GeoJSON overlay — разные для Point / LineString / Polygon
+function geoJsonStyle(feature: GeoJSON.Feature) {
+  const geomType = feature.geometry?.type
+  if (geomType === 'Point' || geomType === 'MultiPoint') {
+    return {
+      color: '#e11d48',
+      weight: 2,
+      opacity: 0.9,
+      fillColor: '#e11d48',
+      fillOpacity: 0.6,
+      radius: 6,
+    }
+  }
+  if (geomType === 'LineString' || geomType === 'MultiLineString') {
+    return {
+      color: '#f97316',
+      weight: 3,
+      opacity: 0.8,
+      fillColor: 'transparent',
+      fillOpacity: 0,
+    }
+  }
+  // Polygon / MultiPolygon
+  return {
+    color: '#8b5cf6',
+    weight: 2,
+    opacity: 0.8,
+    fillColor: '#8b5cf6',
+    fillOpacity: 0.15,
+  }
+}
+
+// Popup для каждого объекта overlay
+function onEachFeature(feature: GeoJSON.Feature, layer: L.Layer) {
+  if (feature.properties) {
+    const name = feature.properties.name || feature.properties.Name || feature.properties.title
+    const description = feature.properties.description || feature.properties.Description
+
+    if (name || description) {
+      let html = ''
+      if (name) html += `<div style="font-weight:600;font-size:13px;margin-bottom:4px;">${name}</div>`
+      if (description) html += `<div style="font-size:11px;color:#666;">${description}</div>`
+      layer.bindPopup(html)
+    }
+  }
+}
+
 export default function MapLeaflet({ nodes }: MapViewProps) {
   const nodesWithPosition = nodes.filter(n => n.latitude && n.longitude)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Overlay state
+  const [overlay, setOverlay] = useState<KmzParseResult | null>(null)
+  const [overlayVisible, setOverlayVisible] = useState(true)
+  const [overlayFitTrigger, setOverlayFitTrigger] = useState(0)
+  const [overlayError, setOverlayError] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
 
   // Count by role
   const routerCount = nodes.filter(n => n.role === 'ROUTER').length
@@ -125,8 +204,63 @@ export default function MapLeaflet({ nodes }: MapViewProps) {
     }
   }
 
+  // Обработчик загрузки файла
+  const handleFileSelect = async (file: File) => {
+    setOverlayError(null)
+    try {
+      const result = await parseKmzFile(file)
+      setOverlay(result)
+      setOverlayVisible(true)
+      setOverlayFitTrigger(prev => prev + 1)  // подогнать карту под overlay
+    } catch (e) {
+      setOverlayError(e instanceof Error ? e.message : 'Ошибка загрузки файла')
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleFileSelect(file)
+    // Сбросить input, чтобы можно было загрузить тот же файл повторно
+    e.target.value = ''
+  }
+
+  const handleRemoveOverlay = () => {
+    setOverlay(null)
+    setOverlayVisible(true)
+    setOverlayError(null)
+  }
+
+  // Drag & drop обработчики
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleFileSelect(file)
+  }
+
+  // Статистика overlay
+  const overlayStats = overlay ? getGeoJsonStats(overlay.geojson) : null
+
   return (
-    <div className="relative h-full w-full rounded-lg overflow-hidden border">
+    <div
+      className="relative h-full w-full rounded-lg overflow-hidden border"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {/* Custom CSS to fix Leaflet default marker styling */}
       <style jsx global>{`
         .custom-marker {
@@ -144,6 +278,16 @@ export default function MapLeaflet({ nodes }: MapViewProps) {
         }
       `}</style>
 
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-[2000] bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg flex items-center justify-center pointer-events-none">
+          <div className="bg-background/90 rounded-xl shadow-lg p-6 text-center">
+            <Upload className="h-10 w-10 text-primary mx-auto mb-3" />
+            <p className="text-sm font-semibold">Перетащите .kmz или .kml файл сюда</p>
+          </div>
+        </div>
+      )}
+
       <MapContainer
         center={[55.7558, 37.6173]}
         zoom={13}
@@ -156,6 +300,29 @@ export default function MapLeaflet({ nodes }: MapViewProps) {
         />
 
         <FitBounds nodes={nodes} />
+
+        {/* KMZ/KML Overlay */}
+        {overlay && overlayVisible && (
+          <>
+            <GeoJSON
+              key={`${overlay.fileName}-${overlay.sourceType}`}
+              data={overlay.geojson}
+              style={geoJsonStyle}
+              onEachFeature={onEachFeature}
+              pointToLayer={(_feature, latlng) => {
+                return L.circleMarker(latlng, {
+                  radius: 6,
+                  color: '#e11d48',
+                  weight: 2,
+                  opacity: 0.9,
+                  fillColor: '#e11d48',
+                  fillOpacity: 0.6,
+                })
+              }}
+            />
+            <FitOverlayBounds geojson={overlay.geojson} trigger={overlayFitTrigger} />
+          </>
+        )}
 
         {/* Node markers */}
         {nodesWithPosition.map(node => {
@@ -377,7 +544,110 @@ export default function MapLeaflet({ nodes }: MapViewProps) {
             <span>Периодическая связь</span>
           </div>
         </div>
+
+        {/* KMZ/KML Overlay section */}
+        <div className="mt-2 pt-2 border-t">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="flex items-center gap-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <Layers className="h-3 w-3" />
+              Слой
+            </span>
+            {!overlay && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[10px] gap-1"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-3 w-3" />
+                KMZ/KML
+              </Button>
+            )}
+          </div>
+
+          {overlay && overlayStats ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={overlay.fileName}>
+                  📄 {overlay.fileName}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0"
+                    onClick={() => setOverlayVisible(!overlayVisible)}
+                    title={overlayVisible ? 'Скрыть слой' : 'Показать слой'}
+                  >
+                    {overlayVisible ? <EyeOff className="h-3 w-3" /> : <Layers className="h-3 w-3" />}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 text-destructive hover:text-destructive"
+                    onClick={handleRemoveOverlay}
+                    title="Удалить слой"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Статистика объектов */}
+              <div className="flex flex-wrap gap-1.5 text-[9px]">
+                {overlayStats.points > 0 && (
+                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                    <MapPin className="h-2.5 w-2.5" />
+                    {overlayStats.points} тчк
+                  </span>
+                )}
+                {overlayStats.lines > 0 && (
+                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                    <RouteIcon className="h-2.5 w-2.5" />
+                    {overlayStats.lines} лин
+                  </span>
+                )}
+                {overlayStats.polygons > 0 && (
+                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700">
+                    <Hexagon className="h-2.5 w-2.5" />
+                    {overlayStats.polygons} пол
+                  </span>
+                )}
+              </div>
+
+              {/* Подогнать карту */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full h-6 text-[10px] gap-1"
+                onClick={() => setOverlayFitTrigger(prev => prev + 1)}
+              >
+                <Layers className="h-3 w-3" />
+                Показать весь слой
+              </Button>
+            </div>
+          ) : (
+            <p className="text-[10px] text-muted-foreground">
+              Перетащите .kmz/.kml на карту или нажмите кнопку выше
+            </p>
+          )}
+
+          {overlayError && (
+            <p className="text-[10px] text-destructive mt-1">
+              ⚠️ {overlayError}
+            </p>
+          )}
+        </div>
       </div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".kmz,.kml"
+        className="hidden"
+        onChange={handleInputChange}
+      />
     </div>
   )
 }
