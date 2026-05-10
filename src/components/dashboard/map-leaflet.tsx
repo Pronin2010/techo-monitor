@@ -691,6 +691,17 @@ export default function MapLeaflet({ nodes }: MapViewProps) {
               ⚠️ {overlayError}
             </p>
           )}
+
+          {/* Предупреждения парсинга KMZ */}
+          {overlay?.warnings && overlay.warnings.length > 0 && (
+            <div className="mt-1 space-y-0.5">
+              {overlay.warnings.map((w, i) => (
+                <p key={i} className="text-[10px] text-amber-600">
+                  ⚠️ {w}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

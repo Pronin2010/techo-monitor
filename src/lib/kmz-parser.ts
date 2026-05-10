@@ -36,6 +36,8 @@ export interface KmzParseResult {
   groundOverlays: GroundOverlayData[]
   sourceType: 'kmz' | 'kml'
   fileName: string
+  /** Предупреждения при парсинге (для отображения пользователю) */
+  warnings: string[]
 }
 
 /**
@@ -59,6 +61,7 @@ export async function parseKmzFile(file: File): Promise<KmzParseResult> {
 async function parseKmz(file: File): Promise<KmzParseResult> {
   const arrayBuffer = await file.arrayBuffer()
   const uint8 = new Uint8Array(arrayBuffer)
+  const warnings: string[] = []
 
   // Распаковываем ZIP
   let unzipped: Record<string, Uint8Array>
@@ -68,10 +71,11 @@ async function parseKmz(file: File): Promise<KmzParseResult> {
     throw new Error('Не удалось распаковать KMZ-файл. Убедитесь, что файл не повреждён.')
   }
 
+  // Список всех файлов в архиве (для диагностики)
+  const allFiles = Object.keys(unzipped).filter(n => !n.startsWith('__MACOSX') && !n.endsWith('/'))
+
   // Ищем .kml файл внутри архива
-  const kmlEntryName = Object.keys(unzipped).find(
-    name => name.toLowerCase().endsWith('.kml') && !name.startsWith('__MACOSX')
-  )
+  const kmlEntryName = allFiles.find(name => name.toLowerCase().endsWith('.kml'))
 
   if (!kmlEntryName) {
     throw new Error('В KMZ-архиве не найден KML-файл')
@@ -80,7 +84,7 @@ async function parseKmz(file: File): Promise<KmzParseResult> {
   const kmlBytes = unzipped[kmlEntryName]
   const kmlText = new TextDecoder().decode(kmlBytes)
 
-  // Базовая директория KML внутри архива (для разрешения относительных путей к картинкам)
+  // Базовая директория KML внутри архива
   const kmlDir = kmlEntryName.includes('/') ? kmlEntryName.substring(0, kmlEntryName.lastIndexOf('/') + 1) : ''
 
   // Парсим XML
@@ -94,17 +98,60 @@ async function parseKmz(file: File): Promise<KmzParseResult> {
   // Векторные данные
   const geojson = kml(xmlDoc)
 
+  // Собираем все изображения из архива (для fallback-поиска)
+  const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'tif', 'tiff']
+  const imageFiles = allFiles.filter(name => {
+    const ext = name.toLowerCase().split('.').pop() || ''
+    return imageExtensions.includes(ext)
+  })
+
   // Растровые данные (GroundOverlay) — извлекаем изображения из архива
   const groundOverlays = parseGroundOverlays(xmlDoc, (imagePath: string) => {
-    // Разрешаем относительный путь к картинке внутри KMZ
+    // Стратегия 1: Точное совпадение пути (с учётом kmlDir)
     const fullPath = resolveKmzPath(kmlDir, imagePath)
-    const imageEntry = findFileEntry(unzipped, fullPath)
-    if (!imageEntry) return null
+    const entry1 = findFileEntry(unzipped, fullPath)
+    if (entry1) {
+      console.log(`[KMZ] Изображение найдено (точный путь): ${imagePath} → ${entry1}`)
+      return imageToDataUrl(unzipped, entry1)
+    }
 
-    const imageBytes = unzipped[imageEntry]
-    const mimeType = guessMimeType(imageEntry)
-    const base64 = arrayBufferToBase64(imageBytes)
-    return `data:${mimeType};base64,${base64}`
+    // Стратегия 2: Поиск по имени файла (без пути)
+    const fileName = imagePath.split('/').pop() || imagePath
+    const entry2 = findFileEntry(unzipped, fileName)
+    if (entry2) {
+      console.log(`[KMZ] Изображение найдено (по имени): ${imagePath} → ${entry2}`)
+      return imageToDataUrl(unzipped, entry2)
+    }
+
+    // Стратегия 3: Если href содержит "/files/" — попробовать без этого префикса
+    if (imagePath.includes('/files/')) {
+      const strippedPath = imagePath.split('/files/')[1]
+      if (strippedPath) {
+        const entry3 = findFileEntry(unzipped, strippedPath)
+        if (entry3) {
+          console.log(`[KMZ] Изображение найдено (без /files/): ${imagePath} → ${entry3}`)
+          return imageToDataUrl(unzipped, entry3)
+        }
+      }
+    }
+
+    // Стратегия 4: Если есть только одно изображение в архиве — используем его
+    if (imageFiles.length === 1) {
+      console.log(`[KMZ] Изображение найдено (единственное в архиве): ${imagePath} → ${imageFiles[0]}`)
+      return imageToDataUrl(unzipped, imageFiles[0])
+    }
+
+    // Стратегия 5: Если href — просто индекс (0, 1, ...) — попробовать i-й файл
+    const index = parseInt(imagePath)
+    if (!isNaN(index) && index < imageFiles.length) {
+      console.log(`[KMZ] Изображение найдено (по индексу ${index}): → ${imageFiles[index]}`)
+      return imageToDataUrl(unzipped, imageFiles[index])
+    }
+
+    // Не нашли
+    console.warn(`[KMZ] Изображение НЕ найдено: "${imagePath}". Файлы в архиве:`, allFiles)
+    warnings.push(`Изображение "${imagePath}" не найдено в KMZ-архиве`)
+    return null
   })
 
   // Пустой GeoJSON допустим, если есть GroundOverlay
@@ -121,7 +168,18 @@ async function parseKmz(file: File): Promise<KmzParseResult> {
     groundOverlays,
     sourceType: 'kmz',
     fileName: file.name,
+    warnings,
   }
+}
+
+/**
+ * Конвертирует файл из архива в data URL
+ */
+function imageToDataUrl(archive: Record<string, Uint8Array>, entryName: string): string {
+  const imageBytes = archive[entryName]
+  const mimeType = guessMimeType(entryName)
+  const base64 = arrayBufferToBase64(imageBytes)
+  return `data:${mimeType};base64,${base64}`
 }
 
 /**
@@ -129,6 +187,7 @@ async function parseKmz(file: File): Promise<KmzParseResult> {
  */
 async function parseKml(file: File): Promise<KmzParseResult> {
   const text = await file.text()
+  const warnings: string[] = []
 
   const parser = new DOMParser()
   const xmlDoc = parser.parseFromString(text, 'text/xml')
@@ -139,13 +198,12 @@ async function parseKml(file: File): Promise<KmzParseResult> {
 
   const geojson = kml(xmlDoc)
 
-  // Для KML без архива — картинки по оригинальным URL (могут быть относительными — не загрузятся)
+  // Для KML без архива — картинки по оригинальным URL
   const groundOverlays = parseGroundOverlays(xmlDoc, (imagePath: string) => {
-    // Если URL абсолютный (http/https) — используем как есть
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       return imagePath
     }
-    // Относительный путь в KML без архива — не можем загрузить
+    warnings.push(`Локальное изображение "${imagePath}" недоступно — используйте .kmz вместо .kml`)
     return null
   })
 
@@ -162,25 +220,12 @@ async function parseKml(file: File): Promise<KmzParseResult> {
     groundOverlays,
     sourceType: 'kml',
     fileName: file.name,
+    warnings,
   }
 }
 
 /**
  * Парсит все <GroundOverlay> из KML XML-документа
- *
- * KML GroundOverlay структура:
- * <GroundOverlay>
- *   <name>...</name>
- *   <Icon><href>path/to/image.png</href></Icon>
- *   <LatLonBox>
- *     <north>48.5</north>
- *     <south>45.0</south>
- *     <east>71.0</east>
- *     <west>48.0</west>
- *     <rotation>0</rotation>
- *   </LatLonBox>
- *   <color>aabbggrr</color>  <!-- опционально, alpha-канал = прозрачность -->
- * </GroundOverlay>
  */
 function parseGroundOverlays(
   xmlDoc: Document,
@@ -188,7 +233,6 @@ function parseGroundOverlays(
 ): GroundOverlayData[] {
   const overlays: GroundOverlayData[] = []
 
-  // KML может использовать namespace — ищем с и без
   const groundOverlays = xmlDoc.getElementsByTagName('GroundOverlay')
 
   for (let i = 0; i < groundOverlays.length; i++) {
@@ -198,29 +242,65 @@ function parseGroundOverlays(
     const nameEl = go.getElementsByTagName('name')[0]
     const name = nameEl?.textContent?.trim() || `Оверлей ${i + 1}`
 
-    // Изображение
+    // Изображение — пробуем несколько вариантов
+    let href = ''
+
+    // Вариант 1: <Icon><href>...</href></Icon>
     const iconEl = go.getElementsByTagName('Icon')[0]
     const hrefEl = iconEl?.getElementsByTagName('href')[0]
-    const href = hrefEl?.textContent?.trim()
+    href = hrefEl?.textContent?.trim() || ''
 
-    if (!href) continue
+    // Вариант 2: <href> напрямую внутри GroundOverlay (нестандартный, но бывает)
+    if (!href) {
+      const directHref = go.getElementsByTagName('href')[0]
+      href = directHref?.textContent?.trim() || ''
+    }
+
+    if (!href) {
+      console.warn(`[KMZ] GroundOverlay "${name}" не содержит <href> — пропущен`)
+      continue
+    }
+
+    console.log(`[KMZ] GroundOverlay "${name}": href="${href}"`)
 
     const imageUrl = resolveImage(href)
     if (!imageUrl) continue
 
-    // Границы (LatLonBox)
+    // Границы — пробуем LatLonBox и LatLonQuad
     const latLonBox = go.getElementsByTagName('LatLonBox')[0]
-    if (!latLonBox) continue
+    const latLonQuad = go.getElementsByTagName('LatLonQuad')[0]
 
-    const north = parseFloat(latLonBox.getElementsByTagName('north')[0]?.textContent || '0')
-    const south = parseFloat(latLonBox.getElementsByTagName('south')[0]?.textContent || '0')
-    const east = parseFloat(latLonBox.getElementsByTagName('east')[0]?.textContent || '0')
-    const west = parseFloat(latLonBox.getElementsByTagName('west')[0]?.textContent || '0')
-    const rotation = parseFloat(latLonBox.getElementsByTagName('rotation')[0]?.textContent || '0')
+    let south = 0, north = 0, east = 0, west = 0, rotation = 0
 
-    if (north === 0 && south === 0 && east === 0 && west === 0) continue
+    if (latLonBox) {
+      north = parseFloat(latLonBox.getElementsByTagName('north')[0]?.textContent || '0')
+      south = parseFloat(latLonBox.getElementsByTagName('south')[0]?.textContent || '0')
+      east = parseFloat(latLonBox.getElementsByTagName('east')[0]?.textContent || '0')
+      west = parseFloat(latLonBox.getElementsByTagName('west')[0]?.textContent || '0')
+      rotation = parseFloat(latLonBox.getElementsByTagName('rotation')[0]?.textContent || '0')
+    } else if (latLonQuad) {
+      // LatLonQuad: <coordinates>south,west south,east north,east north,west</coordinates>
+      const coordsText = latLonQuad.getElementsByTagName('coordinates')[0]?.textContent?.trim() || ''
+      const coords = coordsText.split(/\s+/).map(pair => {
+        const [lat, lon] = pair.split(',').map(Number)
+        return { lat, lon }
+      })
+      if (coords.length >= 4) {
+        south = Math.min(...coords.map(c => c.lat))
+        north = Math.max(...coords.map(c => c.lat))
+        west = Math.min(...coords.map(c => c.lon))
+        east = Math.max(...coords.map(c => c.lon))
+      }
+    }
 
-    // Прозрачность из <color> (KML формат: aabbggrr, первые 2 символа = alpha)
+    if (north === 0 && south === 0 && east === 0 && west === 0) {
+      console.warn(`[KMZ] GroundOverlay "${name}": координаты = 0 — пропущен`)
+      continue
+    }
+
+    console.log(`[KMZ] GroundOverlay "${name}": bounds S=${south} W=${west} N=${north} E=${east}`)
+
+    // Прозрачность из <color> (KML формат: aabbggrr)
     let opacity = 1
     const colorEl = go.getElementsByTagName('color')[0]
     if (colorEl?.textContent) {
@@ -244,21 +324,16 @@ function parseGroundOverlays(
     })
   }
 
+  console.log(`[KMZ] Найдено GroundOverlay: ${overlays.length}`)
   return overlays
 }
 
 /**
  * Разрешает относительный путь к файлу внутри KMZ-архива
- * Например: kmlDir="doc.kml/files/", imagePath="files/image.png" → "doc.kml/files/image.png"
  */
 function resolveKmzPath(kmlDir: string, imagePath: string): string {
-  // Уже абсолютный путь
   if (imagePath.startsWith('/')) return imagePath.substring(1)
-
-  // URL — не относительный путь
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath
-
-  // Относительный путь — склеиваем с директорией KML
   return kmlDir + imagePath
 }
 
@@ -277,11 +352,21 @@ function findFileEntry(archive: Record<string, Uint8Array>, path: string): strin
   )
   if (found) return found
 
-  // Частичное совпадение (конец пути) — иногда пути в KMZ не совпадают точно
+  // Частичное совпадение (конец пути)
   const partialMatch = Object.keys(archive).find(
-    name => name.toLowerCase().endsWith(lowerPath) && !name.startsWith('__MACOSX')
+    name => name.toLowerCase().endsWith('/' + lowerPath) && !name.startsWith('__MACOSX')
   )
-  return partialMatch || null
+  if (partialMatch) return partialMatch
+
+  // Совпадение только имени файла (без директории)
+  const justName = lowerPath.split('/').pop() || lowerPath
+  const nameMatch = Object.keys(archive).find(name => {
+    const entryName = name.toLowerCase().split('/').pop() || ''
+    return entryName === justName && !name.startsWith('__MACOSX')
+  })
+  if (nameMatch) return nameMatch
+
+  return null
 }
 
 /**
@@ -298,7 +383,7 @@ function guessMimeType(filename: string): string {
     case 'webp': return 'image/webp'
     case 'tif':
     case 'tiff': return 'image/tiff'
-    default: return 'image/png'  // по умолчанию
+    default: return 'image/png'
   }
 }
 
