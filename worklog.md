@@ -157,3 +157,31 @@ Stage Summary:
 - Ключевое изменение: setOwner теперь выполняется как отдельный шаг с перезагрузкой при factory reset
 - Это гарантирует, что устройство корректно инициализируется с новым именем перед записью конфигурации
 - Файлы: techo-bridge.py, src/app/api/meshtastic/config/route.ts, src/components/dashboard/settings-presets-tab.tsx, AI_PROMPT.md
+
+---
+Task ID: 36
+Agent: main
+Task: Ревью проекта — проверить соответствие документации реальному коду
+
+Work Log:
+- Полный аудит проекта: структура файлов, Prisma-схема, bridge, API роуты, UI компоненты, builtin-presets
+- Найдено 8 расхождений между кодом и документацией
+
+Критические (исправлены):
+- MODEM_PRESET_MAP: мост имел 10 пресетов, UI — 12. LITE_FAST/SLOW, NARROW_FAST/SLOW молча пропускались при пушe → добавлены в мост
+- REBROADCAST_MODE_MAP: UI использовал LOCAL_SKIP/SIMPLE — не существуют в protobuf. Мост использовал ALL_SKIP_DECODING/CORE_PORTNUMS_ONLY — не доступны в UI → добавлены алиасы
+- usePreamble: «зомби-поле» — есть в БД/API/UI/CLI/YAML, но НЕ применяется мостом (не существует в LoRaConfig 2.7.15) → убран из UI чекбоксов и CLI/YAML генераторов
+
+Средние (исправлены):
+- ROLE_MAP: TAK=7 (protobuf) ≠ TAK_TRACKER=10 — добавлен комментарий
+- Bridge docstring: не содержал 2 endpoint'а → добавлены
+- AI_PROMPT.md: иконка «Подключение» = SVG (не Cable), rebroadcast mode = 6+2 алиаса (не 3), usePreamble = зомби
+
+Не исправлено (низкий приоритет):
+- GET /api/meshtastic/script — упрощённая версия моста (пользователь должен скачать techo-bridge.py из репо)
+- Дубликат иконки Cpu для «Настройка» и «Пресеты»
+
+Stage Summary:
+- 3 критических бага: настройки молча пропускались при push-to-device из-за неверных маппингов
+- Все критические и средние расхождения исправлены и запушены
+- Commit: cc5bf3a
