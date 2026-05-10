@@ -930,7 +930,70 @@ class BridgeHTTPHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "Неизвестный маршрут"}, 404)
 
     def do_POST(self):
-        """POST /api/apply-config — применить пресет к устройству."""
+        """POST /api/apply-config — применить пресет к устройству.
+           POST /api/set-owner — установить имя устройства (без полного пресета).
+        """
+        if self.path == '/api/set-owner':
+            # Установка имени устройства через setOwner() — без применения пресета
+            iface = _bridge_interface[0]
+            if not iface:
+                self._send_json({"success": False, "message": "Мост не подключён к устройству"}, 503)
+                return
+
+            try:
+                body = self._read_body()
+            except Exception as e:
+                self._send_json({"success": False, "message": f"Ошибка JSON: {e}"}, 400)
+                return
+
+            node_id = body.get('nodeId', '')  # пустая строка = локальный
+            device_name = body.get('deviceName') or None      # длинное имя
+            device_short_name = body.get('deviceShortName') or None  # короткое имя (макс. 4 символа)
+
+            if not device_name and not device_short_name:
+                self._send_json({"success": False, "message": "Укажите хотя бы одно имя (длинное или короткое)"}, 400)
+                return
+
+            target_label = node_id or 'BASE (локальный)'
+            name_label = f"{device_name or ''}/{device_short_name or ''}"
+            print(f"\033[1;33m═══ УСТАНОВКА ИМЕНИ: «{name_label}» → {target_label} ═══\033[0m")
+
+            try:
+                # Определяем целевой узел
+                if node_id and node_id.strip():
+                    print(f"\033[33m[NAME] Подключение к удалённому узлу {node_id}...\033[0m")
+                    node = iface.getNode(node_id, timeout=120)
+                else:
+                    node = iface.localNode
+
+                # ensureSessionKey() — обязательно для 2.7.x!
+                try:
+                    node.ensureSessionKey()
+                    print("\033[32m[NAME] session_passkey получен\033[0m")
+                except Exception as e:
+                    print(f"\033[33m[NAME] ensureSessionKey() не удался: {e} (продолжаем)\033[0m")
+
+                # setOwner() — устанавливает имя на устройстве
+                # Ограничения: short_name макс. 4 символа, пустая строка = sys.exit()
+                node.setOwner(long_name=device_name, short_name=device_short_name)
+                print(f"\033[32m[NAME] Имя установлено: {name_label}\033[0m")
+
+                self._send_json({
+                    "success": True,
+                    "message": f"Имя установлено: {name_label}",
+                    "longName": device_name,
+                    "shortName": device_short_name,
+                })
+
+            except SystemExit:
+                print("\033[31m[NAME] КРИТИЧЕСКАЯ ОШИБКА: setOwner() вызвал sys.exit()!\033[0m")
+                self._send_json({"success": False, "message": "Ошибка: пустое имя вызвало падение setOwner()"}, 500)
+            except Exception as e:
+                print(f"\033[31m[NAME] Ошибка установки имени: {e}\033[0m")
+                self._send_json({"success": False, "message": f"Ошибка установки имени: {e}"}, 500)
+
+            return
+
         if self.path == '/api/apply-config':
             iface = _bridge_interface[0]
             if not iface:
