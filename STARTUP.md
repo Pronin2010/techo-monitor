@@ -226,6 +226,52 @@ python -m meshtastic --ch-index 0 --ch-set name "forest-track"
 | **session_passkey обязателен** | Без ensureSessionKey() устройство молча игнорирует admin-команды |
 | **BT PairingMode: RANDOM_PIN=0, FIXED_PIN=1** | FIXED_PIN = 1, НЕ 0! (проверено по protobuf config.proto) |
 
+### Точность координат (position_precision)
+
+**Важно**: `position_precision` — это настройка **КАНАЛА**, а не позиции!
+Устанавливается через `--ch-set`, а не `--set`.
+
+```bash
+# Максимальная точность (~1м) — для трекеров
+meshtastic --ch-index 0 --ch-set module_settings.position_precision 32
+
+# Не передавать координаты — для базовой станции
+meshtastic --ch-index 0 --ch-set module_settings.position_precision 0
+```
+
+| Значение | Радиус | Описание |
+|----------|--------|----------|
+| 0 | — | Не передавать позицию |
+| 13 | ~2.9 км | Дефолт прошивки |
+| 32 | ~1-3 м | Максимальная точность (GPS) |
+
+⚠️ НЕ используйте `--set position.position_precision` — это не работает в 2.7.x!
+
+### Флаги позиции (position_flags)
+
+Битовая маска, определяющая какие данные включать в позиционный пакет:
+
+| Флаг | Значение | Описание |
+|------|----------|----------|
+| ALTITUDE | 1 | Высота |
+| ALTITUDE_MSL | 2 | Высота MSL (иначе HAE) |
+| GEOIDAL_SEPARATION | 4 | Геоидальное отделение |
+| DOP | 8 | DOP (PDOP) |
+| HVDOP | 16 | HDOP/VDOP вместо PDOP |
+| SATINVIEW | 32 | Кол-во спутников |
+| SEQ_NO | 64 | Номер пакета |
+| TIMESTAMP | 128 | Метка времени GPS |
+| HEADING | 256 | Направление (транспорт!) |
+| SPEED | 512 | Скорость (транспорт!) |
+
+```bash
+# Пеший режим (дефолт в пресетах) — без SPEED
+meshtastic --set position.position_flags 299
+
+# Транспорт (дефолт прошивки) — со SPEED
+meshtastic --set position.position_flags 811
+```
+
 ### ⚠️ Известные проблемы nRF52840 (T-Echo) в прошивке 2.7.x
 
 | Проблема | GitHub Issue | Описание |
@@ -241,7 +287,8 @@ python -m meshtastic --ch-index 0 --ch-set name "forest-track"
 
 ### «Не удалось загрузить данные»
 - Проверьте, что сервер запущен: `bun run dev`
-- Проверьте, что база данных создана: `bun run db:push`
+- БД обновляется автоматически при запуске (prisma db push)
+- Если ошибка «Unknown argument» — обновите БД вручную: `bun run db:push`
 - Проверьте, что файл БД существует: `db/custom.db` (путь в .env: `file:../db/custom.db`)
 
 ### «Устройство не видно по USB»

@@ -172,6 +172,28 @@ techo-dump-config.py              # Скрипт чтения конфигура
 - CLI: `meshtastic --ch-index 0 --ch-set module_settings.position_precision 32`
 - ⚠️ НЕ `--set position.position_precision` (устаревший/неверный путь!)
 
+### Position Flags (состав данных позиции)
+- Битовая маска `position.position_flags` (protobuf Config.PositionConfig)
+- Определяет какие **дополнительные** поля включаются в позиционный пакет
+
+| Флаг | Значение | Описание |
+|------|----------|----------|
+| ALTITUDE | 1 | Включить высоту |
+| ALTITUDE_MSL | 2 | Высота MSL (иначе HAE — Height Above Ellipsoid) |
+| GEOIDAL_SEPARATION | 4 | Геоидальное отделение |
+| DOP | 8 | DOP (PDOP по умолчанию) |
+| HVDOP | 16 | Раздельные HDOP/VDOP вместо PDOP (только с DOP) |
+| SATINVIEW | 32 | Количество видимых спутников |
+| SEQ_NO | 64 | Порядковый номер пакета |
+| TIMESTAMP | 128 | Метка времени GPS-решения |
+| HEADING | 256 | Направление движения (для транспорта!) |
+| SPEED | 512 | Скорость движения (для транспорта!) |
+
+- **Дефолт прошивки** (NodeDB.cpp): **811** = ALT+MSL+DOP+SAT+HEADING+SPEED (транспорт)
+- **Пеший режим** (наш дефолт): **299** = ALT+MSL+DOP+SAT+HEADING (без SPEED — пеший)
+- **Все флаги**: **1023**
+- ⚠️ HEADING/SPEED — для транспорта, пешком данные ненадёжны
+
 ### Ключевые изменения 2.7.15
 - Телеметрия отключена по умолчанию
 - Прямые сообщения только через PKI
@@ -223,7 +245,7 @@ ConnectionConfig
 Preset
   name, description?, icon, role, powerSaving, lsSecs, minWakeSecs
   gpsMode, gpsUpdateInterval, agpsEnabled, gpsAttemptTime
-  positionPrecision, positionBroadcastSecs, smartBroadcast*
+  positionPrecision(32), positionFlags(299), positionBroadcastSecs, smartBroadcast*
   telemetryInterval, region, modemPreset, txPower, hopLimit, usePreamble
   bluetoothEnabled, bluetoothFixedPin?, screenOnSecs, ledDisabled
   rebroadcastMode, channelId? → Channel
@@ -284,6 +306,8 @@ SyncLog
 25. Критическое правило: ВСЕГДА ИСКАТЬ В ДОКУМЕНТАЦИИ ПРОШИВКИ 2.7.15 ПЕРЕД написанием кода для устройств
 26. Фикс BT PIN: protobuf-константы (config_pb2) вместо magic numbers + ensureSessionKey() перед транзакцией + диагностика BT после записи/перезагрузки
 27. Фикс positionPrecision: убран try/catch вокруг записи канала (ошибка → откат транзакции), добавлена немедленная диагностика position_precision после writeChannel(0), исправлен дефолт прошивки с 14 на 13 (проверено по Channels.cpp v2.7.15), исправлены скрипты (--set position.position_precision → --ch-index 0 --ch-set module_settings.position_precision), исправлен баг в techo-dump-config.py (positionFlags сравнивался с positionPrecision)
+28. Автосинхронизация БД: prisma db push в dev-скрипте + postinstall prisma generate
+29. Фикс positionFlags: 943→299 (пеший режим, дефолт 811 без SPEED). Проверено по protobuf config.proto v2.7.15. Все пресеты, UI-опции, скрипты обновлены.
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -306,9 +330,13 @@ EU_433 (основной, Россия/СНГ), ANZ_433, UA_433, KZ_433, PH_433,
 ### GPS Mode (3)
 ENABLED, DISABLED, NOT_PRESENT
 
+### Position Flags (10)
+ALTITUDE=1, ALT_MSL=2, GEO=4, DOP=8, HVDOP=16, SAT=32, SEQ=64, TS=128, HEADING=256, SPEED=512
+Пеший: 299 | Дефолт прошивки: 811 | Все: 1023
+
 ### Rebroadcast Mode (3)
 ALL, LOCAL_SKIP, SIMPLE
 
 ---
 
-_Последнее обновление: 2026-05-09 (Фикс positionPrecision: дефолт 13 не 14, настройка канала не позиции, диагностика после writeChannel)_
+_Последнее обновление: 2026-05-09 (Фикс positionFlags: 943→299 пеший режим, таблица PositionFlags, автосинхронизация БД)_
