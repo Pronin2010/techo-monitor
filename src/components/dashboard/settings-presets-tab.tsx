@@ -1527,8 +1527,48 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                     ))}
                   </div>
                 )}
-              </div>
-            )}
+                {/* Инструкции по прошивке */}
+                {selectedDevice.flashInstructions.length > 0 && (
+                  <div className="pt-1 border-t mt-1">
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="flash" className="border-b-0">
+                        <AccordionTrigger className="hover:no-underline py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground">
+                          <span className="flex items-center gap-1">
+                            <Upload className="size-2.5" />
+                            Инструкция по прошивке
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-1">
+                          <ol className="space-y-1">
+                            {selectedDevice.flashInstructions.map((step) => (
+                              <li key={step.step} className="text-[10px]">
+                                <div className="flex items-start gap-1.5">
+                                  <span className="font-medium text-muted-foreground shrink-0">{step.step}.</span>
+                                  <div className="space-y-0.5">
+                                    <span>{step.description}</span>
+                                    {step.command && (
+                                      <pre className="bg-background border rounded p-1.5 text-[9px] font-mono whitespace-pre-wrap break-all mt-0.5">
+                                                        {step.command}
+                                                      </pre>
+                                                    )}
+                                                    {step.note && (
+                                                      <p className="text-amber-600 flex items-start gap-0.5 mt-0.5">
+                                                        <AlertTriangle className="size-2 shrink-0 mt-0.5" />
+                                                        {step.note}
+                                                      </p>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              </li>
+                                            ))}
+                                          </ol>
+                                        </AccordionContent>
+                                      </AccordionItem>
+                                    </Accordion>
+                                  </div>
+                                )}
+                              </div>
+                            )}
             <pre className="bg-muted p-4 rounded-md text-xs font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-all">
               {displayContent}
             </pre>

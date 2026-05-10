@@ -260,3 +260,29 @@ Stage Summary:
 - 2 профиля устройств: T-Echo (проверенный), Heltec Wireless Tracker V1.1 (новый)
 - Heltec Tracker: UC6580 GNSS баги задокументированы, defaultsOverride адаптированы
 - Файлы: src/lib/device-profiles.ts (обновлён), AI_PROMPT.md (обновлён), PROJECT_RULES.md (обновлён)
+
+---
+Task ID: 40
+Agent: main
+Task: Исследовать документацию Heltec Wireless Tracker V1.1 и добавить инструкции по прошивке в пресеты
+
+Work Log:
+- Web search: Heltec Wireless Tracker V1.1 specs, flash instructions, UC6580 GPS bugs, power consumption, Meshtastic configuration
+- Прочитаны: Heltec FAQ (docs.heltec.org), Meshtastic device config, power config, flash firmware docs, LyonsComputer guide, Reddit/Reddit power consumption
+- Найдены ключевые баги: UC6580 сбрасывается при screen_on_secs=0 (#5088), дефолтная конфигурация ухудшает GNSS (#10202)
+- Найдена специфика V1.1: питание GNSS через GPIO3 (не как в V1.0), требуется прошивка ≥ 2.2.17
+- Найден boot mode: USER+RESET (ESP32-S3 внутренний USB, не USB-UART мост)
+- Найдены два способа прошивки: Web Flasher (flasher.meshtastic.org) и CLI (device-install.sh / esptool.py)
+- Добавлен тип FlashInstruction в device-profiles.ts (step, description, command?, note?)
+- Добавлены flashInstructions для обоих устройств (T-Echo: 4 шага, Heltec Tracker: 6 шагов с CLI-командами)
+- Обновлены postCommands Heltec Tracker: добавлены power_saving, ls_secs, min_wake_secs
+- Обновлены warnings Heltec Tracker: добавлены V1.1 GPIO3, boot mode, TRACKER + power_saving поведение, screen_on_secs ≠ 0
+- Добавлена секция "Инструкция по прошивке" (аккордеон) в UI генератора команд
+- Обновлена документация: AI_PROMPT.md (задача 38 расширена), worklog.md
+- Lint пройден
+
+Stage Summary:
+- FlashInstruction — новый тип для пошаговых инструкций по прошивке
+- Heltec Tracker: 6 шагов прошивки (Web Flasher + CLI), boot mode USER+RESET, V1.1 специфика
+- UI: аккордеон "Инструкция по прошивке" в панели характеристик устройства
+- Файлы: src/lib/device-profiles.ts (обновлён), src/components/dashboard/settings-presets-tab.tsx (обновлён), AI_PROMPT.md (обновлён)
