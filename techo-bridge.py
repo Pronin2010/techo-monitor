@@ -16,8 +16,10 @@ T-Echo Meshtastic Bridge Script
   python techo-bridge.py --mode mqtt --broker mqtt://broker.hivemq.com:1883 --dashboard http://localhost:3000
 
 Управление конфигурацией (через HTTP API моста):
-  POST /api/apply-config — применить пресет к локальному или удалённому узлу
-  GET  /api/status       — статус подключения и список узлов
+  POST /api/apply-config  — применить пресет к локальному или удалённому узлу
+  POST /api/set-owner     — установить имя устройства без применения пресета
+  GET  /api/status        — статус подключения и список узлов
+  GET  /api/device-config — полная конфигурация устройства (все секции + каналы + владелец)
 """
 
 import argparse
@@ -232,6 +234,10 @@ ROLE_MAP = {
     'LOST_AND_FOUND': 9, 'TAK_TRACKER': 10,
     'ROUTER_LATE': 11, 'CLIENT_BASE': 12,
 }
+# ВНИМАНИЕ: TAK=7 — это НЕ TAK_TRACKER! В protobuf config.proto v2.7.15:
+#   TAK = 7 (устаревшее имя, protobuf-имя 'TAK')
+#   TAK_TRACKER = 10 (новое имя, protobuf-имя 'TAK_TRACKER')
+# В UI используется только TAK_TRACKER. Оставляем TAK для совместимости при чтении конфига.
 
 # GPS режимы: строка → числовое значение enum Config.PositionConfig.GpsMode
 GPS_MODE_MAP = {
@@ -245,6 +251,8 @@ MODEM_PRESET_MAP = {
     'MEDIUM_SLOW': 3, 'MEDIUM_FAST': 4,
     'SHORT_SLOW': 5, 'SHORT_FAST': 6,
     'LONG_MODERATE': 7, 'SHORT_TURBO': 8, 'LONG_TURBO': 9,
+    'LITE_FAST': 10, 'LITE_SLOW': 11,
+    'NARROW_FAST': 12, 'NARROW_SLOW': 13,
 }
 
 # Регионы: строка → числовое значение enum Config.LoRaConfig.RegionCode
@@ -255,9 +263,20 @@ REGION_MAP = {
 }
 
 # Режимы ретрансляции: строка → числовое значение enum Config.DeviceConfig.RebroadcastMode
+# Значения из protobuf config.proto прошивки 2.7.15
+# ВНИМАНИЕ: в UI использовались 'LOCAL_SKIP' и 'SIMPLE' — это неверные имена!
+#   LOCAL_SKIP → не существует в protobuf, заменён на ALL_SKIP_DECODING (ближайший по смыслу)
+#   SIMPLE → не существует, заменён на CORE_PORTNUMS_ONLY (минимальная ретрансляция)
 REBROADCAST_MODE_MAP = {
-    'ALL': 0, 'ALL_SKIP_DECODING': 1, 'LOCAL_ONLY': 2,
-    'KNOWN_ONLY': 3, 'NONE': 4, 'CORE_PORTNUMS_ONLY': 5,
+    'ALL': 0,                 # Ретранслировать все пакеты
+    'ALL_SKIP_DECODING': 1,   # Ретранслировать все, но не декодировать
+    'LOCAL_ONLY': 2,          # Только локальные пакеты (не из mesh)
+    'KNOWN_ONLY': 3,          # Только от известных узлов
+    'NONE': 4,                # Не ретранслировать ничего
+    'CORE_PORTNUMS_ONLY': 5,  # Только основные порт-номера (минимальная ретрансляция)
+    # Алиасы для обратной совместимости с UI (маппинг на ближайшие по смыслу)
+    'LOCAL_SKIP': 1,          # Алиас для ALL_SKIP_DECODING
+    'SIMPLE': 5,              # Алиас для CORE_PORTNUMS_ONLY
 }
 
 # BT режимы: строка → числовое значение enum Config.BluetoothConfig.PairingMode

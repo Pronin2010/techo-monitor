@@ -341,7 +341,7 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     // --- Network ---
     lines.push(`${p} --set network.hop_limit ${state.hopLimit}`)
     lines.push(`${p} --set network.rebroadcast_mode ${state.rebroadcastMode}`)
-    lines.push(`${p} --set lora.use_preamble ${state.usePreamble}`)
+    // use_preamble удалён — не существует в LoRaConfig прошивки 2.7.15
 
     // --- Power ---
     lines.push(`${p} --set power.is_power_saving ${state.powerSaving}`)
@@ -424,7 +424,7 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     ylines.push(`    region: ${state.region}`)
     ylines.push(`    modem_preset: ${state.modemPreset}`)
     ylines.push(`    tx_power: ${state.txPower}`)
-    ylines.push(`    use_preamble: ${state.usePreamble}`)
+    // use_preamble удалён — не существует в LoRaConfig прошивки 2.7.15
     ylines.push('  network:')
     ylines.push(`    hop_limit: ${state.hopLimit}`)
     ylines.push(`    rebroadcast_mode: ${state.rebroadcastMode}`)
@@ -835,27 +835,7 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
                   <Separator />
 
                   {/* Длинный преамбула */}
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="use-preamble" className="flex items-center gap-1.5 cursor-pointer">
-                        Длинный преамбула (lora.use_preamble)
-                      </Label>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <CircleHelp className="size-3.5 text-muted-foreground cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          Увеличивает преамбулу с 8 до 32 символов, помогает принять первый пакет.
-                          Полезно при слабом сигнале или помехах.
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <Checkbox
-                      id="use-preamble"
-                      checked={state.usePreamble}
-                      onCheckedChange={(v) => updateField('usePreamble', !!v)}
-                    />
-                  </div>
+                  {/* Use Preamble — УБРАНО: не существует в LoRaConfig прошивки 2.7.15 */}
                 </div>
               </AccordionContent>
             </AccordionItem>

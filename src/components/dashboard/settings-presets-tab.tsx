@@ -647,7 +647,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     lines.push(`${cmd} --set lora.region ${p.region}`)
     lines.push(`${cmd} --set lora.modem_preset ${p.modemPreset}`)
     lines.push(`${cmd} --set lora.tx_power ${p.txPower}`)
-    lines.push(`${cmd} --set lora.use_preamble ${p.usePreamble}`)
+    // use_preamble удалён — не существует в LoRaConfig прошивки 2.7.15
 
     // --- Network ---
     lines.push(`${cmd} --set network.hop_limit ${p.hopLimit}`)
@@ -735,7 +735,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     ylines.push(`    region: ${p.region}`)
     ylines.push(`    modem_preset: ${p.modemPreset}`)
     ylines.push(`    tx_power: ${p.txPower}`)
-    ylines.push(`    use_preamble: ${p.usePreamble}`)
+    // use_preamble удалён — не существует в LoRaConfig прошивки 2.7.15
     ylines.push('  network:')
     ylines.push(`    hop_limit: ${p.hopLimit}`)
     ylines.push(`    rebroadcast_mode: ${p.rebroadcastMode}`)
@@ -839,7 +839,7 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
     lines.push(`${cmd} --set lora.region ${preset.region}`)
     lines.push(`${cmd} --set lora.modem_preset ${preset.modemPreset}`)
     lines.push(`${cmd} --set lora.tx_power ${preset.txPower}`)
-    lines.push(`${cmd} --set lora.use_preamble ${preset.usePreamble}`)
+    // use_preamble удалён — не существует в LoRaConfig прошивки 2.7.15
     lines.push(`${cmd} --set network.hop_limit ${preset.hopLimit}`)
     lines.push(`${cmd} --set network.rebroadcast_mode ${preset.rebroadcastMode}`)
     lines.push(`${cmd} --set power.is_power_saving ${preset.powerSaving}`)
@@ -1687,15 +1687,8 @@ export default function SettingsPresetsTab({ channels }: SettingsPresetsTabProps
                       </Select>
                     </div>
 
-                    {/* Use Preamble */}
-                    <div className="flex items-center justify-between gap-4 pt-6">
-                      <Label htmlFor="preset-preamble" className="cursor-pointer">Длинный преамбула</Label>
-                      <Checkbox
-                        id="preset-preamble"
-                        checked={form.usePreamble}
-                        onCheckedChange={v => updateField('usePreamble', !!v)}
-                      />
-                    </div>
+                    {/* Use Preamble — УБРАНО: не существует в LoRaConfig прошивки 2.7.15 */}
+                    {/* Поле usePreamble оставлено в БД для совместимости, но НЕ применяется мостом */}
                   </div>
                 </div>
               </AccordionContent>

@@ -79,7 +79,7 @@ techo-dump-config.py              # Скрипт чтения конфигура
 | **Статус** | Activity | Карточки узлов: батарея, SNR, RSSI, поиск, аккордеон-детали |
 | **Карта** | Map | Leaflet + OSM, маркеры по ролям, линии связи |
 | **Каналы** | Settings | PSK 256 бит, модем-пресет, регион 433 МГц, QR-коды |
-| **Подключение** | Cable | Serial/MQTT выбор, команда запуска, лог синхронизаций |
+| **Подключение** | SVG (кабель) | Serial/MQTT выбор, команда запуска, лог синхронизаций |
 | **Настройка** | Cpu | Генератор CLI-команд и YAML для meshtastic 2.7.15 |
 | **Пресеты** | Cpu | Системные/пользовательские + push-to-device через мост |
 | **Пакеты** | Zap | Потоковый мониторинг пакетов (in-memory buffer) |
@@ -276,7 +276,8 @@ Preset
   name, description?, icon, role, powerSaving, lsSecs, minWakeSecs
   gpsMode, gpsUpdateInterval, agpsEnabled, gpsAttemptTime
   positionPrecision(32), positionFlags(299), positionBroadcastSecs, smartBroadcast*
-  fixedPosition(false), telemetryInterval, region, modemPreset, txPower, hopLimit, usePreamble
+  fixedPosition(false), telemetryInterval, region, modemPreset, txPower, hopLimit
+  ⚠️ usePreamble — зомби-поле: есть в БД, НЕ применяется мостом (не существует в LoRaConfig 2.7.15)
   bluetoothEnabled, bluetoothFixedPin?, screenOnSecs, ledDisabled
   rebroadcastMode, channelId? → Channel
   isBuiltIn, builtinId? @unique
@@ -386,9 +387,10 @@ ENABLED, DISABLED, NOT_PRESENT
 ALTITUDE=1, ALT_MSL=2, GEO=4, DOP=8, HVDOP=16, SAT=32, SEQ=64, TS=128, HEADING=256, SPEED=512
 Пеший: 299 | Дефолт прошивки: 811 | Все: 1023
 
-### Rebroadcast Mode (3)
-ALL, LOCAL_SKIP, SIMPLE
+### Rebroadcast Mode (6 + 2 алиаса)
+ALL(0), ALL_SKIP_DECODING(1), LOCAL_ONLY(2), KNOWN_ONLY(3), NONE(4), CORE_PORTNUMS_ONLY(5)
+Алиасы для совместимости: LOCAL_SKIP→1, SIMPLE→5
 
 ---
 
-_Последнее обновление: 2026-05-11 (Порядок прошивки: factory reset → 20с → имя → 20с → конфиг → reboot)_
+_Последнее обновление: 2026-05-11 (Ревью: исправлены MODEM_PRESET_MAP +4 пресета, REBROADCAST_MODE_MAP +алиасы, usePreamble убран из UI/CLI/YAML)_
