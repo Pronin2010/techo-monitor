@@ -65,7 +65,7 @@ src/
 │   ├── types.ts                  # TypeScript типы + константы Meshtastic
 │   ├── utils.ts                  # cn() + serializeBigInt()
 │   ├── kmz-parser.ts             # KMZ/KML → GeoJSON парсер (@tmcw/togeojson + fflate), GroundOverlay (ImageOverlay)
-│   ├── device-profiles.ts        # 6 профилей устройств (T-Echo, T-Beam S, T-LoRa, Heltec V3, RAK, DIY)
+│   ├── device-profiles.ts        # 2 профиля устройств (T-Echo, Heltec Wireless Tracker V1.1)
 │   └── builtin-presets.ts        # 4 встроенных пресета
 prisma/
 └── schema.prisma                 # 6 моделей: Node, Channel, Telemetry, ConnectionConfig, Preset, SyncLog
@@ -366,7 +366,7 @@ SyncLog
 35. Новый порядок прошивки пресетом: factory reset → 20 сек → reconnect → setOwner (имя) → reboot → 20 сек → reconnect → транзакция (конфиг) → reboot. (а) apply_config_to_node() перестроен в 3 явных шага с отдельной перезагрузкой после имени; (б) Таймаут API 120→180 сек; (в) UI диалог обновлён с описанием нового порядка; (г) Документация обновлена
 36. Ревью проекта: (а) MODEM_PRESET_MAP — добавлены LITE_FAST/SLOW, NARROW_FAST/SLOW (молча пропускались при push); (б) REBROADCAST_MODE_MAP — добавлены алиасы LOCAL_SKIP→1, SIMPLE→5; (в) usePreamble — зомби-поле, убрано из UI/CLI/YAML; (г) ROLE_MAP — комментарий TAK≠TAK_TRACKER; (д) Bridge docstring обновлён
 37. KMZ/KML overlay на карте: (а) Создан kmz-parser.ts — парсинг .kmz (unzip через fflate + KML→GeoJSON через @tmcw/togeojson) и .kml; (б) Карта (map-leaflet.tsx) — кнопка загрузки KMZ/KML, drag & drop, GeoJSON-слой с цветовым кодированием (точки=розовый, линии=оранжевый, полигоны=фиолетовый), popup с name/description, управление видимостью, подгонка bounds; (в) Панель «Слой» в статистике карты; (г) GroundOverlay — растровые изображения из KMZ (base64 data URL) через L.ImageOverlay с bounds, opacity из <color> KML, подгонка карты по combined bounds (вектор+растр); (д) Фильтрация синего полигона-дубликата GroundOverlay — удаление <GroundOverlay> из XML до togeojson
-38. Профили устройств: (а) Создан device-profiles.ts — 6 профилей: T-Echo, T-Beam Supreme, T-LoRa V2.1, Heltec V3, RAK WisBlock, DIY; (б) Каждый профиль: аппаратные характеристики (CPU, GPS, дисплей, батарея, LoRa, BT), специфичные команды прошивки (pre/post), предупреждения, defaultsOverride; (в) UI: кнопки выбора устройства над карточками пресетов; (г) UI: выбор типа устройства в диалоге пуша; (д) UI: панель характеристик и warnings в генераторе команд; (е) Генерация команд: заголовок с устройством, pre/post команды, warnings
+38. Профили устройств: (а) device-profiles.ts — 2 профиля: T-Echo (LilyGO, nRF52840 + L76K GPS, e-ink, 850 мАч), Heltec Wireless Tracker V1.1 (ESP32-S3FN8 + UC6580 GNSS, LCD 0.96", USB-C); (б) Каждый профиль: аппаратные характеристики (CPU, GPS, дисплей, батарея, LoRa, BT), специфичные команды прошивки (pre/post), предупреждения, defaultsOverride; (в) UI: кнопки выбора устройства над карточками пресетов; (г) UI: выбор типа устройства в диалоге пуша; (д) UI: панель характеристик и warnings в генераторе команд; (е) Генерация команд: заголовок с устройством, pre/post команды, warnings; (ж) Heltec Tracker: UC6580 GNSS баги — модуль сбрасывается при выключенном экране (#5088), дефолтная конфигурация Meshtastic ухудшает GNSS (#10202); LCD жрёт батарею → screenOnSecs=30, LED включён
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -399,4 +399,4 @@ ALL(0), ALL_SKIP_DECODING(1), LOCAL_ONLY(2), KNOWN_ONLY(3), NONE(4), CORE_PORTNU
 
 ---
 
-_Последнее обновление: 2026-05-11 (Задача 38: Профили устройств в пресетах)_
+_Последнее обновление: 2026-05-11 (Задача 39: Профили устройств — T-Echo + Heltec Wireless Tracker V1.1)_

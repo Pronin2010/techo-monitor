@@ -260,4 +260,4 @@ meshtastic --set position.fixed_position true \
 
 ---
 
-_Последнее обновление: 2026-05-11 (Задача 37: KMZ/KML overlay на карте)_
+_Последнее обновление: 2026-05-11 (Задача 39: Профили устройств — T-Echo + Heltec Wireless Tracker V1.1)_

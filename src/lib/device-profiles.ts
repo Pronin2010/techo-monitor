@@ -112,24 +112,24 @@ export const DEVICE_PROFILES: DeviceProfile[] = [
     },
   },
   {
-    id: 't-beam-supreme',
-    name: 'T-Beam Supreme (LilyGO)',
-    shortName: 'T-Beam S',
-    icon: '🛰️',
+    id: 'heltec-wireless-tracker',
+    name: 'Heltec Wireless Tracker V1.1',
+    shortName: 'Heltec Tracker',
+    icon: '📡',
     description:
-      'ESP32-S3 + SX1262, OLED 0.96", L76K GPS, 18650 батарея. Популярный трекер с OLED-дисплеем.',
+      'ESP32-S3FN8 + SX1262 + UC6580 GNSS, LCD 0.96", USB-C питание. Компактный трекер с GNSS — дешёвая альтернатива T-Echo.',
     hardware: {
-      cpu: 'ESP32-S3 (Xtensa LX7, 240 МГц, 512 КБ SRAM, 8 МБ Flash)',
-      display: '0.96" OLED 128×64 (SSD1306)',
-      gps: 'L76K (Quectel, EASY™ прогноз орбит)',
-      battery: '18650 Li-Ion (съёмная, ~2500 мАч)',
-      lora: 'SX1262 (433 МГц, до +22 дБм)',
-      bluetooth: 'BLE (ESP32-S3 встроен)',
+      cpu: 'ESP32-S3FN8 (Xtensa LX7, 240 МГц, 512 КБ SRAM, 8 МБ Flash)',
+      display: '0.96" LCD 160×80 (ST7735)',
+      gps: 'UC6580 (Unicore, двухчастотный GNSS: GPS/BDS/GLONASS/Galileo, 22 нм)',
+      battery: 'Нет встроенной (питание через USB-C, можно подключить Li-Po)',
+      lora: 'SX1262 (433 МГц, до +21 дБм)',
+      bluetooth: 'BLE 5.0 (ESP32-S3 встроен)',
     },
     preCommands: [
       {
-        command: '# T-Beam Supreme: специальная подготовка не требуется',
-        description: 'T-Beam Supreme работает с meshtastic Python из коробки',
+        command: '# Heltec Wireless Tracker: UC6580 GNSS подготовка',
+        description: 'Heltec Tracker: UC6580 GNSS — проверить, что модуль определяется',
         phase: 'before',
         optional: true,
       },
@@ -137,173 +137,33 @@ export const DEVICE_PROFILES: DeviceProfile[] = [
     postCommands: [
       {
         command: 'python -m meshtastic --set position.gps_update_interval ${gpsUpdateInterval}',
-        description: 'T-Beam S: интервал обновления GPS (L76K — минимум 30 сек)',
+        description: 'Heltec Tracker: интервал обновления GPS (UC6580 — минимум 30 сек, дефолт 120)',
+        phase: 'after',
+      },
+      {
+        command: 'python -m meshtastic --set position.gps_attempt_time ${gpsAttemptTime}',
+        description: 'Heltec Tracker: таймаут GPS-фикса (UC6580 в лесу — 90 сек, дефолт 30)',
+        phase: 'after',
+      },
+      {
+        command: 'python -m meshtastic --set display.screen_on_secs ${screenOnSecs}',
+        description: 'Heltec Tracker: таймаут экрана — LCD жрёт батарею, уменьшаем',
         phase: 'after',
       },
     ],
     warnings: [
-      '⚠️ ESP32-S3 потребляет больше энергии, чем nRF52840 — автономность ниже',
-      '⚠️ L76K аналогичен T-Echo — те же ограничения по интервалу GPS',
-      '⚠️ OLED дисплей потребляет ~20 мА (e-ink T-Echo ≈ 0 мА)',
+      '⚠️ UC6580 GPS: известный баг — при выключенном экране модуль периодически сбрасывается (firmware #5088)',
+      '⚠️ UC6580: дефолтная конфигурация Meshtastic ухудшает GNSS-производительность (firmware #10202)',
+      '⚠️ Нет встроенной батареи — только USB-C питание (или внешний Li-Po)',
+      '⚠️ LCD 0.96" потребляет ~20 мА (e-ink T-Echo ≈ 0 мА) — автономность ниже',
+      '⚠️ ESP32-S3 потребляет больше энергии, чем nRF52840 — автономность ниже T-Echo',
     ],
     defaultsOverride: {
       gpsUpdateInterval: 30,
       gpsAttemptTime: 90,
-      screenOnSecs: 30,  // OLED — жрёт батарею, уменьшаем таймаут
-      ledDisabled: false, // На T-Beam LED полезен (нет e-ink экрана)
+      screenOnSecs: 30,     // LCD жрёт батарею — уменьшаем таймаут
+      ledDisabled: false,   // LED полезен как индикатор (LCD маленький)
     },
-  },
-  {
-    id: 't-lora-v2-1',
-    name: 'T-LoRa V2.1 (LilyGO)',
-    shortName: 'T-LoRa',
-    icon: '📡',
-    description:
-      'ESP32 + SX1276, без дисплея, без GPS, USB-C. Минимальная плата — ретранслятор или базовая станция.',
-    hardware: {
-      cpu: 'ESP32 (Xtensa LX6, 240 МГц, 520 КБ SRAM, 4 МБ Flash)',
-      display: 'Нет (можно подключить OLED externally)',
-      gps: 'Нет (можно подключить externally)',
-      battery: 'Нет встроенной (питание через USB-C)',
-      lora: 'SX1276 (433 МГц, до +20 дБм)',
-      bluetooth: 'BLE (ESP32 встроен)',
-    },
-    preCommands: [
-      {
-        command: '# T-LoRa V2.1: нет GPS, нет дисплея',
-        description: 'Устройство без GPS и дисплея — настраиваем соответствующие параметры',
-        phase: 'before',
-      },
-    ],
-    postCommands: [
-      {
-        command: 'python -m meshtastic --set position.gps_mode NOT_PRESENT',
-        description: 'T-LoRa V2.1: нет встроенного GPS → NOT_PRESENT',
-        phase: 'after',
-      },
-      {
-        command: 'python -m meshtastic --set display.screen_on_secs 0',
-        description: 'T-LoRa V2.1: нет дисплея → экран выключен',
-        phase: 'after',
-      },
-    ],
-    warnings: [
-      '⚠️ Нет встроенного GPS — позиция не будет обновляться',
-      '⚠️ Нет дисплея — настройки экрана игнорируются',
-      '⚠️ Нет батареи — только USB питание, power saving не имеет смысла',
-      '⚠️ SX1276 (вместо SX1262) — другой чип, другие пресеты модема',
-    ],
-    defaultsOverride: {
-      gpsMode: 'NOT_PRESENT',
-      gpsUpdateInterval: 0,
-      gpsAttemptTime: 0,
-      screenOnSecs: 0,
-      ledDisabled: false, // LED — единственный индикатор на плате
-    },
-  },
-  {
-    id: 'heltec-v3',
-    name: 'Heltec V3',
-    shortName: 'Heltec V3',
-    icon: '📟',
-    description:
-      'ESP32-S3 + SX1262, OLED 0.49", без GPS, USB-C. Компактная плата с мини-дисплеем.',
-    hardware: {
-      cpu: 'ESP32-S3 (Xtensa LX7, 240 МГц, 512 КБ SRAM, 8 МБ Flash)',
-      display: '0.49" OLED 64×32 (SSD1306, mini)',
-      gps: 'Нет (можно подключить externally)',
-      battery: 'Нет встроенной (питание через USB-C)',
-      lora: 'SX1262 (433 МГц, до +22 дБм)',
-      bluetooth: 'BLE (ESP32-S3 встроен)',
-    },
-    preCommands: [
-      {
-        command: '# Heltec V3: нет встроенного GPS',
-        description: 'Устройство без GPS — позиция не обновляется автоматически',
-        phase: 'before',
-      },
-    ],
-    postCommands: [
-      {
-        command: 'python -m meshtastic --set position.gps_mode NOT_PRESENT',
-        description: 'Heltec V3: нет встроенного GPS → NOT_PRESENT',
-        phase: 'after',
-      },
-    ],
-    warnings: [
-      '⚠️ Нет встроенного GPS — позиция не будет обновляться',
-      '⚠️ Мини-OLED 0.49" — очень маленький, мало информации',
-      '⚠️ Нет батареи — только USB питание',
-    ],
-    defaultsOverride: {
-      gpsMode: 'NOT_PRESENT',
-      gpsUpdateInterval: 0,
-      gpsAttemptTime: 0,
-      screenOnSecs: 30,
-      ledDisabled: false,
-    },
-  },
-  {
-    id: 'rak-wisblock',
-    name: 'RAK WisBlock (RAK4631)',
-    shortName: 'RAK',
-    icon: '🧩',
-    description:
-      'nRF52840 + SX1262, модульная система. GPS-модуль RAK1910 опционально. Рекомендуется для custom-сборок.',
-    hardware: {
-      cpu: 'nRF52840 (ARM Cortex-M4, 64 МГц, 256 КБ RAM, 1 МБ Flash)',
-      display: 'Нет (можно подключить OLED/epaper через I2C)',
-      gps: 'Опционально RAK1910 (u-blox MAX-7Q)',
-      battery: 'Li-Po через Solar/WisBlock connector (до 4200 мАч)',
-      lora: 'SX1262 (433 МГц, до +22 дБм)',
-      bluetooth: 'BLE 5.0 (nRF52840 встроен)',
-    },
-    preCommands: [
-      {
-        command: '# RAK WisBlock: конфигурация зависит от установленных модулей',
-        description: 'Модульная система — настройка зависит от комплекта',
-        phase: 'before',
-      },
-    ],
-    postCommands: [
-      {
-        command: '# Если установлен GPS-модуль RAK1910:',
-        description: 'RAK1910 поддерживает EASY™ прогноз орбит, аналогично L76K',
-        phase: 'after',
-        optional: true,
-      },
-    ],
-    warnings: [
-      '⚠️ GPS опционален — проверьте установлен ли RAK1910 перед настройкой',
-      '⚠️ Нет встроенного дисплея — настройки экрана могут не применяться',
-      '⚠️ Модульная система — набор команд зависит от установленных модулей',
-    ],
-    defaultsOverride: {
-      gpsUpdateInterval: 30,
-      gpsAttemptTime: 90,
-    },
-  },
-  {
-    id: 'meshtastic-diy',
-    name: 'DIY / Другое',
-    shortName: 'DIY',
-    icon: '🔧',
-    description:
-      'Кастомная сборка или другое устройство Meshtastic. Стандартные настройки без специфики.',
-    hardware: {
-      cpu: 'Зависит от сборки',
-      display: 'Зависит от сборки',
-      gps: 'Зависит от сборки',
-      battery: 'Зависит от сборки',
-      lora: 'Зависит от сборки (433 МГц)',
-      bluetooth: 'Зависит от сборки',
-    },
-    preCommands: [],
-    postCommands: [],
-    warnings: [
-      '⚠️ Универсальный профиль — проверьте совместимость настроек с вашим устройством',
-    ],
-    defaultsOverride: {},
   },
 ]
 
@@ -321,12 +181,10 @@ export function getDeviceProfileByHardware(hardwareModel: string): DeviceProfile
   const lower = hardwareModel.toLowerCase()
 
   if (lower.includes('t-echo') || lower.includes('techo')) return DEVICE_PROFILES[0]
-  if (lower.includes('t-beam') && lower.includes('supreme')) return DEVICE_PROFILES[1]
-  if (lower.includes('t-lora') || lower.includes('tlora')) return DEVICE_PROFILES[2]
-  if (lower.includes('heltec') && lower.includes('v3')) return DEVICE_PROFILES[3]
-  if (lower.includes('rak') || lower.includes('wisblock')) return DEVICE_PROFILES[4]
+  if (lower.includes('heltec') && (lower.includes('tracker') || lower.includes('wireless-tracker'))) return DEVICE_PROFILES[1]
 
-  return DEVICE_PROFILES[5] // DIY
+  // По умолчанию — T-Echo (первый профиль)
+  return DEVICE_PROFILES[0]
 }
 
 /** Получить все ID профилей */

@@ -238,3 +238,25 @@ Stage Summary:
 - UI: кнопки выбора устройства, тип устройства в пуш-диалоге, панель характеристик
 - Генерация команд адаптирована под выбранное устройство
 - Файлы: src/lib/device-profiles.ts (новый), src/components/dashboard/settings-presets-tab.tsx (обновлён)
+
+---
+Task ID: 39
+Agent: main
+Task: Убрать лишние устройства из пресетов (кроме T-Echo) и добавить Heltec Wireless Tracker V1.1
+
+Work Log:
+- Исследованы характеристики Heltec Wireless Tracker V1.1 через web search
+- Спецификации: ESP32-S3FN8, SX1262 (433 МГц, +21 дБм), UC6580 GNSS (двухчастотный, 22 нм), LCD 0.96" (160×80, ST7735), USB-C питание (нет встроенной батареи), BLE 5.0
+- Найдены баги UC6580: модуль сбрасывается при выключенном экране (#5088), дефолтная конфигурация Meshtastic ухудшает GNSS (#10202)
+- Обновлён device-profiles.ts: убраны 5 устройств (T-Beam Supreme, T-LoRa V2.1, Heltec V3, RAK WisBlock, DIY), добавлен Heltec Wireless Tracker V1.1
+- Профиль Heltec Tracker: preCommands (проверка UC6580), postCommands (gps_update_interval, gps_attempt_time, screen_on_secs), warnings (5 штук — баги UC6580, нет батареи, LCD жрёт, ESP32-S3 vs nRF52840)
+- defaultsOverride: gpsUpdateInterval=30, gpsAttemptTime=90, screenOnSecs=30 (LCD жрёт), ledDisabled=false
+- Обновлён getDeviceProfileByHardware(): распознаёт 'heltec' + 'tracker'
+- UI не требует правок — DEVICE_PROFILES итерируется динамически
+- Обновлена документация: AI_PROMPT.md (профили устройств, задача 39), PROJECT_RULES.md (дата)
+- Lint пройден
+
+Stage Summary:
+- 2 профиля устройств: T-Echo (проверенный), Heltec Wireless Tracker V1.1 (новый)
+- Heltec Tracker: UC6580 GNSS баги задокументированы, defaultsOverride адаптированы
+- Файлы: src/lib/device-profiles.ts (обновлён), AI_PROMPT.md (обновлён), PROJECT_RULES.md (обновлён)
