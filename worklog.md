@@ -49,3 +49,28 @@ Stage Summary:
 - Корневая причина: try/except вокруг записи канала в мосте глотал ошибки, и position_precision молча не записывался → устройство использовало дефолт 13 (~2.9км)
 - Дополнительная причина: скрипты использовали неверный путь `--set position.position_precision` вместо `--ch-set module_settings.position_precision`
 - Все файлы исправлены, документация обновлена
+
+---
+Task ID: 31
+Agent: main
+Task: Фикс: после factory reset длинное и короткое имя не менялись
+
+Work Log:
+- Прочитал PROJECT_RULES.md (правило 4.1: проверять документацию прошивки!)
+- Исследовал исходники AdminModule.cpp + NodeDB.cpp прошивки 2.7.15:
+  - factory_reset_config (поле 99) → factoryReset() → installDefaultDeviceState() → имя сбрасывается на «Meshtastic XXXX»
+  - factory_reset_device (поле 94) → то же + очистка BLE bonds
+- Проверил Python-библиотеку meshtastic 2.7.8: setOwner() обрезает short_name до 4 символов (nChars=4), пустая строка вызывает sys.exit()!
+- Нашёл корневую причину: после factory reset мост вызывал setOwner() со старым автозаполненным именем → перезаписывал дефолтное
+- Исправления:
+  1. techo-bridge.py: защита от SystemExit в setOwner(), задержка 5 сек после factory reset, комментарий про nChars=4
+  2. settings-presets-tab.tsx: при factory reset поля имени автоматически очищаются, подсказка обновлена
+  3. settings-presets-tab.tsx: short_name макс. 4 символа (было 5), обработчик handleFactoryResetChange
+  4. config/route.ts: комментарий 5→4 символа
+  5. Документация: AI_PROMPT.md, PROJECT_RULES.md, STARTUP.md обновлены
+
+Stage Summary:
+- Корневая причина: автозаполнение имени в диалоге → setOwner() перезаписывал дефолтное имя после factory reset
+- Вторичная проблема: short_name макс. 4 символа в Python-библиотеке, а UI разрешал 5
+- Третичная проблема: setOwner("") вызывает sys.exit() — мост падал бы
+- Все три проблемы исправлены, запушено в GitHub
