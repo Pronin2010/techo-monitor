@@ -12,6 +12,7 @@ import {
   Eye,
   EyeOff,
   Shuffle,
+  Repeat,
   Zap,
   Shield,
   Info,
@@ -211,8 +212,11 @@ const INITIAL_STATE = {
   positionPrecision: 32,
   positionFlags: 299,
   positionBroadcastSecs: 300,
+  smartBroadcastEnabled: true,     // Умная трансляция позиции
   smartBroadcastMinDist: 100,
   smartBroadcastMinInterval: 120,
+  gpsAttemptTime: 90,              // GPS время попытки (position.gps_attempt_time)
+  fixedPosition: false,            // Фиксированная позиция (для базовых станций)
   // --- Telemetry ---
   telemetryDeviceInterval: 300,
   // --- LoRa Advanced ---
@@ -224,6 +228,7 @@ const INITIAL_STATE = {
   bluetoothFixedPin: '',
   // --- Display ---
   screenOnSecs: 60,
+  ledHeartbeatDisabled: false,     // Отключить LED индикатор
   // --- Network ---
   rebroadcastMode: 'ALL' as RebroadcastMode,
   // --- Owner ---
@@ -373,15 +378,24 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     lines.push(`${p} --set position.gps_mode ${state.gpsMode}`)
     if (state.gpsMode === 'ENABLED') {
       lines.push(`${p} --set position.gps_update_interval ${state.gpsUpdateInterval}`)
-      lines.push(`${p} --set position.gps_attempt_time 90`)
+      lines.push(`${p} --set position.gps_attempt_time ${state.gpsAttemptTime}`)
     }
     if (state.agpsEnabled) {
       lines.push(`${p} --set gps.agps_enabled true`)
     }
     lines.push(`${p} --set position.position_flags ${state.positionFlags}`)
     lines.push(`${p} --set position.position_broadcast_secs ${state.positionBroadcastSecs}`)
-    lines.push(`${p} --set position.broadcast_smart_minimum_distance ${state.smartBroadcastMinDist}`)
-    lines.push(`${p} --set position.broadcast_smart_minimum_interval_secs ${state.smartBroadcastMinInterval}`)
+    if (state.smartBroadcastEnabled) {
+      lines.push(`${p} --set position.position_broadcast_smart_enabled true`)
+      lines.push(`${p} --set position.broadcast_smart_minimum_distance ${state.smartBroadcastMinDist}`)
+      lines.push(`${p} --set position.broadcast_smart_minimum_interval_secs ${state.smartBroadcastMinInterval}`)
+    }
+    if (state.fixedPosition) {
+      lines.push(`${p} --set position.fixed_position true`)
+    }
+    if (state.ledHeartbeatDisabled) {
+      lines.push(`${p} --set device.led_heartbeat_disabled true`)
+    }
     if (state.positionPrecision > 0) {
       lines.push(`${p} --ch-index 0 --ch-set module_settings.position_precision ${state.positionPrecision}`)
     }
@@ -439,6 +453,9 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     ylines.push('  device:')
     ylines.push(`    role: ${state.role}`)
     ylines.push(`    node_info_broadcast_secs: ${state.nodeInfoBroadcastSecs}`)
+    if (state.ledHeartbeatDisabled) {
+      ylines.push('    led_heartbeat_disabled: true')
+    }
     ylines.push('  lora:')
     ylines.push(`    region: ${state.region}`)
     ylines.push(`    modem_preset: ${state.modemPreset}`)
@@ -472,16 +489,21 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
     ylines.push(`    gps_mode: ${state.gpsMode}`)
     if (state.gpsMode === 'ENABLED') {
       ylines.push(`    gps_update_interval: ${state.gpsUpdateInterval}`)
-      ylines.push(`    gps_attempt_time: ${state.gpsMode === 'ENABLED' ? 90 : 0}`)
+      ylines.push(`    gps_attempt_time: ${state.gpsAttemptTime}`)
     }
     if (state.agpsEnabled) {
       ylines.push('    agps_enabled: true')
     }
     ylines.push(`    position_flags: ${state.positionFlags}`)
     ylines.push(`    position_broadcast_secs: ${state.positionBroadcastSecs}`)
-    ylines.push('    position_broadcast_smart_enabled: true')
-    ylines.push(`    broadcast_smart_minimum_distance: ${state.smartBroadcastMinDist}`)
-    ylines.push(`    broadcast_smart_minimum_interval_secs: ${state.smartBroadcastMinInterval}`)
+    if (state.smartBroadcastEnabled) {
+      ylines.push('    position_broadcast_smart_enabled: true')
+      ylines.push(`    broadcast_smart_minimum_distance: ${state.smartBroadcastMinDist}`)
+      ylines.push(`    broadcast_smart_minimum_interval_secs: ${state.smartBroadcastMinInterval}`)
+    }
+    if (state.fixedPosition) {
+      ylines.push('    fixed_position: true')
+    }
     // Device-specific position overrides (rx_gpio, tx_gpio, etc.)
     // Пропускаем дублирующиеся поля, уже выведенные из state
     const DEVICE_SETUP_POSITION_KEYS = new Set([
@@ -966,22 +988,47 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
                       </SelectContent>
                     </Select>
                     {state.gpsMode === 'ENABLED' && (
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="gps-interval" className="text-sm text-muted-foreground whitespace-nowrap">
-                          GPS интервал (position.gps_update_interval)
-                        </Label>
-                        <Input
-                          id="gps-interval"
-                          type="number"
-                          min={1}
-                          value={state.gpsUpdateInterval}
-                          onChange={(e) =>
-                            updateField('gpsUpdateInterval', Number(e.target.value) || 30)
-                          }
-                          className="w-24"
-                        />
-                        <span className="text-sm text-muted-foreground">сек</span>
-                      </div>
+                      <>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="gps-interval" className="text-sm text-muted-foreground whitespace-nowrap">
+                            GPS интервал (position.gps_update_interval)
+                          </Label>
+                          <Input
+                            id="gps-interval"
+                            type="number"
+                            min={1}
+                            value={state.gpsUpdateInterval}
+                            onChange={(e) =>
+                              updateField('gpsUpdateInterval', Number(e.target.value) || 30)
+                            }
+                            className="w-24"
+                          />
+                          <span className="text-sm text-muted-foreground">сек</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="gps-attempt-time" className="text-sm text-muted-foreground whitespace-nowrap">
+                            Время попытки GPS (gps_attempt_time)
+                          </Label>
+                          <Input
+                            id="gps-attempt-time"
+                            type="number"
+                            min={10}
+                            value={state.gpsAttemptTime}
+                            onChange={(e) => updateField('gpsAttemptTime', Number(e.target.value) || 90)}
+                            className="w-24"
+                          />
+                          <span className="text-sm text-muted-foreground">сек</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label className="flex items-center gap-1.5 cursor-pointer">
+                            AGPS (position.agps_enabled)
+                          </Label>
+                          <Checkbox
+                            checked={state.agpsEnabled}
+                            onCheckedChange={(v) => updateField('agpsEnabled', !!v)}
+                          />
+                        </div>
+                      </>
                     )}
                     <p className="text-xs text-muted-foreground">
                       Поле <code className="bg-muted px-1 rounded text-[11px]">gps_enabled</code> устарело в 2.7.x. Используйте <code className="bg-muted px-1 rounded text-[11px]">gps_mode</code>.
@@ -1058,7 +1105,64 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
                     </p>
                   </div>
 
-                  {/* Пояснение разницы */}
+                  <Separator />
+
+                  {/* Умная трансляция позиции */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-1.5 cursor-pointer">
+                        <Repeat className="size-3.5 text-muted-foreground" />
+                        Умная трансляция (position.position_broadcast_smart_enabled)
+                      </Label>
+                      <Checkbox
+                        checked={state.smartBroadcastEnabled}
+                        onCheckedChange={(v) => updateField('smartBroadcastEnabled', !!v)}
+                      />
+                    </div>
+                    {state.smartBroadcastEnabled && (
+                      <div className="space-y-3 pl-2 border-l-2 border-muted">
+                        <div className="space-y-1">
+                          <Label className="text-sm">Мин. расстояние (broadcast_smart_minimum_distance)</Label>
+                          <Input type="number" min={1} value={state.smartBroadcastMinDist} onChange={(e) => updateField('smartBroadcastMinDist', Number(e.target.value) || 100)} className="w-32" />
+                          <p className="text-xs text-muted-foreground">метров</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-sm">Мин. интервал (broadcast_smart_minimum_interval_secs)</Label>
+                          <Input type="number" min={10} value={state.smartBroadcastMinInterval} onChange={(e) => updateField('smartBroadcastMinInterval', Number(e.target.value) || 120)} className="w-32" />
+                          <p className="text-xs text-muted-foreground">секунд</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Фиксированная позиция */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-1.5 cursor-pointer">
+                        <MapPin className="size-3.5 text-muted-foreground" />
+                        Фиксированная позиция (position.fixed_position)
+                      </Label>
+                      <Checkbox
+                        checked={state.fixedPosition}
+                        onCheckedChange={(v) => updateField('fixedPosition', !!v)}
+                      />
+                    </div>
+                    {state.fixedPosition && (
+                      <Alert className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+                        <Info className="size-4 text-amber-500" />
+                        <AlertDescription className="text-amber-700 dark:text-amber-300 text-xs">
+                          При фиксированной позиции gps_mode должен быть DISABLED (баг #8403)
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Для базовых станций с фиксированным местоположением. Координаты задаются вручную.
+                    </p>
+                  </div>
+
+                  {/* Пояснение разницы precision / flags */}
                   <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
                     <Info className="size-4 text-blue-500" />
                     <AlertDescription className="text-blue-700 dark:text-blue-300 text-xs">
@@ -1318,6 +1422,25 @@ export default function DeviceSetupTab({ channels }: DeviceSetupTabProps) {
                     <p className="text-xs text-muted-foreground">
                       Сколько секунд экран остаётся включённым после последнего действия.
                       Меньше значение — дольше работает батарея.
+                    </p>
+                  </div>
+
+                  <Separator />
+
+                  {/* LED индикатор */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-1.5 cursor-pointer">
+                        <Lightbulb className="size-3.5 text-muted-foreground" />
+                        LED индикатор включён
+                      </Label>
+                      <Checkbox
+                        checked={!state.ledHeartbeatDisabled}
+                        onCheckedChange={(v) => updateField('ledHeartbeatDisabled', !v)}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Отключение LED экономит батарею. Для T-Echo: e-ink экран остаётся рабочим.
                     </p>
                   </div>
                 </div>

@@ -56,3 +56,38 @@ Stage Summary:
 - YAML теперь генерирует корректный конфиг, совместимый с meshtastic --configure
 - Команды канала всегда добавляются после --configure с --reboot
 - Дублирование smart broadcast из yamlExtras устранено в обоих файлах
+
+---
+Task ID: 3
+Agent: main
+Task: Исправление оставшихся багов YAML/CLI генерации в device-setup-tab.tsx
+
+Work Log:
+- Добавлены 4 недостающих поля в INITIAL_STATE:
+  1. smartBroadcastEnabled: true — умная трансляция позиции
+  2. gpsAttemptTime: 90 — GPS время попытки
+  3. fixedPosition: false — фиксированная позиция (для базовых станций)
+  4. ledHeartbeatDisabled: false — отключение LED индикатора
+- Исправлена генерация YAML:
+  1. gps_attempt_time теперь использует state.gpsAttemptTime вместо хардкода 90
+  2. position_broadcast_smart_enabled и сопутствующие поля обёрнуты в if (state.smartBroadcastEnabled)
+  3. Добавлен вывод fixed_position: true при state.fixedPosition
+  4. Добавлен вывод led_heartbeat_disabled: true в секции config.device при state.ledHeartbeatDisabled
+- Исправлена генерация CLI:
+  1. gps_attempt_time использует state.gpsAttemptTime вместо хардкода 90
+  2. Smart broadcast команды обёрнуты в if (state.smartBroadcastEnabled) + добавлена команда position_broadcast_smart_enabled true
+  3. Добавлена команда fixed_position true при state.fixedPosition
+  4. Добавлена команда device.led_heartbeat_disabled true при state.ledHeartbeatDisabled
+- Добавлены UI-контролы:
+  1. AGPS toggle + GPS Attempt Time — в секции GPS (после GPS интервала, только при ENABLED)
+  2. Умная трансляция (toggle + мин. расстояние + мин. интервал) — в секции GPS/Позиция после position_flags
+  3. Фиксированная позиция (toggle + предупреждение о баге #8403) — в секции GPS/Позиция после умной трансляции
+  4. LED индикатор (toggle с инвертированной логикой) — в секции Дисплей после таймаута экрана
+- Добавлен импорт иконки Repeat из lucide-react
+- Lint пройден без ошибок
+- Dev-сервер работает стабильно
+
+Stage Summary:
+- Все 4 бага генерации YAML/CLI исправлены (smartBroadcastEnabled, gpsAttemptTime, fixedPosition, ledHeartbeatDisabled)
+- YAML и CLI генераторы теперь полностью управляются state — нет хардкода
+- Добавлены все недостающие UI-контролы с корректными подписями на русском
