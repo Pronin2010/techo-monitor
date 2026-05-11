@@ -139,3 +139,25 @@ Stage Summary:
 - Формат: «🕐 5 мин. назад │ 👤15м │ 🌡5м │ 📍2м»
 - Расширенная секция «Последние пакеты» сохранена для детального просмотра
 - Цветовая индикация устаревших данных (>1ч = amber)
+
+---
+Task ID: 6
+Agent: main
+Task: Изменить логику определения USB/внешнего питания: batteryLevel>=101 и voltage>=4.4V вместо voltage>3.9V
+
+Work Log:
+- Найдена проблема: старая логика voltage > 3.9V ненадёжна — LiPo при полной зарядке может быть 4.1-4.2V
+- Meshtastic прошивка реально шлёт batteryLevel=101% при USB-питании — точный индикатор
+- techo-bridge.py: убран min(batteryLevel, 100) — 101% больше не обрезается, используется как маркер USB
+- techo-bridge.py: новая логика usbPower: (1) прямое поле usbPower из deviceMetrics, (2) batteryLevel >= 101, (3) voltage >= 4.4V
+- API sync route (update и create): usbPower определяется по трём критериям вместо voltage > 3.9
+- API sync route: batteryLevel обрезается до 100 через Math.min() при сохранении в БД (101→100)
+- API sync route: убрано дублирование batteryLevel/voltage в update-блоке
+- UI node-status-card.tsx: tooltip «Внешнее питание (USB / зарядка)» вместо «Устройство подключено по USB»
+- Lint пройден без ошибок
+- Тестовые данные пересозданы (3 узла, «База» с usbPower=true)
+
+Stage Summary:
+- USB питание определяется по 3 критериям: usbPower field || batteryLevel>=101 || voltage>=4.4V
+- batteryLevel=101 от прошивки обрезается до 100 при сохранении в БД
+- Мост больше не обрезает batteryLevel — сохраняет 101 как маркер для usbPower

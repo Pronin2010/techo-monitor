@@ -185,8 +185,6 @@ export async function POST(request: Request) {
             shortName: incoming.shortName ?? existingNode.shortName,
             role: incoming.role ?? existingNode.role,
             status: 'online',
-            ...(incoming.batteryLevel != null && { batteryLevel: incoming.batteryLevel }),
-            ...(incoming.voltage != null && { voltage: incoming.voltage }),
             ...(incoming.snr != null && { snr: incoming.snr }),
             ...(incoming.rssi != null && { rssi: incoming.rssi }),
             ...(incoming.latitude != null && { latitude: incoming.latitude }),
@@ -199,12 +197,14 @@ export async function POST(request: Request) {
             ...(incoming.pressure != null && { pressure: incoming.pressure }),
             ...(incoming.channelUtilization != null && { channelUtilization: incoming.channelUtilization }),
             ...(incoming.airUtilTx != null && { airUtilTx: incoming.airUtilTx }),
-            usbPower: incoming.usbPower === true || (incoming.voltage != null && incoming.voltage > 3.9),
-            lsSecs: incoming.lsSecs ?? existingNode.lsSecs,
-            minWakeSecs: incoming.minWakeSecs ?? existingNode.minWakeSecs,
-            lastSeen: incoming.lastHeard
-              ? new Date(incoming.lastHeard as string)
-              : new Date(),
+            // USB питание: (1) прямое поле, (2) batteryLevel >= 101 — Meshtastic шлёт 101% при USB,
+            // (3) напряжение >= 4.4V — высокое напряжение = внешнее питание
+            usbPower: incoming.usbPower === true ||
+              (incoming.batteryLevel != null && incoming.batteryLevel >= 101) ||
+              (incoming.voltage != null && incoming.voltage >= 4.4),
+            // batteryLevel: 101 от прошивки = USB, обрезаем до 100 для отображения
+            ...(incoming.batteryLevel != null && { batteryLevel: Math.min(incoming.batteryLevel as number, 100) }),
+            ...(incoming.voltage != null && { voltage: incoming.voltage }),
             // Timestamp'ы последних пакетов по типам
             ...(incoming.lastInfoPacket && { lastInfoPacket: new Date(incoming.lastInfoPacket as string) }),
             ...(incoming.lastTelemetryPacket && { lastTelemetryPacket: new Date(incoming.lastTelemetryPacket as string) }),
@@ -216,7 +216,7 @@ export async function POST(request: Request) {
         await db.telemetry.create({
           data: {
             nodeId: existingNode.id,
-            batteryLevel: incoming.batteryLevel ?? existingNode.batteryLevel,
+            batteryLevel: incoming.batteryLevel != null ? Math.min(incoming.batteryLevel as number, 100) : existingNode.batteryLevel,
             voltage: incoming.voltage ?? existingNode.voltage,
             snr: incoming.snr ?? existingNode.snr,
             rssi: incoming.rssi ?? existingNode.rssi,
@@ -284,11 +284,16 @@ export async function POST(request: Request) {
             hardwareModel: incoming.hardwareModel || 'T-Echo',
             role: incoming.role || 'CLIENT',
             status: 'online',
-            batteryLevel: incoming.batteryLevel ?? null,
+            // batteryLevel: 101 от прошивки = USB, обрезаем до 100 для отображения
+            batteryLevel: incoming.batteryLevel != null ? Math.min(incoming.batteryLevel as number, 100) : null,
             voltage: incoming.voltage ?? null,
             snr: incoming.snr ?? 0,
             rssi: incoming.rssi ?? 0,
-            usbPower: incoming.usbPower === true || (incoming.voltage != null && incoming.voltage > 3.9),
+            // USB питание: (1) прямое поле, (2) batteryLevel >= 101 — Meshtastic шлёт 101% при USB,
+            // (3) напряжение >= 4.4V — высокое напряжение = внешнее питание
+            usbPower: incoming.usbPower === true ||
+              (incoming.batteryLevel != null && incoming.batteryLevel >= 101) ||
+              (incoming.voltage != null && incoming.voltage >= 4.4),
             latitude: incoming.latitude,
             longitude: incoming.longitude,
             altitude: incoming.altitude,

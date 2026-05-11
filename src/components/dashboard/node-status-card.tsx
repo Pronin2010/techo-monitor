@@ -244,7 +244,7 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
                   <Zap className="h-2.5 w-2.5" />USB
                 </Badge>
               </TooltipTrigger>
-              <TooltipContent>Устройство подключено по USB</TooltipContent>
+              <TooltipContent>Внешнее питание (USB / зарядка)</TooltipContent>
             </Tooltip>
           )}
           {estimatedRuntime && (

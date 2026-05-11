@@ -258,6 +258,7 @@ Node ──< Telemetry
   pressure?, channelUtilization?, airUtilTx?   # Давление, сеть
   lsSecs?, minWakeSecs?, lastSeen
   lastInfoPacket?, lastTelemetryPacket?, lastPositionPacket?  # Время последних пакетов по типам
+  usbPower                                    # Внешнее питание (usbPower || bat>=101 || V>=4.4)
 
 Channel ──< ConnectionConfig
         ──< Preset
@@ -371,6 +372,7 @@ SyncLog
 39. Фикс генерации YAML/CLI (9 критических багов): (а) Убрана секция module_config.channel.module_settings.position_precision из YAML — meshtastic --configure игнорирует эту секцию! position_precision настраивается только через CLI: --ch-index 0 --ch-set module_settings.position_precision N; (б) channel_url ВСЕГДА закомментирован в YAML — баг --seturl с base64 PSK (символ '+' ломает парсер); (в) Команды канала ВСЕГДА добавляются после --configure + --reboot (раньше только при отсутствии channelUrl); (г) Устранено дублирование smart broadcast настроек из yamlExtras Heltec Tracker — PRESET_POSITION_KEYS/DEVICE_SETUP_POSITION_KEYS фильтры; (д) device-setup-tab: добавлены недостающие поля в YAML — position_broadcast_secs, smart broadcast (distance, interval), agps_enabled; (е) device-setup-tab: добавлены недостающие поля в INITIAL_STATE — agpsEnabled, positionBroadcastSecs, smartBroadcastMinDist, smartBroadcastMinInterval; (ж) device-setup-tab: добавлен gps_attempt_time, position_broadcast_secs, smart broadcast, position_flags в CLI команды; (з) Fallback: position_precision + --reboot даже без привязанного канала
 40. Фикс оставшихся багов YAML/CLI генерации в device-setup-tab.tsx (4 бага): (а) smartBroadcastEnabled — добавлен в INITIAL_STATE, убран хардкод true → условная генерация в YAML и CLI; (б) gpsAttemptTime — добавлен в INITIAL_STATE, убран хардкод 90 → state.gpsAttemptTime в YAML и CLI; (в) fixedPosition — добавлен в INITIAL_STATE + YAML (fixed_position: true) + CLI (--set position.fixed_position true) + UI toggle с предупреждением о баге #8403; (г) ledHeartbeatDisabled — добавлен в INITIAL_STATE + YAML (led_heartbeat_disabled: true в config.device) + CLI (--set device.led_heartbeat_disabled true) + UI toggle в секции Дисплей; (д) Добавлены UI-контролы: AGPS toggle, GPS Attempt Time, Smart Broadcast toggle + поля, Fixed Position toggle, LED индикатор toggle
 41. Компактное отображение времён пакетов по типам в свёрнутой строке карточки узла: (а) Поля lastInfoPacket/lastTelemetryPacket/lastPositionPacket уже существовали в Prisma-схеме, типах, API и мосте; (б) Prisma Client не включал поля в SQL-запросы — выполнен prisma db push + regenerate; (в) Добавлена функция getShortRelativeTime() — компактный формат (now, 5м, 2ч, 3д); (г) В свёрнутую строку рядом с «Last seen» добавлены 3 компактных индикатора: 👤 NODEINFO (порт 4, синий), 🌡 TELEMETRY (порт 7, оранжевый), 📍 POSITION (порт 3, зелёный); (д) Каждый индикатор с tooltip (точное время приёма) и цветовой индикацией (>1ч = amber); (е) Расширенная секция «Последние пакеты» сохранена для детального просмотра
+42. Новая логика определения USB/внешнего питания: (а) Было: usbPower = voltage > 3.9V — ненадёжно, LiPo может быть 4.1V при полной зарядке; (б) Стало: usbPower = (прямое поле usbPower из deviceMetrics) ИЛИ (batteryLevel >= 101 — Meshtastic шлёт 101% при USB) ИЛИ (voltage >= 4.4V — гарантированно внешнее питание); (в) Мост (techo-bridge.py): убран min(batteryLevel, 100) — 101% сохраняется как маркер USB; (г) API: batteryLevel обрезается до 100 через Math.min() при сохранении в БД (101→100), usbPower определяется по трём критериям; (д) UI: tooltip «Внешнее питание (USB / зарядка)» вместо «Устройство подключено по USB»
 
 ### Известные проблемы (из ревью):
 - Нет аутентификации на API-роутах
@@ -403,4 +405,4 @@ ALL(0), ALL_SKIP_DECODING(1), LOCAL_ONLY(2), KNOWN_ONLY(3), NONE(4), CORE_PORTNU
 
 ---
 
-_Последнее обновление: 2026-05-11 (Задача 41: Компактное отображение времён пакетов по типам в карточке узла)_
+_Последнее обновление: 2026-05-11 (Задача 42: Новая логика USB питания — batteryLevel>=101 + voltage>=4.4V)_

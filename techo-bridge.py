@@ -1482,17 +1482,20 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
                     node_id_int = int(node_num)
 
                 # Battery, Voltage, USB
+                # Meshtastic шлёт batteryLevel=101 при USB-питании — это
+                # точный индикатор внешнего питания (не напряжение > 3.9V!)
+                # Для отображения 101% = USB, сохраняем как есть (UI покажет 100%)
                 dm = node.get("deviceMetrics", {})
-                usb_power = dm.get("usbPower")
-                if dm and dm.get("batteryLevel") is not None:
-                    batteryLevel = min(dm.get("batteryLevel"), 100)
-                    voltage = dm.get("voltage")
+                raw_battery = dm.get("batteryLevel")
+                voltage = dm.get("voltage") if dm else None
+                if dm and raw_battery is not None:
+                    batteryLevel = raw_battery  # 101 = USB питание, НЕ обрезать!
                 else:
                     if node_num == my_node_num:
                         bl = myInfo.get("batteryLevel")
                         vl = myInfo.get("voltage")
                         if bl is not None:
-                            batteryLevel = min(bl, 100)
+                            batteryLevel = bl  # 101 = USB питание
                             voltage = vl if vl else None
                         else:
                             batteryLevel = None
@@ -1501,8 +1504,14 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
                         batteryLevel = None
                         voltage = None
 
-                if usb_power is None:
-                    usb_power = (node_num == my_node_num)
+                # Определение USB питания:
+                # 1. Прямое поле usbPower из deviceMetrics (если есть)
+                # 2. batteryLevel == 101 — прошивка Meshtastic шлёт 101% при USB
+                # 3. voltage >= 4.4V — высокое напряжение = внешнее питание
+                usb_power = dm.get("usbPower") if dm else None
+                if usb_power is None or usb_power is False:
+                    usb_power = (batteryLevel is not None and batteryLevel >= 101) or \
+                                (voltage is not None and voltage >= 4.4)
 
                 if debug:
                     user_tmp = node.get("user", {})
