@@ -33,6 +33,9 @@ model Node {
   lsSecs        Int?      // Light sleep interval in seconds (for TRACKER/CLIENT roles)
   minWakeSecs   Int?      @default(10) // Minimum awake time in seconds before sleeping
   lastSeen      DateTime  @default(now())
+  lastInfoPacket      DateTime?  // Время последнего пакета NODEINFO (порт 4)
+  lastTelemetryPacket DateTime?  // Время последнего пакета TELEMETRY (порт 7)
+  lastPositionPacket  DateTime?  // Время последнего пакета POSITION (порт 3)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

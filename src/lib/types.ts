@@ -114,6 +114,9 @@ export interface MeshNode {
   lsSecs: number | null       // Light sleep interval in seconds
   minWakeSecs: number | null   // Minimum awake time in seconds
   lastSeen: string
+  lastInfoPacket: string | null      // Время последнего NODEINFO пакета (порт 4)
+  lastTelemetryPacket: string | null // Время последнего TELEMETRY пакета (порт 7)
+  lastPositionPacket: string | null  // Время последнего POSITION пакета (порт 3)
   createdAt: string
   updatedAt: string
   telemetry: NodeTelemetry[]

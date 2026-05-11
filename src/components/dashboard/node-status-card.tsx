@@ -43,6 +43,8 @@ import {
   Satellite,
   Activity,
   Waves,
+  User,
+  Package,
 } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -485,6 +487,87 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
               <Cpu className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground">Модель:</span>
               <span className="font-medium">{node.hardwareModel}</span>
+            </div>
+          </div>
+
+          {/* ── Последние пакеты по типам ── */}
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Package className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Последние пакеты</span>
+            </div>
+            <div className="grid grid-cols-3 gap-x-6 gap-y-1.5 text-xs">
+              {/* NODEINFO (порт 4) */}
+              <div className="flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                <span className="text-muted-foreground">Инфо:</span>
+                {node.lastInfoPacket ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={
+                        Date.now() - new Date(node.lastInfoPacket).getTime() > 3600000
+                          ? 'text-amber-600 dark:text-amber-400 font-medium'
+                          : 'font-medium'
+                      }>
+                        {getRelativeTime(node.lastInfoPacket)}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Пакет NODEINFO (порт 4): {new Date(node.lastInfoPacket).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </div>
+
+              {/* TELEMETRY (порт 7) */}
+              <div className="flex items-center gap-1.5">
+                <Thermometer className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                <span className="text-muted-foreground">Телеметрия:</span>
+                {node.lastTelemetryPacket ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={
+                        Date.now() - new Date(node.lastTelemetryPacket).getTime() > 3600000
+                          ? 'text-amber-600 dark:text-amber-400 font-medium'
+                          : 'font-medium'
+                      }>
+                        {getRelativeTime(node.lastTelemetryPacket)}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Пакет TELEMETRY (порт 7): {new Date(node.lastTelemetryPacket).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </div>
+
+              {/* POSITION (порт 3) */}
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                <span className="text-muted-foreground">GPS:</span>
+                {node.lastPositionPacket ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={
+                        Date.now() - new Date(node.lastPositionPacket).getTime() > 3600000
+                          ? 'text-amber-600 dark:text-amber-400 font-medium'
+                          : 'font-medium'
+                      }>
+                        {getRelativeTime(node.lastPositionPacket)}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Пакет POSITION (порт 3): {new Date(node.lastPositionPacket).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </div>
             </div>
           </div>
         </div>

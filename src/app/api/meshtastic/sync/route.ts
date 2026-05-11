@@ -205,6 +205,10 @@ export async function POST(request: Request) {
             lastSeen: incoming.lastHeard
               ? new Date(incoming.lastHeard as string)
               : new Date(),
+            // Timestamp'ы последних пакетов по типам
+            ...(incoming.lastInfoPacket && { lastInfoPacket: new Date(incoming.lastInfoPacket as string) }),
+            ...(incoming.lastTelemetryPacket && { lastTelemetryPacket: new Date(incoming.lastTelemetryPacket as string) }),
+            ...(incoming.lastPositionPacket && { lastPositionPacket: new Date(incoming.lastPositionPacket as string) }),
           },
         })
 
@@ -300,6 +304,10 @@ export async function POST(request: Request) {
             lastSeen: incoming.lastHeard
               ? new Date(incoming.lastHeard as string)
               : new Date(),
+            // Timestamp'ы последних пакетов по типам
+            ...(incoming.lastInfoPacket && { lastInfoPacket: new Date(incoming.lastInfoPacket as string) }),
+            ...(incoming.lastTelemetryPacket && { lastTelemetryPacket: new Date(incoming.lastTelemetryPacket as string) }),
+            ...(incoming.lastPositionPacket && { lastPositionPacket: new Date(incoming.lastPositionPacket as string) }),
           },
         })
 

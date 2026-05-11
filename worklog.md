@@ -91,3 +91,24 @@ Stage Summary:
 - Все 4 бага генерации YAML/CLI исправлены (smartBroadcastEnabled, gpsAttemptTime, fixedPosition, ledHeartbeatDisabled)
 - YAML и CLI генераторы теперь полностью управляются state — нет хардкода
 - Добавлены все недостающие UI-контролы с корректными подписями на русском
+
+---
+Task ID: 4
+Agent: main
+Task: Добавить вывод времени последних пакетов (NODEINFO, TELEMETRY, POSITION) в карточку узла
+
+Work Log:
+- Добавлены 3 поля в Prisma-схему Node: lastInfoPacket, lastTelemetryPacket, lastPositionPacket (DateTime?, nullable)
+- Выполнен prisma db push — схема синхронизирована с SQLite
+- Добавлены 3 кэша в techo-bridge.py: node_last_info, node_last_telemetry, node_last_position
+- Обновлён on_receive: запись timestamp при получении каждого типа пакета (NODEINFO=порт 4, TELEMETRY=порт 7, POSITION=порт 3)
+- Обновлён periodic sync: передача lastInfoPacket/lastTelemetryPacket/lastPositionPacket в node_entry
+- Обновлён POST /api/meshtastic/sync: сохранение новых полей в БД (и при update, и при create)
+- Обновлён тип MeshNode в types.ts: добавлены lastInfoPacket, lastTelemetryPacket, lastPositionPacket (string | null)
+- Обновлён NodeStatusCard: секция «Последние пакеты» с 3 строками (Инфо, Телеметрия, GPS) и цветовой индикацией (>1ч = amber)
+- Lint пройден без ошибок, dev-сервер работает
+
+Stage Summary:
+- Карточка узла теперь показывает когда последний раз приходили пакеты NODEINFO, TELEMETRY и POSITION
+- Мост записывает timestamp'ы при получении каждого типа пакета через pubsub
+- Цветовая индикация: если пакет старше 1 часа — текст amber, иначе стандартный

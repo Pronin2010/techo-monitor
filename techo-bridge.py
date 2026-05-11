@@ -1189,6 +1189,9 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
     node_last_heard = {}     # {from_int: ISO-8601 timestamp}
     node_dev_metrics = {}    # {from_int: {batteryLevel, voltage, channelUtilization, airUtilTx, ...}}
     node_env_metrics = {}    # {from_int: {temperature, humidity, barometricPressure, ...}}
+    node_last_info = {}      # {from_int: ISO-8601} — время последнего NODEINFO пакета (порт 4)
+    node_last_telemetry = {} # {from_int: ISO-8601} — время последнего TELEMETRY пакета (порт 7)
+    node_last_position = {}  # {from_int: ISO-8601} — время последнего POSITION пакета (порт 3)
     my_node_num_ref = [None]
     
     # ── Packet counter & rate tracking ──
@@ -1266,6 +1269,8 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
                     # --- POSITION ---
                     pos = decoded.get("position")
                     if isinstance(pos, dict):
+                        # Записываем время POSITION пакета
+                        node_last_position[from_int] = now_iso
                         lat_i = pos.get("latitudeI")
                         lon_i = pos.get("longitudeI")
                         if isinstance(lat_i, int) and lat_i != 0 and isinstance(lon_i, int) and lon_i != 0:
@@ -1308,6 +1313,8 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
                     # --- NODEINFO (имена узлов) ---
                     user_info = decoded.get("user")
                     if isinstance(user_info, dict):
+                        # Записываем время NODEINFO пакета
+                        node_last_info[from_int] = now_iso
                         sn = user_info.get("shortName", "")
                         ln = user_info.get("longName", "")
                         _update_node_name(from_int, sn, ln)
@@ -1316,6 +1323,8 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
                     # --- TELEMETRY ---
                     telem = decoded.get("telemetry")
                     if isinstance(telem, dict):
+                        # Записываем время TELEMETRY пакета
+                        node_last_telemetry[from_int] = now_iso
                         dev_metrics = telem.get("deviceMetrics", {})
                         env_metrics = telem.get("environmentMetrics", {})
                         if dev_metrics:
@@ -1627,6 +1636,14 @@ def serial_mode(port, dashboard_url, interval, debug=False, realtime=True, api_p
                         heard_time = format_timestamp(meshtastic_lh)
                 if heard_time:
                     node_entry["lastHeard"] = heard_time
+
+                # Timestamp'ы последних пакетов по типам
+                if node_id_int in node_last_info:
+                    node_entry["lastInfoPacket"] = node_last_info[node_id_int]
+                if node_id_int in node_last_telemetry:
+                    node_entry["lastTelemetryPacket"] = node_last_telemetry[node_id_int]
+                if node_id_int in node_last_position:
+                    node_entry["lastPositionPacket"] = node_last_position[node_id_int]
 
                 nodes_data.append(node_entry)
 
