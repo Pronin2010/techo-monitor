@@ -68,33 +68,35 @@ src/
 │       ├── nodes/                # REST API узлов сети
 │       ├── channels/             # REST API каналов
 │       ├── presets/              # REST API пресетов
-│       ├── packets/              # REST API пакетов
+│       ├── packets/              # REST API пакетов (in-memory buffer)
 │       ├── telemetry/            # REST API телеметрии
 │       ├── sync-log/             # REST API логов синхронизации
-│       └── meshtastic/           # API синхронизации, скриптов и отправки конфигурации
+│       └── meshtastic/           # API синхронизации, скриптов, отправки конфигурации, set-owner
 ├── components/
 │   ├── dashboard/                # Компоненты дашборда
 │   │   ├── dashboard-client.tsx  # Клиентский контейнер
 │   │   ├── dashboard-page.tsx    # Страница дашборда
-│   │   ├── node-status-card.tsx  # Карточка узла
-│   │   ├── map-view.tsx          # Вкладка карты
-│   │   ├── map-leaflet.tsx       # Компонент Leaflet-карты
-│   │   ├── channel-settings.tsx  # Настройки каналов
-│   │   ├── connection-tab.tsx    # Подключение к устройству
-│   │   ├── device-setup-tab.tsx  # Настройка устройства
-│   │   ├── settings-presets-tab.tsx # Пресеты настроек
+│   │   ├── node-status-card.tsx  # Карточка узла (аккордеон + телеметрия)
+│   │   ├── map-view.tsx          # Вкладка карты (dynamic import)
+│   │   ├── map-leaflet.tsx       # Leaflet-карта + KMZ/KML overlay
+│   │   ├── channel-settings.tsx  # Настройки каналов + QR
+│   │   ├── connection-tab.tsx    # Подключение к устройству (Serial/MQTT)
+│   │   ├── device-setup-tab.tsx  # Настройка устройства (CLI/YAML генератор)
+│   │   ├── settings-presets-tab.tsx # Пресеты + push-to-device
 │   │   ├── packet-stream-tab.tsx # Поток пакетов
 │   │   └── node-form-dialog.tsx  # Диалог редактирования узла
 │   └── ui/                       # shadcn/ui компоненты
 ├── hooks/                        # React-хуки
 ├── lib/
-│   ├── db.ts                     # Prisma Client
-│   ├── types.ts                  # TypeScript типы
-│   ├── utils.ts                  # Утилиты
+│   ├── db.ts                     # Prisma Client (singleton)
+│   ├── types.ts                  # TypeScript типы + константы Meshtastic
+│   ├── utils.ts                  # cn() + serializeBigInt()
+│   ├── kmz-parser.ts             # KMZ/KML → GeoJSON парсер (fflate + @tmcw/togeojson)
+│   ├── device-profiles.ts        # Профили устройств (T-Echo, Heltec Tracker V1.1)
 │   └── builtin-presets.ts        # Встроенные пресеты
 └── prisma/
     └── schema.prisma             # Схема базы данных
-techo-bridge.py                   # Python-мост (Serial/MQTT → HTTP API)
+techo-bridge.py                   # Python-мост (Serial → HTTP API :8420)
 techo-dump-config.py              # Скрипт чтения конфигурации устройства
 AI_PROMPT.md                      # Контекст проекта для AI-ассистента
 PROJECT_RULES.md                  # Правила проекта

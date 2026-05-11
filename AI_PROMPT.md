@@ -44,32 +44,32 @@ src/
 │       ├── packets/              # REST API пакетов (in-memory ring buffer 200 шт)
 │       ├── telemetry/            # REST API телеметрии
 │       ├── sync-log/             # REST API логов синхронизации
-│       └── meshtastic/           # sync, bridge, script, config
+│       └── meshtastic/           # sync, bridge, script, config, set-owner
 ├── components/
-│   ├── dashboard/                # 11 компонентов дашборда
-│   │   ├── dashboard-client.tsx  # Главный клиентский контейнер (7 вкладок)
+│   ├── dashboard/                # 11 компонентов дашборда (~8474 строк)
+│   │   ├── dashboard-client.tsx  # Главный клиентский контейнер (7 вкладок, 451 строка)
 │   │   ├── dashboard-page.tsx    # Обёртка (передаёт initialNodes=[])
-│   │   ├── node-status-card.tsx  # Строка узла с аккордеоном
-│   │   ├── node-form-dialog.tsx  # Диалог редактирования узла
+│   │   ├── node-status-card.tsx  # Строка узла с аккордеоном (663 строки)
+│   │   ├── node-form-dialog.tsx  # Диалог редактирования узла (268 строк)
 │   │   ├── map-view.tsx          # Вкладка карты (dynamic import)
-│   │   ├── map-leaflet.tsx       # Leaflet-карта + KMZ/KML overlay
-│   │   ├── channel-settings.tsx  # Настройки каналов + QR
-│   │   ├── connection-tab.tsx    # Подключение (Serial/MQTT, лог синхронизаций)
-│   │   ├── device-setup-tab.tsx  # Генератор CLI-команд и YAML
-│   │   ├── settings-presets-tab.tsx # Пресеты + push-to-device (~1000 строк)
-│   │   └── packet-stream-tab.tsx # Поток пакетов
+│   │   ├── map-leaflet.tsx       # Leaflet-карта + KMZ/KML overlay (718 строк)
+│   │   ├── channel-settings.tsx  # Настройки каналов + QR (799 строк)
+│   │   ├── connection-tab.tsx    # Подключение (Serial/MQTT, лог синхронизаций, 611 строк)
+│   │   ├── device-setup-tab.tsx  # Генератор CLI-команд и YAML (1841 строка)
+│   │   ├── settings-presets-tab.tsx # Пресеты + push-to-device (2653 строки ⚠️)
+│   │   └── packet-stream-tab.tsx # Поток пакетов (444 строки)
 │   └── ui/                       # shadcn/ui примитивы
 ├── hooks/                        # use-toast, use-mobile
 ├── lib/
 │   ├── db.ts                     # Prisma Client (singleton, dev query logging)
-│   ├── types.ts                  # TypeScript типы + константы Meshtastic
+│   ├── types.ts                  # TypeScript типы + константы Meshtastic (202 строки)
 │   ├── utils.ts                  # cn() + serializeBigInt()
 │   ├── kmz-parser.ts             # KMZ/KML → GeoJSON парсер (@tmcw/togeojson + fflate), GroundOverlay (ImageOverlay)
 │   ├── device-profiles.ts        # 2 профиля устройств (T-Echo, Heltec Wireless Tracker V1.1)
 │   └── builtin-presets.ts        # 4 встроенных пресета
 prisma/
 └── schema.prisma                 # 6 моделей: Node, Channel, Telemetry, ConnectionConfig, Preset, SyncLog
-techo-bridge.py                   # Python-мост (Serial/MQTT → HTTP API :8420)
+techo-bridge.py                   # Python-мост (Serial/MQTT → HTTP API :8420, 1866 строк)
 techo-dump-config.py              # Скрипт чтения конфигурации устройства (standalone)
 ```
 
@@ -374,12 +374,26 @@ SyncLog
 41. Компактное отображение времён пакетов по типам в свёрнутой строке карточки узла: (а) Поля lastInfoPacket/lastTelemetryPacket/lastPositionPacket уже существовали в Prisma-схеме, типах, API и мосте; (б) Prisma Client не включал поля в SQL-запросы — выполнен prisma db push + regenerate; (в) Добавлена функция getShortRelativeTime() — компактный формат (now, 5м, 2ч, 3д); (г) В свёрнутую строку рядом с «Last seen» добавлены 3 компактных индикатора: 👤 NODEINFO (порт 4, синий), 🌡 TELEMETRY (порт 7, оранжевый), 📍 POSITION (порт 3, зелёный); (д) Каждый индикатор с tooltip (точное время приёма) и цветовой индикацией (>1ч = amber); (е) Расширенная секция «Последние пакеты» сохранена для детального просмотра
 42. Новая логика определения USB/внешнего питания: (а) Было: usbPower = voltage > 3.9V — ненадёжно, LiPo может быть 4.1V при полной зарядке; (б) Стало: usbPower = (прямое поле usbPower из deviceMetrics) ИЛИ (batteryLevel >= 101 — Meshtastic шлёт 101% при USB) ИЛИ (voltage >= 4.4V — гарантированно внешнее питание); (в) Мост (techo-bridge.py): убран min(batteryLevel, 100) — 101% сохраняется как маркер USB; (г) API: batteryLevel обрезается до 100 через Math.min() при сохранении в БД (101→100), usbPower определяется по трём критериям; (д) UI: tooltip «Внешнее питание (USB / зарядка)» вместо «Устройство подключено по USB»
 
-### Известные проблемы (из ревью):
-- Нет аутентификации на API-роутах
-- Python-мост слушает 0.0.0.0 вместо 127.0.0.1
-- Дублирование констант в 3 местах
-- settings-presets-tab.tsx ~1000 строк (монстр)
-- Нет AlertDialog при удалении канала
+### Известные проблемы (из ревью #43):
+
+#### 🔴 Критические
+- **Нет аутентификации** на API-роутах — любой может читать/писать/удалять узлы
+- **Python-мост слушает 0.0.0.0** вместо 127.0.0.1 — доступен из сети
+
+#### 🟡 Средние
+- **settings-presets-tab.tsx — 2653 строки** — монстр-компонент, сложно поддерживать. Рекомендация: разделить на PresetCard, PresetEditor, PushToDeviceDialog
+- **device-setup-tab.tsx — 1841 строка** — тоже крупный, рекомендуется разделение
+- **POST /api/nodes** — не включает новые поля (speed, heading, satsInView, hdop, pressure, channelUtilization, airUtilTx, usbPower, lastInfoPacket, lastTelemetryPacket, lastPositionPacket) — создание узла вручную будет неполным
+- **Нет валидации входных данных** на большинстве API-роутов — только try/catch с Prisma
+- **Нет автоопределения offline** — узлы остаются «online» бесконечно, нет TTL-проверки
+
+#### 🟢 Низкие
+- **Дублирование констант** — ROLE_MAP, MODEM_PRESET_MAP и т.д. в techo-bridge.py, но нет TypeScript-эквивалентов для числовых маппингов (только строковые типы в types.ts)
+- **Нет AlertDialog при удалении канала** — только при удалении узла
+- **Нет Error Boundaries** — падение одного компонента может уронить весь дашборд
+- **Нет механизма очистки Telemetry** — таблица растёт бесконечно
+- **Packets buffer in-memory** — теряется при перезагрузке сервера
+- **usePreamble — зомби-поле** — всё ещё в Prisma-схеме, не используется мостом, нет в UI
 
 ---
 
@@ -405,4 +419,4 @@ ALL(0), ALL_SKIP_DECODING(1), LOCAL_ONLY(2), KNOWN_ONLY(3), NONE(4), CORE_PORTNU
 
 ---
 
-_Последнее обновление: 2026-05-11 (Задача 42: Новая логика USB питания — batteryLevel>=101 + voltage>=4.4V)_
+_Последнее обновление: 2026-05-11 (Задача 43: Полный ревью проекта + обновление документации)_

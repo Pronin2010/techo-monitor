@@ -17,7 +17,7 @@ model Node {
   status        String    @default("online") // online, offline, unknown
   batteryLevel  Int?      // null = данные ещё не получены
   voltage       Float?    // null = данные ещё не получены
-  usbPower      Boolean   @default(false) // напряжение > 3.9V = USB питание
+  usbPower      Boolean   @default(false) // Внешнее питание: usbPower field || batteryLevel>=101 || voltage>=4.4V
   snr           Float     @default(0.0)
   rssi          Int       @default(0)
   latitude      Float?
