@@ -63,6 +63,20 @@ function getRelativeTime(dateStr: string): string {
   return `${Math.floor(hours / 24)} дн. назад`
 }
 
+/** Компактный относительный формат для inline-отображения в свёрнутой строке */
+function getShortRelativeTime(dateStr: string): string {
+  const now = Date.now()
+  const date = new Date(dateStr).getTime()
+  const diff = now - date
+  const seconds = Math.floor(diff / 1000)
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  if (seconds < 60) return 'now'
+  if (minutes < 60) return `${minutes}м`
+  if (hours < 24) return `${hours}ч`
+  return `${Math.floor(hours / 24)}д`
+}
+
 function BatteryLevelIcon({ level, className }: { level: number | null; className?: string }) {
   if (level == null) return <Battery className={className} />
   if (level > 75) return <BatteryFull className={className} />
@@ -251,8 +265,8 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
           <span>{node.rssi} дБм</span>
         </div>
 
-        {/* Last seen */}
-        <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0 ml-2">
+        {/* Last seen + packet type breakdown */}
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 ml-2">
           <Clock className="h-3 w-3" />
           <Tooltip>
             <TooltipTrigger asChild>
@@ -264,6 +278,78 @@ export default function NodeStatusCard({ node, onDelete, onEdit }: NodeStatusCar
               <p>Последний пакет: {new Date(node.lastSeen).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
             </TooltipContent>
           </Tooltip>
+
+          {/* Разделитель */}
+          <span className="text-muted-foreground/40">│</span>
+
+          {/* NODEINFO (порт 4) */}
+          <div className="flex items-center gap-0.5">
+            <User className="h-2.5 w-2.5 text-blue-500 shrink-0" />
+            {node.lastInfoPacket ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className={
+                    Date.now() - new Date(node.lastInfoPacket).getTime() > 3600000
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : ''
+                  }>
+                    {getShortRelativeTime(node.lastInfoPacket)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Инфо (порт 4): {new Date(node.lastInfoPacket).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <span>—</span>
+            )}
+          </div>
+
+          {/* TELEMETRY (порт 7) */}
+          <div className="flex items-center gap-0.5">
+            <Thermometer className="h-2.5 w-2.5 text-orange-500 shrink-0" />
+            {node.lastTelemetryPacket ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className={
+                    Date.now() - new Date(node.lastTelemetryPacket).getTime() > 3600000
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : ''
+                  }>
+                    {getShortRelativeTime(node.lastTelemetryPacket)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Телеметрия (порт 7): {new Date(node.lastTelemetryPacket).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <span>—</span>
+            )}
+          </div>
+
+          {/* POSITION (порт 3) */}
+          <div className="flex items-center gap-0.5">
+            <MapPin className="h-2.5 w-2.5 text-green-500 shrink-0" />
+            {node.lastPositionPacket ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className={
+                    Date.now() - new Date(node.lastPositionPacket).getTime() > 3600000
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : ''
+                  }>
+                    {getShortRelativeTime(node.lastPositionPacket)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>GPS (порт 3): {new Date(node.lastPositionPacket).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <span>—</span>
+            )}
+          </div>
         </div>
 
         {/* Spacer */}
