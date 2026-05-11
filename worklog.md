@@ -183,3 +183,29 @@ Stage Summary:
 - Полный ревью проекта завершён — найдено 2 критических, 5 средних, 6 низких проблем
 - Вся документация актуализирована и отражает текущее состояние проекта
 - Исправлен устаревший комментарий в Prisma-схеме
+
+---
+Task ID: 44
+Agent: main
+Task: Исправление багов из ревью #43 + обновление документации
+
+Work Log:
+- POST /api/nodes: добавлены все недостающие поля (speed, heading, satsInView, hdop, pressure, channelUtilization, airUtilTx, usbPower, lastInfoPacket, lastTelemetryPacket, lastPositionPacket)
+- POST /api/nodes: batteryLevel обрезается через Math.min(num, 100) при ручном создании (101→100)
+- POST /api/nodes: usbPower определяется по 3 критериям (usbPower field || batteryLevel>=101 || voltage>=4.4V)
+- PUT /api/nodes/[id]: whitelist полей расширен — добавлены speed, heading, satsInView, hdop, pressure, channelUtilization, airUtilTx, lastInfoPacket, lastTelemetryPacket, lastPositionPacket
+- Python-мост (techo-bridge.py): HTTP API слушает 127.0.0.1 вместо 0.0.0.0 (безопасность — мост доступен только локально)
+- GET /api/nodes: добавлено автоопределение offline — если lastSeen старше 15 минут (OFFLINE_TTL_MS), узел автоматически переводится в status=offline
+- GET /api/nodes: обновление stale-узлов в БД происходит асинхронно (Promise.all без await — не блокирует ответ)
+- usePreamble: зомби-поле оставлено (размазано по 8+ файлам, уже помечено комментариями как неиспользуемое)
+- Обновлён AI_PROMPT.md: задача 44, 3 проблемы отмечены как FIXED, дата 2026-05-12
+- Обновлён PROJECT_RULES.md: раздел 4.3.2 "Автоопределение offline-узлов", мост 127.0.0.1, дата 2026-05-12
+- Обновлён README.md: автоопределение offline, мост 127.0.0.1
+- Обновлён STARTUP.md: автоопределение offline, мост 127.0.0.1:8420
+- Lint пройден без ошибок
+- API /api/nodes возвращает корректные данные (3 узла, все offline, usbPower определён корректно)
+
+Stage Summary:
+- Исправлено 4 проблемы из ревью: POST /api/nodes неполный, PUT whitelist неполный, мост 0.0.0.0, нет автоoffline
+- Все изменения проверены: lint пройден, API работает, данные корректны
+- Вся документация актуализирована

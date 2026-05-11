@@ -1132,7 +1132,7 @@ class BridgeHTTPHandler(BaseHTTPRequestHandler):
 
 def start_http_server(port=8420):
     """Запустить HTTP API сервер моста в фоновом потоке."""
-    server = HTTPServer(('0.0.0.0', port), BridgeHTTPHandler)
+    server = HTTPServer(('127.0.0.1', port), BridgeHTTPHandler)
     server.timeout = 1  # Для корректного shutdown
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()

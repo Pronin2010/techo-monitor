@@ -38,7 +38,11 @@ export async function PUT(
     const allowedFields = [
       'name', 'shortName', 'hardwareModel', 'role', 'status',
       'batteryLevel', 'voltage', 'usbPower', 'snr', 'rssi',
-      'latitude', 'longitude', 'altitude', 'lsSecs', 'minWakeSecs', 'lastSeen'
+      'latitude', 'longitude', 'altitude',
+      'speed', 'heading', 'satsInView', 'hdop',
+      'pressure', 'channelUtilization', 'airUtilTx',
+      'lsSecs', 'minWakeSecs', 'lastSeen',
+      'lastInfoPacket', 'lastTelemetryPacket', 'lastPositionPacket',
     ]
     const data: Record<string, unknown> = {}
     for (const key of allowedFields) {

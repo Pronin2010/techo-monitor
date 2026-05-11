@@ -296,7 +296,7 @@ SyncLog
 ## 8. Python-мост (techo-bridge.py)
 
 - Режим: `--mode serial` (MQTT не используется)
-- HTTP API на порту **8420** (`--api-port`)
+- HTTP API на **127.0.0.1:8420** (`--api-port`) — слушает только localhost (безопасность)
 - **POST /api/apply-config** — применение конфигурации на устройство
   - Параметры: role, region, modemPreset, lsSecs, minWakeSecs, gpsMode, agpsEnabled, и т.д.
   - deviceName, deviceShortName — установка имени через setOwner()
@@ -330,7 +330,7 @@ SyncLog
 
 ## 9. Текущее состояние (из worklog)
 
-### Выполнено (40 задач):
+### Выполнено (44 задачи):
 1. Рефакторинг вкладки Статус — аккордеон-строки, поиск, упрощённый диалог
 2. Визард подключения — 3 шага вместо 1162 строк
 3. Фикс CLI-команд для meshtastic 2.7.8 (проверено по исходникам)
@@ -373,19 +373,21 @@ SyncLog
 40. Фикс оставшихся багов YAML/CLI генерации в device-setup-tab.tsx (4 бага): (а) smartBroadcastEnabled — добавлен в INITIAL_STATE, убран хардкод true → условная генерация в YAML и CLI; (б) gpsAttemptTime — добавлен в INITIAL_STATE, убран хардкод 90 → state.gpsAttemptTime в YAML и CLI; (в) fixedPosition — добавлен в INITIAL_STATE + YAML (fixed_position: true) + CLI (--set position.fixed_position true) + UI toggle с предупреждением о баге #8403; (г) ledHeartbeatDisabled — добавлен в INITIAL_STATE + YAML (led_heartbeat_disabled: true в config.device) + CLI (--set device.led_heartbeat_disabled true) + UI toggle в секции Дисплей; (д) Добавлены UI-контролы: AGPS toggle, GPS Attempt Time, Smart Broadcast toggle + поля, Fixed Position toggle, LED индикатор toggle
 41. Компактное отображение времён пакетов по типам в свёрнутой строке карточки узла: (а) Поля lastInfoPacket/lastTelemetryPacket/lastPositionPacket уже существовали в Prisma-схеме, типах, API и мосте; (б) Prisma Client не включал поля в SQL-запросы — выполнен prisma db push + regenerate; (в) Добавлена функция getShortRelativeTime() — компактный формат (now, 5м, 2ч, 3д); (г) В свёрнутую строку рядом с «Last seen» добавлены 3 компактных индикатора: 👤 NODEINFO (порт 4, синий), 🌡 TELEMETRY (порт 7, оранжевый), 📍 POSITION (порт 3, зелёный); (д) Каждый индикатор с tooltip (точное время приёма) и цветовой индикацией (>1ч = amber); (е) Расширенная секция «Последние пакеты» сохранена для детального просмотра
 42. Новая логика определения USB/внешнего питания: (а) Было: usbPower = voltage > 3.9V — ненадёжно, LiPo может быть 4.1V при полной зарядке; (б) Стало: usbPower = (прямое поле usbPower из deviceMetrics) ИЛИ (batteryLevel >= 101 — Meshtastic шлёт 101% при USB) ИЛИ (voltage >= 4.4V — гарантированно внешнее питание); (в) Мост (techo-bridge.py): убран min(batteryLevel, 100) — 101% сохраняется как маркер USB; (г) API: batteryLevel обрезается до 100 через Math.min() при сохранении в БД (101→100), usbPower определяется по трём критериям; (д) UI: tooltip «Внешнее питание (USB / зарядка)» вместо «Устройство подключено по USB»
+43. Полный ревью проекта — выявлены критические/средние/низкие проблемы (см. раздел «Известные проблемы»), обновлена документация
+44. Фикс 4 багов из ревью #43: (а) POST /api/nodes — добавлены все недостающие поля: speed, heading, satsInView, hdop, pressure, channelUtilization, airUtilTx, usbPower, lastInfoPacket, lastTelemetryPacket, lastPositionPacket; batteryLevel обрезается через Math.min() при ручном создании; usbPower определяется по 3 критериям (usbPower field || batteryLevel>=101 || voltage>=4.4V); (б) PUT /api/nodes/[id] — whitelist полей расширен: добавлены speed, heading, satsInView, hdop, pressure, channelUtilization, airUtilTx, lastInfoPacket, lastTelemetryPacket, lastPositionPacket; (в) Python-мост (techo-bridge.py) — HTTP API слушает 127.0.0.1 вместо 0.0.0.0 (безопасность: мост доступен только локально); (г) GET /api/nodes — автоопределение offline: если lastSeen старше 15 минут, узел автоматически переводится в status=offline (как в ответе, так и в БД)
 
 ### Известные проблемы (из ревью #43):
 
 #### 🔴 Критические
 - **Нет аутентификации** на API-роутах — любой может читать/писать/удалять узлы
-- **Python-мост слушает 0.0.0.0** вместо 127.0.0.1 — доступен из сети
+- ~~**Python-мост слушает 0.0.0.0** вместо 127.0.0.1 — доступен из сети~~ ✅ FIXED (теперь 127.0.0.1)
 
 #### 🟡 Средние
 - **settings-presets-tab.tsx — 2653 строки** — монстр-компонент, сложно поддерживать. Рекомендация: разделить на PresetCard, PresetEditor, PushToDeviceDialog
 - **device-setup-tab.tsx — 1841 строка** — тоже крупный, рекомендуется разделение
-- **POST /api/nodes** — не включает новые поля (speed, heading, satsInView, hdop, pressure, channelUtilization, airUtilTx, usbPower, lastInfoPacket, lastTelemetryPacket, lastPositionPacket) — создание узла вручную будет неполным
+- ~~**POST /api/nodes** — не включает новые поля (speed, heading, satsInView, hdop, pressure, channelUtilization, airUtilTx, usbPower, lastInfoPacket, lastTelemetryPacket, lastPositionPacket) — создание узла вручную будет неполным~~ ✅ FIXED (все поля добавлены)
 - **Нет валидации входных данных** на большинстве API-роутов — только try/catch с Prisma
-- **Нет автоопределения offline** — узлы остаются «online» бесконечно, нет TTL-проверки
+- ~~**Нет автоопределения offline** — узлы остаются «online» бесконечно, нет TTL-проверки~~ ✅ FIXED (TTL 15 мин в GET /api/nodes)
 
 #### 🟢 Низкие
 - **Дублирование констант** — ROLE_MAP, MODEM_PRESET_MAP и т.д. в techo-bridge.py, но нет TypeScript-эквивалентов для числовых маппингов (только строковые типы в types.ts)
@@ -419,4 +421,4 @@ ALL(0), ALL_SKIP_DECODING(1), LOCAL_ONLY(2), KNOWN_ONLY(3), NONE(4), CORE_PORTNU
 
 ---
 
-_Последнее обновление: 2026-05-11 (Задача 43: Полный ревью проекта + обновление документации)_
+_Последнее обновление: 2026-05-12 (Задача 44: Фикс 4 багов из ревью #43 — POST/PUT API, мост 127.0.0.1, автоoffline)_
