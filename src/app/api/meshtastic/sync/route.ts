@@ -185,6 +185,10 @@ export async function POST(request: Request) {
             shortName: incoming.shortName ?? existingNode.shortName,
             role: incoming.role ?? existingNode.role,
             status: 'online',
+            // lastSeen — обновляем при каждом пакете (иначе автоoffline сразу переводит обратно)
+            lastSeen: incoming.lastHeard
+              ? new Date(incoming.lastHeard as string)
+              : new Date(),
             ...(incoming.snr != null && { snr: incoming.snr }),
             ...(incoming.rssi != null && { rssi: incoming.rssi }),
             ...(incoming.latitude != null && { latitude: incoming.latitude }),
