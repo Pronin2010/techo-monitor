@@ -98,9 +98,11 @@ src/
     └── schema.prisma             # Схема базы данных
 techo-bridge.py                   # Python-мост (Serial → HTTP API 127.0.0.1:8420, только localhost)
 techo-dump-config.py              # Скрипт чтения конфигурации устройства
+meshtastic-config-reference.yaml  # Полный YAML-референс ВСЕХ настроек прошивки 2.7.15 (~190+ полей)
 AI_PROMPT.md                      # Контекст проекта для AI-ассистента
 PROJECT_RULES.md                  # Правила проекта
 STARTUP.md                        # Инструкция по установке
+MESHTASTIC_CONFIG_REFERENCE.md    # Документация к YAML-референсу (приоритеты, deprecated, структура)
 worklog.md                        # История разработки
 
 > **Автоопределение офлайн-статуса:** узлы автоматически помечаются как офлайн через 15 минут после получения последнего пакета (отсутствие активности). Это позволяет актуализировать состояние сети без ручного вмешательства.
@@ -112,6 +114,8 @@ worklog.md                        # История разработки
 | [AI_PROMPT.md](./AI_PROMPT.md) | Полный контекст проекта для AI-ассистента |
 | [STARTUP.md](./STARTUP.md) | Инструкция по установке, настройке и эксплуатации |
 | [PROJECT_RULES.md](./PROJECT_RULES.md) | Правила проекта (Git, язык, архитектура, код) |
+| [MESHTASTIC_CONFIG_REFERENCE.md](./MESHTASTIC_CONFIG_REFERENCE.md) | Документация к YAML-референсу конфигурации 2.7.15 |
+| [meshtastic-config-reference.yaml](./meshtastic-config-reference.yaml) | Полный YAML-файл всех настроек прошивки (~190+ полей с комментариями) |
 | [worklog.md](./worklog.md) | История разработки (выполненные задачи) |
 
 ## Лицензия

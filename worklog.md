@@ -209,3 +209,61 @@ Stage Summary:
 - Исправлено 4 проблемы из ревью: POST /api/nodes неполный, PUT whitelist неполный, мост 0.0.0.0, нет автоoffline
 - Все изменения проверены: lint пройден, API работает, данные корректны
 - Вся документация актуализирована
+
+---
+Task ID: 45
+Agent: main
+Task: Создать полный YAML-референс ВСЕХ настроек прошивки Meshtastic 2.7.15 + документация + обновление правил
+
+Work Log:
+- Исследованы protobuf-определения прошивки 2.7.15 из репозитория meshtastic/protobufs (tag v2.7.15)
+- Прочитаны файлы: config.proto, module_config.proto, channel.proto, device_ui.proto
+- Изучен формат YAML-ключей: protobuf snake_case → YAML camelCase (функция snake_to_camel из Python-библиотеки)
+- Изучены примеры YAML-конфигурации из meshtastic/python и GitHub Gist
+- Создан файл meshtastic-config-reference.yaml — ПОЛНЫЙ референс ВСЕХ ~190+ полей:
+  - Корневые поля: owner, owner_short, channel_url, canned_messages, ringtone, location
+  - config.bluetooth: 3 поля
+  - config.device: 11 полей (13 ролей, 6 режимов rebroadcast, 5 режимов buzzer)
+  - config.display: 11 полей (5 типов OLED, 4 режима дисплея, 8 ориентаций компаса)
+  - config.lora: 16 полей (9 модем-пресетов, 27 регионов, ручные параметры)
+  - config.network: 11+ полей (WiFi, Ethernet, статический IP, IPv6)
+  - config.position: 13 полей (10 position flags, 3 режима GPS, smart broadcast)
+  - config.power: 9 полей (power saving, deep sleep, ADC multiplier)
+  - config.security: 7 полей (ключи, managed mode, serial, admin channel)
+  - config.device_ui: 18+ полей (TFT/BaseUI, темы, языки, фильтры, карта)
+  - module_config.mqtt: 11+ полей
+  - module_config.serial: 8 полей (16 скоростей, 9 режимов)
+  - module_config.external_notification: 16 полей
+  - module_config.store_forward: 6 полей
+  - module_config.range_test: 4 поля
+  - module_config.telemetry: 14 полей (устройство, среда, IAQ, питание, здоровье)
+  - module_config.canned_message: 9 полей
+  - module_config.audio: 7 полей (9 битрейтов codec2)
+  - module_config.remote_hardware: 2+ полей
+  - module_config.neighbor_info: 3 поля
+  - module_config.ambient_lighting: 5 полей
+  - module_config.detection_sensor: 8 полей (6 типов триггера)
+  - module_config.paxcounter: 4 поля
+- Каждое поле прокомментировано на русском: описание, дефолт, допустимые значения, предупреждения
+- Помечены deprecated-поля с объяснением причин и альтернатив
+- Помечены поля, неприменимые для T-Echo (Ethernet, WiFi, TFT, I2S, вентилятор PA)
+- Создан файл MESHTASTIC_CONFIG_REFERENCE.md — документация:
+  - Источник данных (protobuf)
+  - Правила конвертации ключей (snake_to_camel)
+  - Структура YAML-файла с количеством полей
+  - Приоритеты настроек для T-Echo (сеть, позиционирование, батарея, стационарный трекер)
+  - Deprecated-поля с причинами и альтернативами
+  - Ссылки на документацию
+- Обновлён PROJECT_RULES.md:
+  - Добавлен раздел 4.5 "КРИТИЧЕСКОЕ ПРАВИЛО: СПРАВОЧНИК КОНФИГУРАЦИИ YAML"
+  - Правило: при работе с конфигурацией СНАЧАЛА смотреть в YAML-референс
+  - Обновлена дата
+- Обновлён README.md:
+  - Добавлены meshtastic-config-reference.yaml и MESHTASTIC_CONFIG_REFERENCE.md в структуру проекта
+  - Добавлены в таблицу документации
+
+Stage Summary:
+- Создан полный YAML-референс ВСЕХ ~190+ настроек Meshtastic 2.7.15 с комментариями на русском
+- Создана документация MESHTASTIC_CONFIG_REFERENCE.md
+- Правила проекта обновлены — ссылка на YAML-референс как обязательный источник
+- README.md обновлён — новые файлы в структуре и документации
